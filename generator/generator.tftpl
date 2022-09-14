@@ -1,0 +1,40 @@
+terraform {
+  required_providers {
+    spacelift = {
+      source  = "spacelift-io/spacelift"
+      version = "~> 0.1"
+    }
+  }
+}
+%{ for stack in stacks ~}
+
+resource "spacelift_stack" "${replace(lower(stack.name), "-", "_")}" {
+  %{if stack.vcs.provider != "github" ~}
+  ${stack.vcs.provider} {
+    namespace = "${stack.vcs.namespace}"
+  }
+  %{endif ~}
+  autodeploy        = ${stack.autodeploy}
+  branch            = "${stack.vcs.branch}"
+  name              = "${stack.name}"
+  project_root      = "${stack.vcs.project_root}"
+  repository        = "${stack.vcs.repository}"
+  terraform_version = "${stack.terraform_version}"
+
+  %{if stack.manage_state ~}
+  # 8< --------------------------------------------------------------
+  # Delete the following line after the stack has been created
+  import_state_file = "/mnt/workspace/state-import/${stack.name}.tfstate"
+  # -------------------------------------------------------------- 8<
+  %{endif ~}
+}
+
+%{ for env_var in stack.env_vars ~}
+resource "spacelift_environment_variable" "${replace(lower(env_var.name), "-", "_")}" {
+  stack_id   = spacelift_stack.${replace(lower(stack.name), "-", "_")}.id
+  name       = "${env_var.name}"
+  value      = "${env_var.value}"
+  write_only = ${env_var.sensitive}
+}
+%{ endfor ~}
+%{ endfor ~}

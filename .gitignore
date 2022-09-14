@@ -1,0 +1,7 @@
+.terraform
+.terraform.lock.hcl
+terraform.tfstate*
+*.tfvars
+!*.example.tfvars
+/generator.tftpl
+/out
