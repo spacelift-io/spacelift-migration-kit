@@ -4,6 +4,7 @@ locals {
   stacks = [for i, v in data.tfe_workspace_ids.all.ids : {
     autodeploy = data.tfe_workspace.all[i].auto_apply
     env_vars = [for i, v in data.tfe_variables.all[v].variables : {
+      hcl       = v.hcl
       name      = v.category == "terraform" ? "TF_VAR_${v.name}" : v.name
       sensitive = v.sensitive
       value     = v.value

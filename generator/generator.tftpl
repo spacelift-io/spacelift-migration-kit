@@ -33,7 +33,7 @@ resource "spacelift_stack" "${replace(lower(stack.name), "-", "_")}" {
 resource "spacelift_environment_variable" "${replace(lower(env_var.name), "-", "_")}" {
   stack_id   = spacelift_stack.${replace(lower(stack.name), "-", "_")}.id
   name       = "${env_var.name}"
-  value      = "${env_var.value}"
+  value      = %{if env_var.hcl ~}jsonencode(${env_var.value})%{else}"${env_var.value}"%{~endif}
   write_only = ${env_var.sensitive}
 }
 %{ endfor ~}
