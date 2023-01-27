@@ -3,6 +3,7 @@ variable "stacks" {
   type = list(object({
     autodeploy = bool
     env_vars = list(object({
+      hcl       = bool
       name      = string
       sensitive = bool
       value     = string
