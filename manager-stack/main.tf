@@ -26,6 +26,7 @@ resource "spacelift_stack" "manager" {
   branch         = var.branch
   description    = var.stack_description
   name           = var.stack_name
+  project_root   = var.project_root
   repository     = var.repository
 }
 
