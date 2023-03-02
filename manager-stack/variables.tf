@@ -11,7 +11,7 @@ variable "import_state" {
 }
 
 variable "project_root" {
-  default     = ""
+  default     = null
   description = "Path to the folder containing the Terraform code, in case of a monorepo"
   type        = string
 }
@@ -37,7 +37,7 @@ variable "spacelift_api_key_secret" {
 }
 
 variable "stack_description" {
-  default     = ""
+  default     = null
   description = "Description for the stack"
   type        = string
 }
