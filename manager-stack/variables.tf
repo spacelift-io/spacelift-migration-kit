@@ -46,3 +46,15 @@ variable "stack_name" {
   description = "Name of the manager stack"
   type        = string
 }
+
+variable "vcs_provider" {
+  description = "Name of the vcs provider. Supported values are: github_enterprise, bitbucket_cloud, bitbucket_datacenter, gitlab, azure_devops"
+  type        = string
+  default     = null
+}
+
+variable "vcs_namespace" {
+  description = "Name of the vcs namespace"
+  type        = string
+  default     = null
+}

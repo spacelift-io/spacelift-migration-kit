@@ -1,0 +1,8 @@
+migration_data:
+  tfc_organization: tfc_org
+  vcs_provider: github_enterprise
+  vcs_namespace: namespace
+  spacelift_account: spacelift_account
+  repo_name: tfc-migration
+  vcs_default_branch: main
+

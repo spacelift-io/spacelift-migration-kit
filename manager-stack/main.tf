@@ -27,7 +27,44 @@ resource "spacelift_stack" "manager" {
   description    = var.stack_description
   name           = var.stack_name
   project_root   = var.project_root
-  repository     = var.repository
+
+  dynamic "github_enterprise" {
+    for_each = var.vcs_provider == "github_enterprise" ? [1] : []
+    content {
+      namespace = var.vcs_namespace
+    }
+  }
+
+  dynamic "bitbucket_cloud" {
+    for_each = var.vcs_provider == "bitbucket_cloud" ? [1] : []
+    content {
+      namespace = var.vcs_namespace
+    }
+  }
+
+  dynamic "bitbucket_datacenter" {
+    for_each = var.vcs_provider == "bitbucket_datacenter" ? [1] : []
+    content {
+      namespace = var.vcs_namespace
+    }
+  }
+
+  dynamic "gitlab" {
+    for_each = var.vcs_provider == "gitlab" ? [1] : []
+
+    content {
+      namespace = var.vcs_namespace
+    }
+  }
+
+  dynamic "azure_devops" {
+    for_each = var.vcs_provider == "azure_devops" ? [1] : []
+    content {
+      project = var.vcs_namespace
+    }
+  }
+
+  repository = var.repository
 }
 
 resource "spacelift_run" "manager" {
