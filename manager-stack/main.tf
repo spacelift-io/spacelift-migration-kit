@@ -4,7 +4,7 @@ terraform {
   required_providers {
     spacelift = {
       source  = "spacelift-io/spacelift"
-      version = "~> 0.1"
+      version = "~> 1.0"
     }
   }
 }
@@ -28,6 +28,11 @@ resource "spacelift_stack" "manager" {
   name           = var.stack_name
   project_root   = var.project_root
   repository     = var.repository
+  # If you are using GitHub custom app installation https://docs.spacelift.io/integrations/source-control/github#setting-up-the-custom-application
+  # uncomment the following lines
+  # github_enterprise {
+  #   namespace = var.namespace
+  # }
 }
 
 resource "spacelift_run" "manager" {

@@ -82,6 +82,11 @@ When the Terraform code is ready, commit it to a repository.
 
 ### Create a manager Spacelift stack
 
+> :warning: **Check out the VCS system integation**
+> If you were using https://docs.spacelift.io/integrations/source-control/github#setting-up-the-custom-application
+> set a correct `namespace` variable in `manager-stack/terraform.tfvars`
+> and uncomment `github_enterpise` block in `manager-stack/main.tf` file.
+
 It is now time to create a Spacelift stack that will point to the commited Terraform code that manages your Spacelift resources.
 
 - Copy the example `manager-stack.example.tfvars` file into `manager-stack.tfvars` .

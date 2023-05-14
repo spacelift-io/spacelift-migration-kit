@@ -4,6 +4,9 @@ stack_name = "Spacelift Manager"
 # Description for the stack
 stack_description = "Spacelift resources manager"
 
+# Name of your GitHub Enterprise organisation or GitHub account
+# namespace = "change-me-to-your-organisation-or-account-name"
+
 # Name of the repository to associate with the stack
 repository = "spacelift"
 
