@@ -22,16 +22,19 @@ variable "repository" {
 }
 
 variable "spacelift_api_key_endpoint" {
+  default     = null
   description = "Spacelift API endpoint"
   type        = string
 }
 
 variable "spacelift_api_key_id" {
+  default     = null
   description = "Spacelift API key ID"
   type        = string
 }
 
 variable "spacelift_api_key_secret" {
+  default     = null
   description = "Spacelift API key secret"
   type        = string
 }
