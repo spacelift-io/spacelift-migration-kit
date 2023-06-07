@@ -9,6 +9,24 @@ variable "tfc_organization" {
   type        = string
 }
 
+variable "tfc_workspace_names" {
+  default     = ["*"]
+  description = "List of TFC/TFE workspace names to export. Wildcards are supported (e.g., [\"*\"], [\"*-example\"], [\"example-*\"])."
+  type        = list(string)
+}
+
+variable "tfc_workspace_exclude_tags" {
+  default     = null
+  description = "List of TFC/TFE workspace tags to exclude when exporting. Excluded tags take precedence over included ones. Wildcards are not supported."
+  type        = list(string)
+}
+
+variable "tfc_workspace_include_tags" {
+  default     = null
+  description = "List of TFC/TFE workspace tags to include when exporting. Excluded tags take precedence over included ones. Wildcards are not supported."
+  type        = list(string)
+}
+
 variable "vcs_default_branch" {
   default     = "main"
   description = "Name of the repositories' default branch"

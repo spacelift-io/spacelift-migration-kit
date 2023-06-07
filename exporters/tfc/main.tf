@@ -36,8 +36,10 @@ locals {
 }
 
 data "tfe_workspace_ids" "all" {
-  names        = ["*"]
+  exclude_tags = var.tfc_workspace_exclude_tags
+  names        = var.tfc_workspace_names
   organization = var.tfc_organization
+  tag_names    = var.tfc_workspace_include_tags
 }
 
 data "tfe_workspace" "all" {
