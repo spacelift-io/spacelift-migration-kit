@@ -20,7 +20,7 @@ project_root = ""
 import_state = false
 
 # Spacelift API endpoint - Alternatively, you could pass that value via the SPACELIFT_API_KEY_ENDPOINT env var
-# spacelift_api_key_endpoint = "https://example.app.spacelift.io/"
+# spacelift_api_key_endpoint = "https://example.app.spacelift.io"
 
 # Spacelift API key ID - Alternatively, you could pass that value via the SPACELIFT_API_KEY_ID env var
 # spacelift_api_key_id = ""
