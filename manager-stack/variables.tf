@@ -49,3 +49,7 @@ variable "stack_name" {
   description = "Name of the manager stack"
   type        = string
 }
+
+variable "namespace" {
+  description = "VCS Namespace"
+}
