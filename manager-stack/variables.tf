@@ -52,4 +52,5 @@ variable "stack_name" {
 
 variable "namespace" {
   description = "VCS Namespace"
+  type        = string
 }
