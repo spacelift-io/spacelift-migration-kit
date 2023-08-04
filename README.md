@@ -114,6 +114,42 @@ If the Terraform state is managed by Spacelift,perform the following actions, ot
 
 ## Known Limitations
 
+### State Files Bigger than 2MB
+
+The current implementation uses [mounted files](https://docs.spacelift.io/concepts/configuration/environment#mounted-files) to upload the exported state files to Spacelift. This works well for most state files but mounted files have a file size limit of 2MB so state files bigger than that cannot be imported that way.
+
+This limitation will be removed in an upcoming release but until then, the workaround is to:
+
+- Do not export the state files nor import them into Spacelift with the Migration Kit.
+- Set the `TFC_TOKEN` environment variable with a TFC token as the value. It can be set [on the stacks](https://docs.spacelift.io/concepts/configuration/environment#environment-variables) or as [a context](https://docs.spacelift.io/concepts/configuration/context) attached to multiple stacks.
+- Mount the following script as a mounted file named `import-tfc-state.sh`:
+
+```shell
+#!/bin/bash
+set -euo pipefail
+
+if [[ -z $TFC_TOKEN ]]; then
+  echo "TFC_TOKEN is not set"
+  exit 1
+fi
+
+TFC_WORKSPACE_ID=$1
+
+STATE_DOWNLOAD_URL=$(curl -sSL --fail \
+  --header "Authorization: Bearer $TFC_TOKEN" \
+  --header "Content-Type: application/vnd.api+json" \
+  --request GET \
+  "https://app.terraform.io/api/v2/workspaces/${TFC_WORKSPACE_ID}/current-state-version" \
+  | jq -r '.data.attributes."hosted-state-download-url"' )
+
+curl -sSL --fail -o state.tfstate "${STATE_DOWNLOAD_URL}"
+terraform state push -force state.tfstate
+```
+
+- Run the following command as [task](https://docs.spacelift.io/concepts/run/task): `/mnt/workspace/import-tfc-state.sh <TFC WORKSPACE ID>`
+
+Please note that the [spacectl](https://github.com/spacelift-io/spacectl) CLI tool can be used to run those tasks which is helpful if you need to import many big state files: `spacectl stack task --id <STACK ID> --tail /mnt/workspace/import-tfc-state.sh <TFC WORKSPACE ID>`
+
 ### Terraform Cloud/Enterprise Exporter
 
 - The variable sets are not exposed so they cannot be listed and exported.
