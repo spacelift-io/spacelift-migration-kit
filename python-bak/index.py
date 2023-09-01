@@ -31,9 +31,9 @@ class MigrationKit():
         exporter = self._get_exporter(config["exporter"])
         data = exporter.export_data()
 
-        pprint(config)
-        pprint(vars(exporter))
-        pprint(data)
+        # pprint(config)
+        # pprint(vars(exporter))
+        # pprint(data)
       except Exception as e:
          print(f"An error occured: {e}")
          exit(1)
