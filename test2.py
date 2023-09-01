@@ -32,26 +32,25 @@ def loadConfigurationFromFile(path="config.json"):
 # result = list_workspaces(config["exporter"]["tfc"]["organization_id"])
 # pprint(result)
 
-# payload = {
-#   "data": {
-#     "attributes": {
-#       "plan-only": True
-#     },
-#     "type":"runs",
-#     "relationships": {
-#       "workspace": {
-#         "data": {
-#           "type": "workspaces",
-#           "id": "ws-2NNZXcADtN5beCu2"
-#         }
-#       }
-#     }
-#   }
-# }
-# result = run_query("/runs", method="POST", payload=payload)
-# pprint(result)
+payload = {
+  "data": {
+    "attributes": {
+      "plan-only": True
+    },
+    "type":"runs",
+    "relationships": {
+      "workspace": {
+        "data": {
+          "type": "workspaces",
+          "id": "ws-2NNZXcADtN5beCu2"
+        }
+      }
+    }
+  }
+}
+result = run_query("/runs", method="POST", payload=payload)
+pprint(result)
 
 
 result = run_query(f"/plans/plan-WreuWbqi6Tc5ZMud")
 pprint(result)
-
