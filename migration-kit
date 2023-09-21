@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+import click
+import commands
+from envyaml import EnvYAML
+
+@click.group()
+@click.option("--config", default="config.yml", help="Path to the configuration file.", type=click.Path())
+@click.pass_context
+def cli(ctx, config):
+    ctx.ensure_object(dict)
+
+    ctx.obj["config"] = EnvYAML(config, strict=False)
+
+cli.add_command(commands.audit)
+cli.add_command(commands.clean)
+cli.add_command(commands.config)
+cli.add_command(commands.export)
+cli.add_command(commands.generate)
+cli.add_command(commands.import_)
+cli.add_command(commands.migrate)
+cli.add_command(commands.upload_state_files)
+
+if __name__ == "__main__":
+    cli()
