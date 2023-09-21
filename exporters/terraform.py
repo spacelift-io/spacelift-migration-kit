@@ -1,5 +1,6 @@
 import requests
 
+from collections import defaultdict
 from flatten_dict import flatten
 from pprint import pprint
 
@@ -143,38 +144,25 @@ class Exporter:
         )
 
     def audit(self):
+        entities = defaultdict(list)
+
         organizations = self._list_organizations()
+        entities["organizations"] = organizations
 
-        stats = {
-            "organizations": len(organizations),
-        }
         for organization in organizations:
-            # agent_pools = self._list_agent_pools(organization["id"])
-            # stats["agent_pools"] = len(agent_pools)
-
-            # policies = self._list_policies(organization["id"])
-            # stats["policies"] = len(policies)
-
-            # policy_sets = self._list_policy_sets(organization["id"])
-            # stats["policy_sets"] = len(policy_sets)
-
-            # projects = self._list_projects(organization["id"])
-            # stats["projects"] = len(projects)
-
-            # registry_modules = self._list_registry_modules(organization["id"])
-            # stats["registry_modules"] = len(registry_modules)
-
-            # registry_providers = self._list_registry_providers(organization["id"])
-            # stats["registry_providers"] = len(registry_providers)
-
-            # tasks = self._list_tasks(organization["id"])
-            # stats["tasks"] = len(tasks)
-
-            workspaces = self._list_workspaces(organization["id"])
-            pprint(workspaces)
-            stats["workspaces"] = len(workspaces)
+            entities["agent_pools"].extend(self._list_agent_pools(organization["id"]))
+            entities["policies"].extend(self._list_policies(organization["id"]))
+            entities["policy_sets"].extend(self._list_policy_sets(organization["id"]))
+            entities["projects"].extend(self._list_projects(organization["id"]))
+            entities["registry_modules"].extend(self._list_registry_modules(organization["id"]))
+            entities["registry_providers"].extend(self._list_registry_providers(organization["id"]))
+            entities["tasks"].extend(self._list_tasks(organization["id"]))
+            entities["workspaces"].extend(self._list_workspaces(organization["id"]))
 
         tf_edition_name = "Cloud" if self.edition == "tfc" else "Enterprise"
-        print(f"Detected Terraform {tf_edition_name}")
+        print(f"Detected Terraform {tf_edition_name}\n")
 
-        pprint(stats)
+        for key, value in entities.items():
+            print("Statistics")
+            print("----------")
+            print(f"{key}: {len(value)}")
