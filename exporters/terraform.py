@@ -2,39 +2,66 @@ import requests
 
 from collections import defaultdict
 from flatten_dict import flatten
-from pprint import pprint
-
+from rich.pretty import pprint
 
 class Exporter:
     def __init__(
-        self, api_token, api_endpoint="https://app.terraform.io", edition="tfc"
-    ):
-        self.api_endpoint = api_endpoint
-        self.api_token = api_token
+        self, console, api_token, api_endpoint="https://app.terraform.io"):
+        self._api_endpoint = api_endpoint
+        self._api_token = api_token
+
+        self._console = console
 
         if api_endpoint == "https://app.terraform.io":
             self.edition = "tfc"
         else:
             self.edition = "tfe"
 
-    def _call_api(self, url):
+    def _add_agent_pool_checks(self, items):
+        for key, item in enumerate(items):
+            issues = []
+
+            if item["properties"]["agent-count"] == 0:
+              issues.append("No agents")
+
+            items[key]["issues"] = issues
+
+        return items
+
+    def _add_policy_checks(self, items):
+        for key, item in enumerate(items):
+            issues = []
+
+            if item["properties"]["kind"] == "sentinel":
+              issues.append("Sentinel policy")
+
+            items[key]["issues"] = issues
+
+        return items
+
+    def _add_workspace_checks(self, items):
+        for key, item in enumerate(items):
+            issues = []
+
+            if item["properties"]["resource-count"] == 0:
+              issues.append("No resources")
+
+            items[key]["issues"] = issues
+
+        return items
+
+    def _call_api(self, api_path):
         headers = {
-            "Authorization": f"Bearer {self.api_token}",
+            "Authorization": f"Bearer {self._api_token}",
             "Content-Type": "application/vnd.api+json",
         }
-
-        request = requests.get(url, headers=headers)
-
-        # TODO: Handle errors
-
-        return request.json()
-
-    def _get_data(self, api_path):
         data = []
-        url = f"{self.api_endpoint}/api/v2{api_path}"
+        url = f"{self._api_endpoint}/api/v2{api_path}"
 
         while True:
-            response = self._call_api(url)
+            # TODO: Handle errors
+            response = requests.get(url, headers=headers).json()
+
             for item in response["data"]:
                 data.append(item)
 
@@ -45,46 +72,77 @@ class Exporter:
 
         return data
 
-    def _get_entities(self, api_path, attributes=[]):
-        raw_data = self._get_data(api_path)
+    def _get_items(self, api_path, attributes=[]):
+        data = self._call_api(api_path)
+        items = []
 
-        entities = []
-
-        for datum in raw_data:
+        for datum in data:
             datum = flatten(datum, reducer="dot")
-            entity = {}
+            item = {}
             for attribute in attributes:
                 if f"attributes.{attribute}" in datum:
-                    entity[attribute] = datum[f"attributes.{attribute}"]
+                    item[attribute] = datum[f"attributes.{attribute}"]
             if "id" in datum:
-                entity["id"] = datum["id"]
-            entities.append(entity)
+                item["id"] = datum["id"]
+            items.append({"properties": item})
 
-        return entities
+        return items
 
-    def _list_agent_pools(self, organization_id):
+    def _list_agent_pools(self, organization_id, check=False):
         attributes = [
             "agent-count",
             "name",
             "organization-scoped",
         ]
-        return self._get_entities(
+
+        items =  self._get_items(
             f"/organizations/{organization_id}/agent-pools", attributes
         )
 
-    def _list_organizations(self):
-        return self._get_entities("/organizations")
+        if check:
+            items = self._add_agent_pool_checks(items)
 
-    def _list_policies(self, organization_id):
+        return items
+
+    def _list_entities(self, check=True):
+        entities = defaultdict(list)
+
+        organizations = self._list_organizations()
+        entities["organizations"] = organizations
+
+        for organization in organizations:
+            organization_id = organization["properties"]["id"]
+
+            entities["agent_pools"].extend(self._list_agent_pools(organization_id, check=check))
+            entities["policies"].extend(self._list_policies(organization_id, check=check))
+            entities["policy_sets"].extend(self._list_policy_sets(organization_id))
+            entities["projects"].extend(self._list_projects(organization_id))
+            entities["registry_modules"].extend(self._list_registry_modules(organization_id))
+            entities["registry_providers"].extend(self._list_registry_providers(organization_id))
+            entities["tasks"].extend(self._list_tasks(organization_id))
+            entities["workspaces"].extend(self._list_workspaces(organization_id, check=check))
+
+        return entities
+
+    def _list_organizations(self):
+        return self._get_items("/organizations")
+
+    def _list_policies(self, organization_id, check=False):
         attributes = [
             "description",
             "enforcement-level",
             "kind",
             "name",
         ]
-        return self._get_entities(
+
+        items = self._get_items(
             f"/organizations/{organization_id}/policies", attributes
         )
+
+        if check:
+            items = self._add_policy_checks(items)
+
+        return items
 
     def _list_policy_sets(self, organization_id):
         attributes = [
@@ -94,7 +152,7 @@ class Exporter:
             "kind",
             "name",
         ]
-        return self._get_entities(
+        return self._get_items(
             f"/organizations/{organization_id}/policy-sets", attributes
         )
 
@@ -102,7 +160,7 @@ class Exporter:
         attributes = [
             "name"
         ]
-        return self._get_entities(
+        return self._get_items(
             f"/organizations/{organization_id}/projects", attributes
         )
 
@@ -113,7 +171,7 @@ class Exporter:
             "provider",
             "status",
         ]
-        return self._get_entities(
+        return self._get_items(
             f"/organizations/{organization_id}/registry-modules", attributes
         )
 
@@ -123,7 +181,7 @@ class Exporter:
             "namespace",
             "registry-name",
         ]
-        return self._get_entities(
+        return self._get_items(
             f"/organizations/{organization_id}/registry-modules", attributes
         )
 
@@ -131,38 +189,38 @@ class Exporter:
         attributes = [
             "category", "description", "enabled", "name", "url",
         ]
-        return self._get_entities(
+        return self._get_items(
             f"/organizations/{organization_id}/tasks", attributes
         )
 
-    def _list_workspaces(self, organization_id):
+    def _list_workspaces(self, organization_id, check=False):
         attributes = [
             "auto-apply", "description", "name", "resource-count", "terraform-version", "vcs-repo.branch", "vcs-repo.repository-http-url", "working-directory",
         ]
-        return self._get_entities(
+
+        items = self._get_items(
             f"/organizations/{organization_id}/workspaces", attributes
         )
 
+        if check:
+            items = self._add_workspace_checks(items)
+
+        return items
+
     def audit(self):
-        entities = defaultdict(list)
+        entities = self._list_entities(check=True)
 
-        organizations = self._list_organizations()
-        entities["organizations"] = organizations
+        for entity_type, entity_list in sorted(entities.items()):
+            title = entity_type.replace('_', ' ').title()
+            count = len(entity_list)
+            entities_with_issues = [e for e in entity_list if "issues" in e and len(e["issues"]) > 0]
+            with_issues_count = len(entities_with_issues)
+            with_issues_message = f" (including {with_issues_count} with issues)" if with_issues_count > 0 else ""
 
-        for organization in organizations:
-            entities["agent_pools"].extend(self._list_agent_pools(organization["id"]))
-            entities["policies"].extend(self._list_policies(organization["id"]))
-            entities["policy_sets"].extend(self._list_policy_sets(organization["id"]))
-            entities["projects"].extend(self._list_projects(organization["id"]))
-            entities["registry_modules"].extend(self._list_registry_modules(organization["id"]))
-            entities["registry_providers"].extend(self._list_registry_providers(organization["id"]))
-            entities["tasks"].extend(self._list_tasks(organization["id"]))
-            entities["workspaces"].extend(self._list_workspaces(organization["id"]))
+            self._console.print(f"{title}: {count}{with_issues_message}")
 
-        tf_edition_name = "Cloud" if self.edition == "tfc" else "Enterprise"
-        print(f"Detected Terraform {tf_edition_name}\n")
-
-        for key, value in entities.items():
-            print("Statistics")
-            print("----------")
-            print(f"{key}: {len(value)}")
+            for entity in entities_with_issues:
+                entity_id = entity["properties"]["id"]
+                entity_name = f" ({entity['properties']['name']})" if "name" in entity["properties"] else ""
+                issues = ", ".join(entity["issues"])
+                self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
