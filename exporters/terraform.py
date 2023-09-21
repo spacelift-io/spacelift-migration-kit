@@ -120,7 +120,15 @@ class Exporter:
             entities["registry_modules"].extend(self._list_registry_modules(organization_id))
             entities["registry_providers"].extend(self._list_registry_providers(organization_id))
             entities["tasks"].extend(self._list_tasks(organization_id))
-            entities["workspaces"].extend(self._list_workspaces(organization_id, check=check))
+            entities["teams"].extend(self._list_teams(organization_id))
+            entities["variable_sets"].extend(self._list_variable_sets(organization_id))
+
+            workspaces = self._list_workspaces(organization_id, check=check)
+            entities["workspaces"].extend(workspaces)
+
+            for workspace in workspaces:
+                workspace_id = workspace["properties"]["id"]
+                entities["variables"].extend(self._list_variables(workspace_id))
 
         return entities
 
@@ -191,6 +199,30 @@ class Exporter:
         ]
         return self._get_items(
             f"/organizations/{organization_id}/tasks", attributes
+        )
+
+    def _list_teams(self, organization_id):
+        attributes = [
+            "name", "users-count",
+        ]
+        return self._get_items(
+            f"/organizations/{organization_id}/teams", attributes
+        )
+
+    def _list_variable_sets(self, organization_id):
+        attributes = [
+            "description", "global", "name", "project-count", "var-count", "workspace-count",
+        ]
+        return self._get_items(
+            f"/organizations/{organization_id}/varsets", attributes
+        )
+
+    def _list_variables(self, workspace_id):
+        attributes = [
+            "category", "description", "hcl", "key", "name", "sensitive",
+        ]
+        return self._get_items(
+            f"/workspaces/{workspace_id}/vars", attributes
         )
 
     def _list_workspaces(self, organization_id, check=False):
