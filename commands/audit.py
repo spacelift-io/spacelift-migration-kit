@@ -16,7 +16,7 @@ def _load_exporter(console, name, settings={}):
     return klass(console, **settings)
 
 
-@click.command()
+@click.command(help="Audit the source vendor setup.")
 @click.pass_context
 def audit(ctx):
     config = ctx.obj["config"]

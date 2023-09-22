@@ -1,5 +1,9 @@
 import click
 
-@click.command(name="import")
-def import_():
-    print("Import")
+
+@click.command(help="Create Spacelift entities.", name="import")
+@click.pass_context
+def import_(ctx):
+    console = ctx.obj["console"]
+
+    console.print("This command has not been implemented yet.")
