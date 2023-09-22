@@ -2,7 +2,6 @@ import requests
 
 from collections import defaultdict
 from flatten_dict import flatten
-from rich.pretty import pprint
 
 class Exporter:
     def __init__(
@@ -253,6 +252,6 @@ class Exporter:
 
             for entity in entities_with_issues:
                 entity_id = entity["properties"]["id"]
-                entity_name = f" ({entity['properties']['name']})" if "name" in entity["properties"] else ""
+                entity_name = f" ({entity['properties' ]['name']})" if "name" in entity["properties"] else ""
                 issues = ", ".join(entity["issues"])
                 self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
