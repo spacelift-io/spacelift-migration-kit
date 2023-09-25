@@ -32,11 +32,7 @@ def cli(ctx, config):
 cli.add_command(commands.audit)
 cli.add_command(commands.clean)
 cli.add_command(commands.config)
-cli.add_command(commands.export)
-cli.add_command(commands.generate)
-cli.add_command(commands.import_)
 cli.add_command(commands.migrate)
-cli.add_command(commands.upload_state_files)
 
 
 if __name__ == "__main__":
