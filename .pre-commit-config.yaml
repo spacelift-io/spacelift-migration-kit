@@ -29,3 +29,8 @@ repos:
     rev: v0.37.0
     hooks:
       - id: markdownlint
+
+  - repo: https://gitlab.com/bmares/check-json5
+    rev: v1.0.0
+    hooks:
+      - id: check-json5

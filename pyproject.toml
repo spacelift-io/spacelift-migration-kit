@@ -3,18 +3,20 @@ line-length = 120
 target-version = ["py311"]
 
 [tool.ruff]
+fix = true
 line-length = 120
 select = [
   "A",    # flake8-builtins
   "ARG",  #flake8-unused-arguments
   "B",    # flake8-bugbear
   "E",    # pycodestyle
-  "ERA", # eradicate
+  "ERA",  # eradicate
   "F",    # Pyflakes
   "I",    # isort
-  "N", # pep8-naming
+  "N",    # pep8-naming
   "PERF", # Perflint
   "RUF",  # Ruff
   "SIM",  # flake8-simplify
   "SLF",  # flake8-self
 ]
+show-fixes = true
