@@ -1,13 +1,12 @@
-#!/usr/bin/env python
-
 import click
-import commands
 from envyaml import EnvYAML
 from rich.console import Console
 from rich.theme import Theme
 
+from . import commands
 
-@click.group()
+
+@click.group(help="Helper to move from various tools to Spacelift.")
 @click.option(
     "--config",
     default="config.yml",
@@ -38,6 +37,7 @@ cli.add_command(commands.generate)
 cli.add_command(commands.import_)
 cli.add_command(commands.migrate)
 cli.add_command(commands.upload_state_files)
+
 
 if __name__ == "__main__":
     cli()

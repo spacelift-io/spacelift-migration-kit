@@ -1,6 +1,6 @@
-import click
-
 from importlib import import_module
+
+import click
 
 
 def _import_class_from_string(path):
@@ -11,7 +11,10 @@ def _import_class_from_string(path):
     return klass
 
 
-def _load_exporter(console, name, settings={}):
+def _load_exporter(console, name, settings=None):
+    if settings is None:
+        settings = {}
+
     klass = _import_class_from_string(f"exporters.{name}.Exporter")
     return klass(console, **settings)
 
@@ -22,7 +25,5 @@ def audit(ctx):
     config = ctx.obj["config"]
     exporter_settings = config["exporter"]
     exporter_name = exporter_settings.pop("name")
-    exporter = _load_exporter(
-        console=ctx.obj["console"], name=exporter_name, settings=exporter_settings
-    )
+    exporter = _load_exporter(console=ctx.obj["console"], name=exporter_name, settings=exporter_settings)
     exporter.audit()
