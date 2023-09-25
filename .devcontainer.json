@@ -7,7 +7,8 @@
     "ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
   },
   "mounts": [
-    "source=spacemk-command-history,target=/command-history,type=volume"
+    "source=spacemk-command-history,target=/command-history,type=volume", // Persists Bash history
+    "source=spacemk-pre-commit-cache,target=/pre-commit-cache,type=volume" // Persist pre-commit cache
   ],
   "postStartCommand": "pip install --editable .",
   "customizations": {
