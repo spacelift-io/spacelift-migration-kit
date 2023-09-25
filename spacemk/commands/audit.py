@@ -15,7 +15,7 @@ def _load_exporter(console, name, settings=None):
     if settings is None:
         settings = {}
 
-    klass = _import_class_from_string(f"exporters.{name}.Exporter")
+    klass = _import_class_from_string(f"spacemk.exporters.{name}.Exporter")
     return klass(console, **settings)
 
 
