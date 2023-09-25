@@ -71,7 +71,10 @@ class Exporter:
 
         return data
 
-    def _get_items(self, api_path, attributes=[]):
+    def _get_items(self, api_path, attributes=None):
+        if attributes is None:
+            attributes = []
+
         data = self._call_api(api_path)
         items = []
 
@@ -94,9 +97,7 @@ class Exporter:
             "organization-scoped",
         ]
 
-        items = self._get_items(
-            f"/organizations/{organization_id}/agent-pools", attributes
-        )
+        items = self._get_items(f"/organizations/{organization_id}/agent-pools", attributes)
 
         if check:
             items = self._add_agent_pool_checks(items)
@@ -112,20 +113,12 @@ class Exporter:
         for organization in organizations:
             organization_id = organization["properties"]["id"]
 
-            entities["agent_pools"].extend(
-                self._list_agent_pools(organization_id, check=check)
-            )
-            entities["policies"].extend(
-                self._list_policies(organization_id, check=check)
-            )
+            entities["agent_pools"].extend(self._list_agent_pools(organization_id, check=check))
+            entities["policies"].extend(self._list_policies(organization_id, check=check))
             entities["policy_sets"].extend(self._list_policy_sets(organization_id))
             entities["projects"].extend(self._list_projects(organization_id))
-            entities["registry_modules"].extend(
-                self._list_registry_modules(organization_id)
-            )
-            entities["registry_providers"].extend(
-                self._list_registry_providers(organization_id)
-            )
+            entities["registry_modules"].extend(self._list_registry_modules(organization_id))
+            entities["registry_providers"].extend(self._list_registry_providers(organization_id))
             entities["tasks"].extend(self._list_tasks(organization_id))
             entities["teams"].extend(self._list_teams(organization_id))
             entities["variable_sets"].extend(self._list_variable_sets(organization_id))
@@ -150,9 +143,7 @@ class Exporter:
             "name",
         ]
 
-        items = self._get_items(
-            f"/organizations/{organization_id}/policies", attributes
-        )
+        items = self._get_items(f"/organizations/{organization_id}/policies", attributes)
 
         if check:
             items = self._add_policy_checks(items)
@@ -167,9 +158,7 @@ class Exporter:
             "kind",
             "name",
         ]
-        return self._get_items(
-            f"/organizations/{organization_id}/policy-sets", attributes
-        )
+        return self._get_items(f"/organizations/{organization_id}/policy-sets", attributes)
 
     def _list_projects(self, organization_id):
         attributes = ["name"]
@@ -182,9 +171,7 @@ class Exporter:
             "provider",
             "status",
         ]
-        return self._get_items(
-            f"/organizations/{organization_id}/registry-modules", attributes
-        )
+        return self._get_items(f"/organizations/{organization_id}/registry-modules", attributes)
 
     def _list_registry_providers(self, organization_id):
         attributes = [
@@ -192,9 +179,7 @@ class Exporter:
             "namespace",
             "registry-name",
         ]
-        return self._get_items(
-            f"/organizations/{organization_id}/registry-modules", attributes
-        )
+        return self._get_items(f"/organizations/{organization_id}/registry-modules", attributes)
 
     def _list_tasks(self, organization_id):
         attributes = [
@@ -247,9 +232,7 @@ class Exporter:
             "working-directory",
         ]
 
-        items = self._get_items(
-            f"/organizations/{organization_id}/workspaces", attributes
-        )
+        items = self._get_items(f"/organizations/{organization_id}/workspaces", attributes)
 
         if check:
             items = self._add_workspace_checks(items)
@@ -262,26 +245,14 @@ class Exporter:
         for entity_type, entity_list in sorted(entities.items()):
             title = entity_type.replace("_", " ").title()
             count = len(entity_list)
-            entities_with_issues = [
-                e for e in entity_list if "issues" in e and len(e["issues"]) > 0
-            ]
+            entities_with_issues = [e for e in entity_list if "issues" in e and len(e["issues"]) > 0]
             with_issues_count = len(entities_with_issues)
-            with_issues_message = (
-                f" (including {with_issues_count} with issues)"
-                if with_issues_count > 0
-                else ""
-            )
+            with_issues_message = f" (including {with_issues_count} with issues)" if with_issues_count > 0 else ""
 
             self._console.print(f"{title}: {count}{with_issues_message}")
 
             for entity in entities_with_issues:
                 entity_id = entity["properties"]["id"]
-                entity_name = (
-                    f" ({entity['properties' ]['name']})"
-                    if "name" in entity["properties"]
-                    else ""
-                )
+                entity_name = f" ({entity['properties' ]['name']})" if "name" in entity["properties"] else ""
                 issues = ", ".join(entity["issues"])
-                self._console.print(
-                    f"  - {entity_id}{entity_name}: {issues}", style="warning"
-                )
+                self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
