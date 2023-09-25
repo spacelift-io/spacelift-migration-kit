@@ -1,0 +1,36 @@
+{
+  "name": "Spacelift Migration Kit",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
+  },
+  "mounts": [
+    "source=spacemk-command-history,target=/command-history,type=volume"
+  ],
+  "postStartCommand": "pip install --editable .",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "editorconfig.editorconfig",
+        "esbenp.prettier-vscode",
+        "ms-python.black-formatter",
+        "ms-python.python",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "black-formatter.args": ["--line-length", "120"],
+        "editor.rulers": [120],
+        "[jsonc]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true
+        }
+      }
+    }
+  }
+}

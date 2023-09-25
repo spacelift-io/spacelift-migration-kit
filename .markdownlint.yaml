@@ -1,0 +1,18 @@
+# Enable all rules
+default: true
+
+# Configure some rules
+MD003: # Heading style
+  style: atx
+MD004: # Unordered list style
+  style: dash
+MD007: # Unordered list indentation
+  indent: 4
+MD013: # Line length
+  line_length: 120
+MD029: # Ordered list item prefix
+  style: ordered
+MD049: # Emphasis style should be consistent
+  style: underscore
+MD050: # Strong style should be consistent
+  style: asterisk

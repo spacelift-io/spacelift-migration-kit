@@ -62,7 +62,7 @@ class Exporter:
             response = requests.get(url, headers=headers).json()
 
             for item in response["data"]:
-                data.append(item)
+                data.append(item)  # noqa: PERF402 - https://github.com/astral-sh/ruff/issues/5580
 
             if "links" not in response or response["links"]["next"] is None:
                 break
