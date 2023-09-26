@@ -20,3 +20,6 @@ select = [
   "SLF",  # flake8-self
 ]
 show-fixes = true
+unfixable = [
+  "ERA001" # commented-out-code
+]

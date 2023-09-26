@@ -256,3 +256,43 @@ class Exporter:
                 entity_name = f" ({entity['properties' ]['name']})" if "name" in entity["properties"] else ""
                 issues = ", ".join(entity["issues"])
                 self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
+
+    def _extract_data(self, audit=False) -> dict:
+        """Retrieve data from the source vendor
+
+        Args:
+            audit (bool): Extract only the data required for the audit
+
+        Returns:
+            dict: The extracted data
+        """
+        self._console.print(f"{self.__class__.__name__}._extract_data()")
+        self._console.print(audit)
+
+    def _transform_data(self, raw_data: dict) -> dict:
+        """Map the data extracted from the source vendor to Spacelift entities
+
+        Args:
+            raw_data (dict): Data extracted from the source vendor
+
+        Returns:
+            dict: Spacelift entities data
+        """
+        self._console.print(f"{self.__class__.__name__}._transform_data()")
+        self._console.print(raw_data)
+
+    def _save_to_file(self, data: dict):
+        """Save the Spacelift entities data to a JSON file
+
+        Args:
+            data (dict): Spacelift entities data
+        """
+        self._console.print(f"{self.__class__.__name__}._save_to_file()")
+        self._console.print(data)
+
+    def export(self):
+        """Export data from the source vendor to Spacelift entities data and store that in a JSON file"""
+        self._console.print(f"{self.__class__.__name__}.export()")
+        raw_data = self._extract_data()
+        data = self._transform_data(raw_data)
+        self._save_to_file(data)
