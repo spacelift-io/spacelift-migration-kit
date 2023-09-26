@@ -1,7 +1,10 @@
+import json
 from collections import defaultdict
+from pathlib import Path
 
 import requests
 from flatten_dict import flatten
+from slugify import slugify
 
 
 class Exporter:
@@ -14,7 +17,7 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if item["properties"]["agent-count"] == 0:
+            if item["attributes"]["agent-count"] == 0:
                 issues.append("No agents")
 
             items[key]["issues"] = issues
@@ -25,7 +28,7 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if item["properties"]["kind"] == "sentinel":
+            if item["attributes"]["kind"] == "sentinel":
                 issues.append("Sentinel policy")
 
             items[key]["issues"] = issues
@@ -36,7 +39,7 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if item["properties"]["resource-count"] == 0:
+            if item["attributes"]["resource-count"] == 0:
                 issues.append("No resources")
 
             items[key]["issues"] = issues
@@ -78,12 +81,12 @@ class Exporter:
         for datum in data:
             flat_datum = flatten(datum, reducer="dot")
             item = {}
+            if "id" in flat_datum:
+                item["id"] = flat_datum["id"]
             for attribute in attributes:
                 if f"attributes.{attribute}" in flat_datum:
                     item[attribute] = flat_datum[f"attributes.{attribute}"]
-            if "id" in flat_datum:
-                item["id"] = flat_datum["id"]
-            items.append({"properties": item})
+            items.append({"attributes": item})
 
         return items
 
@@ -237,8 +240,8 @@ class Exporter:
             self._console.print(f"{title}: {count}{with_issues_message}")
 
             for entity in entities_with_issues:
-                entity_id = entity["properties"]["id"]
-                entity_name = f" ({entity['properties' ]['name']})" if "name" in entity["properties"] else ""
+                entity_id = entity["attributes"]["id"]
+                entity_name = f" ({entity['attributes' ]['name']})" if "name" in entity["attributes"] else ""
                 issues = ", ".join(entity["issues"])
                 self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
 
@@ -251,8 +254,6 @@ class Exporter:
         Returns:
             dict: The extracted data
         """
-        self._console.print(f"{self.__class__.__name__}._extract_data()")
-
         # Make non-existent keys an empty list to simplify the implementation
         data = defaultdict(list)
 
@@ -260,7 +261,7 @@ class Exporter:
         data["organizations"] = organizations
 
         for organization in organizations:
-            organization_id = organization["properties"]["id"]
+            organization_id = organization["attributes"]["id"]
 
             data["agent_pools"].extend(self._list_agent_pools(organization_id))
             data["policies"].extend(self._list_policies(organization_id))
@@ -276,12 +277,15 @@ class Exporter:
             data["workspaces"].extend(workspaces)
 
             for workspace in workspaces:
-                workspace_id = workspace["properties"]["id"]
+                workspace_id = workspace["attributes"]["id"]
                 data["variables"].extend(
                     self._list_variables(workspace_id, include_sensitive_attributes=include_sensitive_attributes)
                 )
 
         return data
+
+    def _generate_id_from_name(self, name: str) -> str:
+        return slugify(name)
 
     def _transform_data(self, raw_data: dict) -> dict:
         """Map the data extracted from the source vendor to Spacelift entities
@@ -295,14 +299,37 @@ class Exporter:
         self._console.print(f"{self.__class__.__name__}._transform_data()")
         self._console.print(raw_data)
 
+        data = {"stacks": []}
+
+        for workspace in raw_data["workspaces"]:
+            attributes = workspace["attributes"]
+            data["stacks"].append(
+                {
+                    "autodeploy": attributes["auto-apply"],
+                    "branch": attributes["vcs-repo.branch"],
+                    "description": attributes["description"],
+                    "id": self._generate_id_from_name(attributes["name"]),
+                    "name": attributes["name"],
+                    "project_root": attributes["working-directory"],
+                    "repository": attributes["vcs-repo.repository-http-url"],
+                    "terraform_version": attributes["terraform-version"],
+                }
+            )
+
+        return data
+
     def _save_to_file(self, data: dict):
         """Save the Spacelift entities data to a JSON file
 
         Args:
             data (dict): Spacelift entities data
         """
-        self._console.print(f"{self.__class__.__name__}._save_to_file()")
-        self._console.print(data)
+        folder = Path(f"{__file__}/../../../tmp").resolve()
+        if not Path.exists(folder):
+            Path.mkdir(folder, parents=True)
+
+        with Path(f"{folder}/data.json").open("w") as fp:
+            json.dump(data, fp, indent=2, sort_keys=True)
 
     def export(self):
         """Export data from the source vendor to Spacelift entities data and store that in a JSON file"""
