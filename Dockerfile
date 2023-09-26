@@ -13,5 +13,5 @@ RUN SNIPPET="export PROMPT_COMMAND='history -a' && export HISTFILE=/command-hist
   && echo "$SNIPPET" >> "/home/vscode/.bashrc"
 
 # Install dependencies
-COPY requirements.txt .
-RUN pip install --requirement requirements.txt
+COPY requirements.txt /home/vscode
+RUN pip install --no-cache-dir --requirement /home/vscode/requirements.txt
