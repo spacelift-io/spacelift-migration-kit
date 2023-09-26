@@ -296,9 +296,6 @@ class Exporter:
         Returns:
             dict: Spacelift entities data
         """
-        self._console.print(f"{self.__class__.__name__}._transform_data()")
-        self._console.print(raw_data)
-
         data = {"stacks": []}
 
         for workspace in raw_data["workspaces"]:
@@ -333,7 +330,6 @@ class Exporter:
 
     def export(self):
         """Export data from the source vendor to Spacelift entities data and store that in a JSON file"""
-        self._console.print(f"{self.__class__.__name__}.export()")
         data = self._extract_data(include_sensitive_attributes=True)
         data = self._transform_data(data)
         self._save_to_file(data)

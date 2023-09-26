@@ -1,0 +1,19 @@
+terraform {
+  required_providers {
+    spacelift = {
+      source  = "spacelift-io/spacelift"
+      version = "~> 1.0"
+    }
+  }
+}
+
+{% for stack in stacks %}
+resource "spacelift_stack" "{{ stack.id|replace("-", "_") }}" {
+  autodeploy        = "{{ stack.autodeploy }}"
+  branch            = "{{ stack.branch }}"
+  name              = "{{ stack.name }}"
+  project_root      = "{{ stack.project_root }}"
+  repository        = "{{ stack.repository }}"
+  terraform_version = "{{ stack.terraform_version }}"
+}
+{% endfor %}
