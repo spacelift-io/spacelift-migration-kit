@@ -8,13 +8,7 @@ class Exporter:
     def __init__(self, console, api_token, api_endpoint="https://app.terraform.io"):
         self._api_endpoint = api_endpoint
         self._api_token = api_token
-
         self._console = console
-
-        if api_endpoint == "https://app.terraform.io":
-            self.edition = "tfc"
-        else:
-            self.edition = "tfe"
 
     def _add_agent_pool_checks(self, items):
         for key, item in enumerate(items):
@@ -64,10 +58,10 @@ class Exporter:
             for item in response["data"]:
                 data.append(item)  # noqa: PERF402 - https://github.com/astral-sh/ruff/issues/5580
 
-            if "links" not in response or response["links"]["next"] is None:
-                break
-            else:
+            if "links" in response and response["links"]["next"]:
                 url = response["links"]["next"]
+            else:
+                break
 
         return data
 
@@ -82,13 +76,13 @@ class Exporter:
         items = []
 
         for datum in data:
-            datum = flatten(datum, reducer="dot")
+            flat_datum = flatten(datum, reducer="dot")
             item = {}
             for attribute in attributes:
-                if f"attributes.{attribute}" in datum:
-                    item[attribute] = datum[f"attributes.{attribute}"]
-            if "id" in datum:
-                item["id"] = datum["id"]
+                if f"attributes.{attribute}" in flat_datum:
+                    item[attribute] = flat_datum[f"attributes.{attribute}"]
+            if "id" in flat_datum:
+                item["id"] = flat_datum["id"]
             items.append({"properties": item})
 
         return items
@@ -101,34 +95,6 @@ class Exporter:
         ]
 
         return self._get_items(f"/organizations/{organization_id}/agent-pools", attributes)
-
-    def _list_entities(self, check=True):
-        entities = defaultdict(list)
-
-        organizations = self._list_organizations()
-        entities["organizations"] = organizations
-
-        for organization in organizations:
-            organization_id = organization["properties"]["id"]
-
-            entities["agent_pools"].extend(self._list_agent_pools(organization_id, check=check))
-            entities["policies"].extend(self._list_policies(organization_id, check=check))
-            entities["policy_sets"].extend(self._list_policy_sets(organization_id))
-            entities["projects"].extend(self._list_projects(organization_id))
-            entities["registry_modules"].extend(self._list_registry_modules(organization_id))
-            entities["registry_providers"].extend(self._list_registry_providers(organization_id))
-            entities["tasks"].extend(self._list_tasks(organization_id))
-            entities["teams"].extend(self._list_teams(organization_id))
-            entities["variable_sets"].extend(self._list_variable_sets(organization_id))
-
-            workspaces = self._list_workspaces(organization_id, check=check)
-            entities["workspaces"].extend(workspaces)
-
-            for workspace in workspaces:
-                workspace_id = workspace["properties"]["id"]
-                entities["variables"].extend(self._list_variables(workspace_id))
-
-        return entities
 
     def _list_organizations(self):
         attributes = []
@@ -260,7 +226,7 @@ class Exporter:
         data = self._extract_data(include_sensitive_attributes=False)
 
         for entity_type, entity_list in sorted(data.items()):
-            entity_list = self._check_items(entity_type, entity_list)
+            entity_list = self._check_items(entity_type, entity_list)  # noqa: PLW2901
 
             title = entity_type.replace("_", " ").title()
             count = len(entity_list)
