@@ -10,11 +10,11 @@ from spacemk.state_uploader import StateUploader
 @click.command(help="Migrate from the source vendor to Spacelift.")
 @click.pass_context
 def migrate(ctx):
-    # Export
+    # Export data from the source vendor
     exporter = load_exporter(config=ctx.obj["config"].get("exporter", {}), console=ctx.obj["console"])
     exporter.export()
 
-    # Generate
+    # Generate the source code to manage Spacelift entities
     generator = Generator(config=ctx.obj["config"].get("generator", {}), console=ctx.obj["console"])
     generator.generate()
 
@@ -26,6 +26,6 @@ def migrate(ctx):
     importer = Importer(config=ctx.obj["config"].get("importer", {}), console=ctx.obj["console"])
     importer.create()
 
-    # Upload Terraform state files
+    # Upload Terraform state files to the state backend
     state_uploader = StateUploader(config=ctx.obj["config"].get("state_uploader", {}), console=ctx.obj["console"])
     state_uploader.upload_state_files()

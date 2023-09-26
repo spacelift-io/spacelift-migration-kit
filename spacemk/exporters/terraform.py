@@ -71,9 +71,12 @@ class Exporter:
 
         return data
 
-    def _get_items(self, api_path, attributes=None):
-        if attributes is None:
-            attributes = []
+    def _get_items(self, api_path, attributes, sensitive_attributes=None, include_sensitive_attributes=False):
+        if sensitive_attributes is None:
+            sensitive_attributes = []
+
+        if include_sensitive_attributes is True:
+            attributes = attributes + sensitive_attributes
 
         data = self._call_api(api_path)
         items = []
@@ -90,19 +93,14 @@ class Exporter:
 
         return items
 
-    def _list_agent_pools(self, organization_id, check=False):
+    def _list_agent_pools(self, organization_id):
         attributes = [
             "agent-count",
             "name",
             "organization-scoped",
         ]
 
-        items = self._get_items(f"/organizations/{organization_id}/agent-pools", attributes)
-
-        if check:
-            items = self._add_agent_pool_checks(items)
-
-        return items
+        return self._get_items(f"/organizations/{organization_id}/agent-pools", attributes)
 
     def _list_entities(self, check=True):
         entities = defaultdict(list)
@@ -133,9 +131,11 @@ class Exporter:
         return entities
 
     def _list_organizations(self):
-        return self._get_items("/organizations")
+        attributes = []
 
-    def _list_policies(self, organization_id, check=False):
+        return self._get_items("/organizations", attributes)
+
+    def _list_policies(self, organization_id):
         attributes = [
             "description",
             "enforcement-level",
@@ -143,12 +143,7 @@ class Exporter:
             "name",
         ]
 
-        items = self._get_items(f"/organizations/{organization_id}/policies", attributes)
-
-        if check:
-            items = self._add_policy_checks(items)
-
-        return items
+        return self._get_items(f"/organizations/{organization_id}/policies", attributes)
 
     def _list_policy_sets(self, organization_id):
         attributes = [
@@ -158,10 +153,12 @@ class Exporter:
             "kind",
             "name",
         ]
+
         return self._get_items(f"/organizations/{organization_id}/policy-sets", attributes)
 
     def _list_projects(self, organization_id):
         attributes = ["name"]
+
         return self._get_items(f"/organizations/{organization_id}/projects", attributes)
 
     def _list_registry_modules(self, organization_id):
@@ -171,6 +168,7 @@ class Exporter:
             "provider",
             "status",
         ]
+
         return self._get_items(f"/organizations/{organization_id}/registry-modules", attributes)
 
     def _list_registry_providers(self, organization_id):
@@ -179,6 +177,7 @@ class Exporter:
             "namespace",
             "registry-name",
         ]
+
         return self._get_items(f"/organizations/{organization_id}/registry-modules", attributes)
 
     def _list_tasks(self, organization_id):
@@ -189,6 +188,7 @@ class Exporter:
             "name",
             "url",
         ]
+
         return self._get_items(f"/organizations/{organization_id}/tasks", attributes)
 
     def _list_teams(self, organization_id):
@@ -196,6 +196,7 @@ class Exporter:
             "name",
             "users-count",
         ]
+
         return self._get_items(f"/organizations/{organization_id}/teams", attributes)
 
     def _list_variable_sets(self, organization_id):
@@ -207,9 +208,10 @@ class Exporter:
             "var-count",
             "workspace-count",
         ]
+
         return self._get_items(f"/organizations/{organization_id}/varsets", attributes)
 
-    def _list_variables(self, workspace_id):
+    def _list_variables(self, workspace_id, include_sensitive_attributes=False):
         attributes = [
             "category",
             "description",
@@ -218,9 +220,19 @@ class Exporter:
             "name",
             "sensitive",
         ]
-        return self._get_items(f"/workspaces/{workspace_id}/vars", attributes)
 
-    def _list_workspaces(self, organization_id, check=False):
+        sensitive_attributes = [
+            "value",
+        ]
+
+        return self._get_items(
+            f"/workspaces/{workspace_id}/vars",
+            attributes=attributes,
+            sensitive_attributes=sensitive_attributes,
+            include_sensitive_attributes=include_sensitive_attributes,
+        )
+
+    def _list_workspaces(self, organization_id):
         attributes = [
             "auto-apply",
             "description",
@@ -232,17 +244,24 @@ class Exporter:
             "working-directory",
         ]
 
-        items = self._get_items(f"/organizations/{organization_id}/workspaces", attributes)
+        return self._get_items(f"/organizations/{organization_id}/workspaces", attributes)
 
-        if check:
+    def _check_items(self, item_type: str, items: dict) -> dict:
+        if item_type == "agent_pools":
+            items = self._add_agent_pool_checks(items)
+        elif item_type == "policies":
+            items = self._add_policy_checks(items)
+        elif item_type == "workspaces":
             items = self._add_workspace_checks(items)
 
         return items
 
     def audit(self):
-        entities = self._list_entities(check=True)
+        data = self._extract_data(include_sensitive_attributes=False)
 
-        for entity_type, entity_list in sorted(entities.items()):
+        for entity_type, entity_list in sorted(data.items()):
+            entity_list = self._check_items(entity_type, entity_list)
+
             title = entity_type.replace("_", " ").title()
             count = len(entity_list)
             entities_with_issues = [e for e in entity_list if "issues" in e and len(e["issues"]) > 0]
@@ -257,17 +276,46 @@ class Exporter:
                 issues = ", ".join(entity["issues"])
                 self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
 
-    def _extract_data(self, audit=False) -> dict:
+    def _extract_data(self, include_sensitive_attributes=False) -> dict:
         """Retrieve data from the source vendor
 
         Args:
-            audit (bool): Extract only the data required for the audit
+            include_sensitive_attributes (bool): Include sensitive data when exporting
 
         Returns:
             dict: The extracted data
         """
         self._console.print(f"{self.__class__.__name__}._extract_data()")
-        self._console.print(audit)
+
+        # Make non-existent keys an empty list to simplify the implementation
+        data = defaultdict(list)
+
+        organizations = self._list_organizations()
+        data["organizations"] = organizations
+
+        for organization in organizations:
+            organization_id = organization["properties"]["id"]
+
+            data["agent_pools"].extend(self._list_agent_pools(organization_id))
+            data["policies"].extend(self._list_policies(organization_id))
+            data["policy_sets"].extend(self._list_policy_sets(organization_id))
+            data["projects"].extend(self._list_projects(organization_id))
+            data["registry_modules"].extend(self._list_registry_modules(organization_id))
+            data["registry_providers"].extend(self._list_registry_providers(organization_id))
+            data["tasks"].extend(self._list_tasks(organization_id))
+            data["teams"].extend(self._list_teams(organization_id))
+            data["variable_sets"].extend(self._list_variable_sets(organization_id))
+
+            workspaces = self._list_workspaces(organization_id)
+            data["workspaces"].extend(workspaces)
+
+            for workspace in workspaces:
+                workspace_id = workspace["properties"]["id"]
+                data["variables"].extend(
+                    self._list_variables(workspace_id, include_sensitive_attributes=include_sensitive_attributes)
+                )
+
+        return data
 
     def _transform_data(self, raw_data: dict) -> dict:
         """Map the data extracted from the source vendor to Spacelift entities
@@ -293,6 +341,6 @@ class Exporter:
     def export(self):
         """Export data from the source vendor to Spacelift entities data and store that in a JSON file"""
         self._console.print(f"{self.__class__.__name__}.export()")
-        raw_data = self._extract_data()
-        data = self._transform_data(raw_data)
+        data = self._extract_data(include_sensitive_attributes=True)
+        data = self._transform_data(data)
         self._save_to_file(data)
