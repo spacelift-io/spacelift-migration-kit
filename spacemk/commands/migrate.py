@@ -1,10 +1,10 @@
 import click
-from state_uploader import StateUploader
 
 from spacemk.code_publisher import CodePublisher
 from spacemk.exporters import load_exporter
 from spacemk.generator import Generator
 from spacemk.importer import Importer
+from spacemk.state_uploader import StateUploader
 
 
 @click.command(help="Migrate from the source vendor to Spacelift.")
