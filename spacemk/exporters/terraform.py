@@ -121,7 +121,6 @@ class Exporter:
             "global",
             "kind",
             "name",
-            "plop",  # TEMP
         ]
 
         return self._get_items(f"/organizations/{organization_id}/policy-sets", attributes)
