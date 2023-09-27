@@ -17,7 +17,7 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if item["attributes"]["agent-count"] == 0:
+            if "agent-count" in item["attributes"] and item["attributes"]["agent-count"] == 0:
                 issues.append("No agents")
 
             items[key]["issues"] = issues
@@ -28,7 +28,7 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if item["attributes"]["kind"] == "sentinel":
+            if "kind" in item["attributes"] and item["attributes"]["kind"] == "sentinel":
                 issues.append("Sentinel policy")
 
             items[key]["issues"] = issues
@@ -39,7 +39,7 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if item["attributes"]["resource-count"] == 0:
+            if "resource-count" in item["attributes"] and item["attributes"]["resource-count"] == 0:
                 issues.append("No resources")
 
             items[key]["issues"] = issues
@@ -121,6 +121,7 @@ class Exporter:
             "global",
             "kind",
             "name",
+            "plop",  # TEMP
         ]
 
         return self._get_items(f"/organizations/{organization_id}/policy-sets", attributes)
