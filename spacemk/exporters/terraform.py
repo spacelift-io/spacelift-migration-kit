@@ -28,7 +28,11 @@ class Exporter:
         for key, item in enumerate(items):
             issues = []
 
-            if "kind" in item["attributes"] and item["attributes"]["kind"] == "sentinel":
+            if "kind" in item["attributes"]:
+                if item["attributes"]["kind"] == "sentinel":
+                    issues.append("Sentinel policy")
+            else:
+                # Older Terraform Enterprise versions only supported Sentinel policies
                 issues.append("Sentinel policy")
 
             items[key]["issues"] = issues
