@@ -17,12 +17,12 @@ from . import commands
 def cli(ctx, config):
     ctx.ensure_object(dict)
 
-    ctx.obj["config"] = EnvYAML(config, strict=False)
+    ctx.obj["config"] = EnvYAML(config, flatten=False, strict=True)
 
     custom_theme = Theme(
         {
             "error": "bold red",
-            "filename": "blue",
+            "path": "blue",
             "warning": "yellow",
         }
     )
