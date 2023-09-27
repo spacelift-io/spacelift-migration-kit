@@ -1,5 +1,6 @@
 *.egg-info
-.ruff_cache
 __pycache__
+/.env
+/.ruff_cache
 /config.yml
 /tmp

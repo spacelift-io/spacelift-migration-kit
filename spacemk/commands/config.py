@@ -8,6 +8,5 @@ def config(ctx):
 
     console.print("This command has not been implemented yet.")
     console.print(
-        "For the time being, copy the [filename]config.yml.example[/filename] file to [filename]config.yml[/filename]"
-        " and edit it."
+        "For the time being, copy the [path]config.yml.example[/path] file to [path]config.yml[/path]" " and edit it."
     )

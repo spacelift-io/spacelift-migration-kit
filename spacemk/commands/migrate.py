@@ -1,10 +1,10 @@
 import click
+from state_uploader import StateUploader
 
 from spacemk.code_publisher import CodePublisher
 from spacemk.exporters import load_exporter
 from spacemk.generator import Generator
 from spacemk.importer import Importer
-from spacemk.state_uploader import StateUploader
 
 
 @click.command(help="Migrate from the source vendor to Spacelift.")
@@ -23,7 +23,7 @@ def migrate(ctx):
     code_publisher.publish()
 
     # Create the Spacelift manager stack and trigger a run to create the entities
-    importer = Importer(config=ctx.obj["config"].get("importer", {}), console=ctx.obj["console"])
+    importer = Importer(config=ctx.obj["config"]["importer"], console=ctx.obj["console"])
     importer.create()
 
     # Upload Terraform state files to the state backend
