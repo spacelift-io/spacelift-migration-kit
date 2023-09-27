@@ -3,7 +3,7 @@
 exporter:
   name:
   settings:
-    # Specific to the Terraform exporter
+    # Specific to the Terraform exporter (exporter.name: terraform)
     api_endpoint: https://app.terraform.io
     api_token:
 
