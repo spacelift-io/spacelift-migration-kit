@@ -3,7 +3,7 @@ from envyaml import EnvYAML
 from rich.console import Console
 from rich.theme import Theme
 
-from . import commands
+from spacemk import commands
 
 
 @click.group(help="Helper to move from various tools to Spacelift.")
