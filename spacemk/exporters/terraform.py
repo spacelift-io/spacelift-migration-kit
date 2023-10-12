@@ -1,3 +1,4 @@
+# ruff: noqa: TRY002, TRY003
 import json
 from collections import defaultdict
 from pathlib import Path
@@ -59,14 +60,24 @@ class Exporter:
         url = f"{self._api_endpoint}/api/v2{api_path}"
 
         while True:
-            # TODO: Handle errors
-            response = requests.get(url, headers=headers).json()
+            try:
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                raise Exception(f"HTTP Error: {e}") from e
+            except requests.exceptions.ReadTimeout as e:
+                raise Exception(f"Timeout for {url}") from e
+            except requests.exceptions.ConnectionError as e:
+                raise Exception(f"Connection error for {url}") from e
+            except requests.exceptions.RequestException as e:
+                raise Exception(f"Error for {url}") from e
 
-            for item in response["data"]:
+            payload = response.json()
+            for item in payload["data"]:
                 data.append(item)  # noqa: PERF402 - https://github.com/astral-sh/ruff/issues/5580
 
-            if "links" in response and response["links"]["next"]:
-                url = response["links"]["next"]
+            if "links" in payload and payload["links"]["next"]:
+                url = payload["links"]["next"]
             else:
                 break
 

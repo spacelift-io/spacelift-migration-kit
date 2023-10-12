@@ -1,3 +1,5 @@
+import sys
+
 import click
 from envyaml import EnvYAML
 from rich.console import Console
@@ -14,25 +16,35 @@ from spacemk import commands
     type=click.Path(),
 )
 @click.pass_context
-def cli(ctx, config):
+def spacemk(ctx, config):
     ctx.ensure_object(dict)
 
     ctx.obj["config"] = EnvYAML(config, flatten=False, strict=True)
 
-    custom_theme = Theme(
-        {
-            "error": "bold red",
-            "path": "blue",
-            "warning": "yellow",
-        }
-    )
-    ctx.obj["console"] = Console(theme=custom_theme)
+    ctx.obj["console"] = console
 
 
-cli.add_command(commands.audit)
-cli.add_command(commands.clean)
-cli.add_command(commands.config)
-cli.add_command(commands.migrate)
+custom_theme = Theme(
+    {
+        "error": "bold red",
+        "path": "blue",
+        "warning": "yellow",
+    }
+)
+console = Console(theme=custom_theme)
+
+spacemk.add_command(commands.audit)
+spacemk.add_command(commands.clean)
+spacemk.add_command(commands.config)
+spacemk.add_command(commands.migrate)
+
+
+def cli():
+    try:
+        spacemk()
+    except Exception as e:
+        console.print(f"[error]{e}[/error]")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
