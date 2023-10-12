@@ -14,6 +14,9 @@ def vcr_config():
 @pytest.mark.vcr()
 def test_tfe_organization():
     config = {"name": "terraform", "settings": {"api_token": os.getenv("TF_API_TOKEN")}}
+    if os.getenv("TF_API_ENDPOINT"):
+        config["api_endpoint"] = os.getenv("TF_API_ENDPOINT")
+
     console = Console()
     exporter = load_exporter(config, console)
     organizations = exporter._list_organizations()  # noqa: SLF001
