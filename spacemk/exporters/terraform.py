@@ -109,7 +109,10 @@ class Exporter:
                 item["id"] = flat_datum["id"]
             for attribute in attributes:
                 if f"attributes.{attribute}" in flat_datum:
-                    item[attribute] = flat_datum[f"attributes.{attribute}"]
+                    # Older TFE versions might not have all the attributes. We still want the attribute to exist
+                    # to avoid downstream errors or unnecessary checking so we use None as the default value.
+                    item[attribute] = flat_datum.get(f"attributes.{attribute}", None)
+
             items.append({"attributes": item})
 
         return items
