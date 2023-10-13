@@ -1,6 +1,7 @@
 # ruff: noqa: TRY002, TRY003
 import json
 from collections import defaultdict
+from http import HTTPStatus
 from pathlib import Path
 
 import requests
@@ -64,6 +65,11 @@ class Exporter:
                 response = requests.get(url, headers=headers)
                 response.raise_for_status()
             except requests.exceptions.HTTPError as e:
+                # Return None for non-existent API endpoints as we are most likely interacting with an older TFE version
+                if e.response.status_code == HTTPStatus.NOT_FOUND:
+                    self._console.print("[warning]Warning: Non-existent API endpoint. Ignoring.[/warning]")
+                    return None
+
                 raise Exception(f"HTTP Error: {e}") from e
             except requests.exceptions.ReadTimeout as e:
                 raise Exception(f"Timeout for {url}") from e
@@ -91,8 +97,11 @@ class Exporter:
             attributes = attributes + sensitive_attributes
 
         data = self._call_api(api_path)
-        items = []
+        # Some non-critical problem occurred and no data could be retrieved
+        if data is None:
+            return []
 
+        items = []
         for datum in data:
             flat_datum = flatten(datum, reducer="dot")
             item = {}
