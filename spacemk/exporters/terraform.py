@@ -67,7 +67,7 @@ class Exporter:
             except requests.exceptions.HTTPError as e:
                 # Return None for non-existent API endpoints as we are most likely interacting with an older TFE version
                 if e.response.status_code == HTTPStatus.NOT_FOUND:
-                    self._console.print("[warning]Warning: Non-existent API endpoint. Ignoring.[/warning]")
+                    self._console.print(f"[warning]Warning: Non-existent API endpoint ({url}). Ignoring.[/warning]")
                     return None
 
                 raise Exception(f"HTTP Error: {e}") from e
