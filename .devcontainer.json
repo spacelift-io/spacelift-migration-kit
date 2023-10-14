@@ -4,6 +4,7 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
+    "ghcr.io/dhoeric/features/hadolint:1": {},
     "ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
   },
   "mounts": [
