@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -21,7 +21,7 @@ repos:
       - id: ruff
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.5
+    rev: v2.2.6
     hooks:
       - id: codespell
 
@@ -36,7 +36,7 @@ repos:
       - id: check-json5
 
   - repo: https://github.com/jendrikseipp/vulture
-    rev: v2.9.1
+    rev: v2.10
     hooks:
       - id: vulture
 
