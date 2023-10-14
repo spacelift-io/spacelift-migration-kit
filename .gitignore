@@ -1,5 +1,6 @@
 *.egg-info
 __pycache__
+cassettes
 /.coverage
 /.env
 /.pytest_cache

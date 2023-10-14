@@ -1,7 +1,31 @@
 # ruff: noqa: SLF001
-import pytest
+import os
 
-from spacemk.exporters import terraform
+import pytest
+from rich.console import Console
+
+from spacemk.exporters import load_exporter, terraform
+
+
+@pytest.fixture(scope="module")
+def console():
+    return Console()
+
+
+@pytest.fixture(scope="module")
+def terraform_exporter(console, terraform_exporter_config):
+    return load_exporter(terraform_exporter_config, console)
+
+
+@pytest.fixture(scope="module")
+def terraform_exporter_config():
+    return {
+        "name": "terraform",
+        "settings": {
+            "api_endpoint": os.getenv("TF_API_ENDPOINT", "https://app.terraform.io"),
+            "api_token": os.getenv("TF_API_TOKEN", "example_token"),
+        },
+    }
 
 
 @pytest.mark.vcr()
