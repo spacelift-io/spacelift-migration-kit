@@ -174,7 +174,7 @@ class Exporter:
             "registry-name",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/registry-modules", attributes)
+        return self._get_items(f"/organizations/{organization_id}/registry-providers", attributes)
 
     def _list_tasks(self, organization_id):
         attributes = [
