@@ -1,7 +1,10 @@
+
+.coverage
+.terraform/
 *.egg-info
 __pycache__
 cassettes
-/.coverage
+terraform.tfstate*
 /.env
 /.pytest_cache
 /.ruff_cache
