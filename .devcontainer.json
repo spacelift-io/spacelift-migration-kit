@@ -4,8 +4,12 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "ghcr.io/dhoeric/features/hadolint:1": {},
-    "ghcr.io/devcontainers-contrib/features/pre-commit:2": {}
+    "ghcr.io/devcontainers-contrib/features/checkov:1": {},
+    "ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "installTFsec": true
+    },
+    "ghcr.io/dhoeric/features/hadolint:1": {}
   },
   "mounts": [
     "source=spacemk-command-history,target=/command-history,type=volume", // Persists Bash history
@@ -17,6 +21,7 @@
       "extensions": [
         "editorconfig.editorconfig",
         "esbenp.prettier-vscode",
+        "hashicorp.terraform",
         "ms-python.black-formatter",
         "ms-python.python",
         "tamasfe.even-better-toml"
@@ -30,6 +35,10 @@
         },
         "[python]": {
           "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true
+        },
+        "[terraform]": {
+          "editor.defaultFormatter": "hashicorp.terraform",
           "editor.formatOnSave": true
         }
       }
