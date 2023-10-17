@@ -50,6 +50,9 @@ class Exporter:
             if "resource-count" in item["attributes"] and item["attributes"]["resource-count"] == 0:
                 issues.append("No resources")
 
+            if "vcs-repo" not in item["attributes"]:
+                issues.append("No VCS configuration")
+
             items[key]["issues"] = issues
 
         return items
