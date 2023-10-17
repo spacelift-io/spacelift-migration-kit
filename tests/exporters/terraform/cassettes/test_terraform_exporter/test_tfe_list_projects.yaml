@@ -1,0 +1,200 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-1/projects
+  response:
+    body:
+      string: '{"data":[{"id":"prj-rozqHQ3H6ocSq5n8","type":"projects","attributes":{"name":"Default
+        Project","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-1"}}},"links":{"self":"/api/v2/projects/prj-rozqHQ3H6ocSq5n8"}},{"id":"prj-XGjmPS8av1UcZQJW","type":"projects","attributes":{"name":"smk-project-1","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-1"}}},"links":{"self":"/api/v2/projects/prj-XGjmPS8av1UcZQJW"}},{"id":"prj-WA5Td2VL3XH5gci4","type":"projects","attributes":{"name":"smk-project-2","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-1"}}},"links":{"self":"/api/v2/projects/prj-WA5Td2VL3XH5gci4"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-1/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-1/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-1/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"status-counts":{"total":3,"matching":3},"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":3}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2097'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:01:10 GMT
+      Etag:
+      - W/"7f0251bc88784f8ab6ba96b8623f1b73"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.0'
+      X-Request-Id:
+      - 8a710b19-1e66-ebdd-7153-1a45657d151c
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-2/projects
+  response:
+    body:
+      string: '{"data":[{"id":"prj-hXfMJWJEYPxNsReK","type":"projects","attributes":{"name":"Default
+        Project","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-2"}}},"links":{"self":"/api/v2/projects/prj-hXfMJWJEYPxNsReK"}},{"id":"prj-2vxpeHRrEtc5GCv7","type":"projects","attributes":{"name":"smk-project-1","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-2"}}},"links":{"self":"/api/v2/projects/prj-2vxpeHRrEtc5GCv7"}},{"id":"prj-mWeTY7hxHpVW8A3Q","type":"projects","attributes":{"name":"smk-project-2","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-2"}}},"links":{"self":"/api/v2/projects/prj-mWeTY7hxHpVW8A3Q"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-2/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-2/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-2/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"status-counts":{"total":3,"matching":3},"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":3}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2097'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:01:10 GMT
+      Etag:
+      - W/"d3e929befcaa9b8b63a3d9bdc7f8fae3"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.691'
+      X-Request-Id:
+      - e2671fac-dc59-5c6d-a866-075e95a9e5ab
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-3/projects
+  response:
+    body:
+      string: '{"data":[{"id":"prj-e8BuBU9cJmN7NXrd","type":"projects","attributes":{"name":"Default
+        Project","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-3"}}},"links":{"self":"/api/v2/projects/prj-e8BuBU9cJmN7NXrd"}},{"id":"prj-tcuC4oAKRvenvKTi","type":"projects","attributes":{"name":"smk-project-1","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-3"}}},"links":{"self":"/api/v2/projects/prj-tcuC4oAKRvenvKTi"}},{"id":"prj-fbMz4begnQNSxt3g","type":"projects","attributes":{"name":"smk-project-2","permissions":{"can-read":true,"can-update":true,"can-destroy":true,"can-create-workspace":true,"can-move-workspace":true,"can-deploy-no-code-modules":true,"can-read-teams":false,"can-manage-teams":false}},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"},"links":{"related":"/api/v2/organizations/smk-organization-3"}}},"links":{"self":"/api/v2/projects/prj-fbMz4begnQNSxt3g"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-3/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-3/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-3/projects?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"status-counts":{"total":3,"matching":3},"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":3}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2097'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:01:10 GMT
+      Etag:
+      - W/"80ff32cd9e117f89d2b75382b692cc00"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '28'
+      X-Ratelimit-Reset:
+      - '0.281'
+      X-Request-Id:
+      - 3acd8c66-0a6c-0a2b-17e2-fb8ec173c82f
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1
