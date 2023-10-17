@@ -1,0 +1,197 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-1/agent-pools
+  response:
+    body:
+      string: '{"data":[{"id":"apool-a8XNACnrwmJmUbe2","type":"agent-pools","attributes":{"name":"smk-agent-pool-1","created-at":"2023-10-15T16:56:21.045Z","agent-count":0,"organization-scoped":true},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"}},"agents":{"links":{"related":"/api/v2/agent-pools/apool-a8XNACnrwmJmUbe2/agents"}},"authentication-tokens":{"links":{"related":"/api/v2/agent-pools/apool-a8XNACnrwmJmUbe2/authentication-tokens"}},"oauth-clients":{"data":[],"links":{"related":"/api/v2/organizations/smk-organization-1/oauth-clients?filter[agent_pool]=apool-a8XNACnrwmJmUbe2"}},"workspaces":{"data":[]},"allowed-workspaces":{"data":[]}},"links":{"self":"/api/v2/agent-pools/apool-a8XNACnrwmJmUbe2"}},{"id":"apool-a6gpQytVd8TaMq2K","type":"agent-pools","attributes":{"name":"smk-agent-pool-2","created-at":"2023-10-15T16:56:21.689Z","agent-count":0,"organization-scoped":false},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"}},"agents":{"links":{"related":"/api/v2/agent-pools/apool-a6gpQytVd8TaMq2K/agents"}},"authentication-tokens":{"links":{"related":"/api/v2/agent-pools/apool-a6gpQytVd8TaMq2K/authentication-tokens"}},"oauth-clients":{"data":[],"links":{"related":"/api/v2/organizations/smk-organization-1/oauth-clients?filter[agent_pool]=apool-a6gpQytVd8TaMq2K"}},"workspaces":{"data":[]},"allowed-workspaces":{"data":[]}},"links":{"self":"/api/v2/agent-pools/apool-a6gpQytVd8TaMq2K"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-1/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-1/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-1/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"status-counts":{"total":2,"matching":2},"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":2}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2059'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Sun, 15 Oct 2023 22:41:06 GMT
+      Etag:
+      - W/"547ff62629d0c5a1845731c17fcae089"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.719'
+      X-Request-Id:
+      - 58d325eb-d322-e654-3daa-17396cf1ec89
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-2/agent-pools
+  response:
+    body:
+      string: '{"data":[{"id":"apool-LX8hAquAAXNSgTwJ","type":"agent-pools","attributes":{"name":"smk-agent-pool-1","created-at":"2023-10-15T16:56:19.563Z","agent-count":0,"organization-scoped":true},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"}},"agents":{"links":{"related":"/api/v2/agent-pools/apool-LX8hAquAAXNSgTwJ/agents"}},"authentication-tokens":{"links":{"related":"/api/v2/agent-pools/apool-LX8hAquAAXNSgTwJ/authentication-tokens"}},"oauth-clients":{"data":[],"links":{"related":"/api/v2/organizations/smk-organization-2/oauth-clients?filter[agent_pool]=apool-LX8hAquAAXNSgTwJ"}},"workspaces":{"data":[]},"allowed-workspaces":{"data":[]}},"links":{"self":"/api/v2/agent-pools/apool-LX8hAquAAXNSgTwJ"}},{"id":"apool-XaRdZvZmCfWJBZur","type":"agent-pools","attributes":{"name":"smk-agent-pool-2","created-at":"2023-10-15T16:56:19.053Z","agent-count":0,"organization-scoped":false},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"}},"agents":{"links":{"related":"/api/v2/agent-pools/apool-XaRdZvZmCfWJBZur/agents"}},"authentication-tokens":{"links":{"related":"/api/v2/agent-pools/apool-XaRdZvZmCfWJBZur/authentication-tokens"}},"oauth-clients":{"data":[],"links":{"related":"/api/v2/organizations/smk-organization-2/oauth-clients?filter[agent_pool]=apool-XaRdZvZmCfWJBZur"}},"workspaces":{"data":[]},"allowed-workspaces":{"data":[]}},"links":{"self":"/api/v2/agent-pools/apool-XaRdZvZmCfWJBZur"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-2/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-2/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-2/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"status-counts":{"total":2,"matching":2},"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":2}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2059'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Sun, 15 Oct 2023 22:41:06 GMT
+      Etag:
+      - W/"8e0825d783f481afa28735ba7b4a2c49"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '28'
+      X-Ratelimit-Reset:
+      - '0.405'
+      X-Request-Id:
+      - fb0643ab-dc59-5c6d-a866-075e95a9e5ab
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-3/agent-pools
+  response:
+    body:
+      string: '{"data":[{"id":"apool-afdpuzpyuXwB48gQ","type":"agent-pools","attributes":{"name":"smk-agent-pool-1","created-at":"2023-10-15T16:56:19.887Z","agent-count":0,"organization-scoped":true},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"}},"agents":{"links":{"related":"/api/v2/agent-pools/apool-afdpuzpyuXwB48gQ/agents"}},"authentication-tokens":{"links":{"related":"/api/v2/agent-pools/apool-afdpuzpyuXwB48gQ/authentication-tokens"}},"oauth-clients":{"data":[],"links":{"related":"/api/v2/organizations/smk-organization-3/oauth-clients?filter[agent_pool]=apool-afdpuzpyuXwB48gQ"}},"workspaces":{"data":[]},"allowed-workspaces":{"data":[]}},"links":{"self":"/api/v2/agent-pools/apool-afdpuzpyuXwB48gQ"}},{"id":"apool-GHUthx9vqjywRX7C","type":"agent-pools","attributes":{"name":"smk-agent-pool-2","created-at":"2023-10-15T16:56:20.061Z","agent-count":0,"organization-scoped":false},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"}},"agents":{"links":{"related":"/api/v2/agent-pools/apool-GHUthx9vqjywRX7C/agents"}},"authentication-tokens":{"links":{"related":"/api/v2/agent-pools/apool-GHUthx9vqjywRX7C/authentication-tokens"}},"oauth-clients":{"data":[],"links":{"related":"/api/v2/organizations/smk-organization-3/oauth-clients?filter[agent_pool]=apool-GHUthx9vqjywRX7C"}},"workspaces":{"data":[]},"allowed-workspaces":{"data":[]}},"links":{"self":"/api/v2/agent-pools/apool-GHUthx9vqjywRX7C"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-3/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-3/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-3/agent-pools?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"status-counts":{"total":2,"matching":2},"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":2}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2059'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Sun, 15 Oct 2023 22:41:06 GMT
+      Etag:
+      - W/"7c23ca14b16632e0a028b61ab77709dc"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '27'
+      X-Ratelimit-Reset:
+      - '0.093'
+      X-Request-Id:
+      - 09052f18-1e66-ebdd-7153-1a45657d151c
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

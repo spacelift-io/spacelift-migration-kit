@@ -1,0 +1,203 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-1/policies
+  response:
+    body:
+      string: '{"data":[{"id":"pol-2EAtkaeuurV4TSNG","type":"policies","attributes":{"name":"smk-opa-policy-1","description":"SMK
+        OPA policy #1","enforce":[{"path":"smk-opa-policy-1.rego","mode":"advisory"}],"policy-set-count":1,"updated-at":"2023-10-15T16:56:21.895Z","kind":"opa","query":"data.example.rule","enforcement-level":"advisory"},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"}},"policy-sets":{"data":[{"id":"polset-FyjB3zYm7EXFNpQH","type":"policy-sets"}]}},"links":{"self":"/api/v2/policies/pol-2EAtkaeuurV4TSNG","upload":"/api/v2/policies/pol-2EAtkaeuurV4TSNG/upload","download":"/api/v2/policies/pol-2EAtkaeuurV4TSNG/download"}},{"id":"pol-WCXyQvXmgdroXQmS","type":"policies","attributes":{"name":"smk-opa-policy-2","description":"SMK
+        OPA policy #2","enforce":[{"path":"smk-opa-policy-2.rego","mode":"mandatory"}],"policy-set-count":1,"updated-at":"2023-10-15T16:56:21.578Z","kind":"opa","query":"data.example.rule","enforcement-level":"mandatory"},"relationships":{"organization":{"data":{"id":"smk-organization-1","type":"organizations"}},"policy-sets":{"data":[{"id":"polset-FyjB3zYm7EXFNpQH","type":"policy-sets"}]}},"links":{"self":"/api/v2/policies/pol-WCXyQvXmgdroXQmS","upload":"/api/v2/policies/pol-WCXyQvXmgdroXQmS/upload","download":"/api/v2/policies/pol-WCXyQvXmgdroXQmS/download"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-1/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-1/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-1/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":2}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1872'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Mon, 16 Oct 2023 23:47:07 GMT
+      Etag:
+      - W/"c43ade23baabff7b201aed6d1648f2d0"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.166'
+      X-Request-Id:
+      - 289a1dac-dc59-5c6d-a866-075e95a9e5ab
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-2/policies
+  response:
+    body:
+      string: '{"data":[{"id":"pol-VrwYbgj3kYUU12Yd","type":"policies","attributes":{"name":"smk-sentinel-policy-1","description":"SMK
+        Sentinel policy #1","enforce":[{"path":"smk-sentinel-policy-1.sentinel","mode":"advisory"}],"policy-set-count":1,"updated-at":"2023-10-15T16:56:19.339Z","kind":"sentinel","enforcement-level":"advisory"},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"}},"policy-sets":{"data":[{"id":"polset-WWTUxoQEEXykj8FY","type":"policy-sets"}]}},"links":{"self":"/api/v2/policies/pol-VrwYbgj3kYUU12Yd","upload":"/api/v2/policies/pol-VrwYbgj3kYUU12Yd/upload","download":"/api/v2/policies/pol-VrwYbgj3kYUU12Yd/download"}},{"id":"pol-CYSq72Sc8BDo35UP","type":"policies","attributes":{"name":"smk-sentinel-policy-2","description":"SMK
+        Sentinel policy #2","enforce":[{"path":"smk-sentinel-policy-2.sentinel","mode":"hard-mandatory"}],"policy-set-count":1,"updated-at":"2023-10-15T16:56:19.533Z","kind":"sentinel","enforcement-level":"hard-mandatory"},"relationships":{"organization":{"data":{"id":"smk-organization-2","type":"organizations"}},"policy-sets":{"data":[{"id":"polset-WWTUxoQEEXykj8FY","type":"policy-sets"}]}},"links":{"self":"/api/v2/policies/pol-CYSq72Sc8BDo35UP","upload":"/api/v2/policies/pol-CYSq72Sc8BDo35UP/upload","download":"/api/v2/policies/pol-CYSq72Sc8BDo35UP/download"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-2/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-2/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-2/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":2}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1874'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Mon, 16 Oct 2023 23:47:08 GMT
+      Etag:
+      - W/"8ff3f0c8fe27e136182f0e278ffc4cbf"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '28'
+      X-Ratelimit-Reset:
+      - '0.0'
+      X-Request-Id:
+      - 3a094d9d-4b58-cfc6-0ece-f57881fb3dfa
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/organizations/smk-organization-3/policies
+  response:
+    body:
+      string: '{"data":[{"id":"pol-5jWy6yMYGbwH3SXQ","type":"policies","attributes":{"name":"smk-sentinel-policy-1","description":"SMK
+        Sentinel policy #1","enforce":[{"path":"smk-sentinel-policy-1.sentinel","mode":"advisory"}],"policy-set-count":1,"updated-at":"2023-10-15T16:56:20.863Z","kind":"sentinel","enforcement-level":"advisory"},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"}},"policy-sets":{"data":[{"id":"polset-r56aKK3wGLrceQfh","type":"policy-sets"}]}},"links":{"self":"/api/v2/policies/pol-5jWy6yMYGbwH3SXQ","upload":"/api/v2/policies/pol-5jWy6yMYGbwH3SXQ/upload","download":"/api/v2/policies/pol-5jWy6yMYGbwH3SXQ/download"}},{"id":"pol-Q1TMoCaqCV8iU6jY","type":"policies","attributes":{"name":"smk-sentinel-policy-2","description":"SMK
+        Sentinel policy #2","enforce":[{"path":"smk-sentinel-policy-2.sentinel","mode":"soft-mandatory"}],"policy-set-count":1,"updated-at":"2023-10-15T16:56:21.124Z","kind":"sentinel","enforcement-level":"soft-mandatory"},"relationships":{"organization":{"data":{"id":"smk-organization-3","type":"organizations"}},"policy-sets":{"data":[{"id":"polset-r56aKK3wGLrceQfh","type":"policy-sets"}]}},"links":{"self":"/api/v2/policies/pol-Q1TMoCaqCV8iU6jY","upload":"/api/v2/policies/pol-Q1TMoCaqCV8iU6jY/upload","download":"/api/v2/policies/pol-Q1TMoCaqCV8iU6jY/download"}}],"links":{"self":"https://app.terraform.io/api/v2/organizations/smk-organization-3/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","first":"https://app.terraform.io/api/v2/organizations/smk-organization-3/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20","prev":null,"next":null,"last":"https://app.terraform.io/api/v2/organizations/smk-organization-3/policies?page%5Bnumber%5D=1\u0026page%5Bsize%5D=20"},"meta":{"pagination":{"current-page":1,"page-size":20,"prev-page":null,"next-page":null,"total-pages":1,"total-count":2}}}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1874'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Mon, 16 Oct 2023 23:47:08 GMT
+      Etag:
+      - W/"e97b5c30446163260b8ad83a3fefe40f"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.641'
+      X-Request-Id:
+      - 25e6b878-7a19-34ad-78a4-6a2988530bb9
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1
