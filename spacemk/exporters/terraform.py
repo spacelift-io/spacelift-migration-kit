@@ -1,5 +1,6 @@
 # ruff: noqa: TRY002, TRY003
 import json
+import re
 from collections import defaultdict
 from http import HTTPStatus
 from pathlib import Path
@@ -10,10 +11,11 @@ from slugify import slugify
 
 
 class Exporter:
-    def __init__(self, console, api_token, api_endpoint="https://app.terraform.io"):
+    def __init__(self, console, api_token, api_endpoint="https://app.terraform.io", include=None):
         self._api_endpoint = api_endpoint
         self._api_token = api_token
         self._console = console
+        self._include_patterns = include if include is not None else []
 
     def _add_agent_pool_checks(self, items):
         for key, item in enumerate(items):
@@ -89,7 +91,20 @@ class Exporter:
 
         return data
 
-    def _get_items(self, api_path, attributes, sensitive_attributes=None, include_sensitive_attributes=False):
+    def _get_include_pattern(self, entity_type):
+        if entity_type in self._include_patterns:
+            return self._include_patterns[entity_type]
+
+        return ".*"
+
+    def _get_items(
+        self,
+        api_path,
+        attributes,
+        sensitive_attributes=None,
+        include_sensitive_attributes=False,
+        include_pattern=".*",
+    ):
         if sensitive_attributes is None:
             sensitive_attributes = []
 
@@ -101,9 +116,15 @@ class Exporter:
         if data is None:
             return []
 
+        include_regex = re.compile(include_pattern)
+
         items = []
         for datum in data:
             flat_datum = flatten(datum, reducer="dot")
+
+            if "attributes.name" in flat_datum and include_regex.match(flat_datum["attributes.name"]) is None:
+                continue
+
             item = {}
             if "id" in flat_datum:
                 item["id"] = flat_datum["id"]
@@ -124,12 +145,16 @@ class Exporter:
             "organization-scoped",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/agent-pools", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/agent-pools",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("pool_agents"),
+        )
 
     def _list_organizations(self):
-        attributes = []
-
-        return self._get_items("/organizations", attributes)
+        return self._get_items(
+            api_path="/organizations", attributes=[], include_pattern=self._get_include_pattern("organizations")
+        )
 
     def _list_policies(self, organization_id):
         attributes = [
@@ -139,7 +164,11 @@ class Exporter:
             "name",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/policies", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/policies",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("policies"),
+        )
 
     def _list_policy_sets(self, organization_id):
         attributes = [
@@ -150,12 +179,20 @@ class Exporter:
             "name",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/policy-sets", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/policy-sets",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("policy_sets"),
+        )
 
     def _list_projects(self, organization_id):
         attributes = ["name"]
 
-        return self._get_items(f"/organizations/{organization_id}/projects", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/projects",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("projects"),
+        )
 
     def _list_registry_modules(self, organization_id):
         attributes = [
@@ -165,7 +202,11 @@ class Exporter:
             "status",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/registry-modules", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/registry-modules",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("modules"),
+        )
 
     def _list_registry_providers(self, organization_id):
         attributes = [
@@ -174,7 +215,11 @@ class Exporter:
             "registry-name",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/registry-providers", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/registry-providers",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("providers"),
+        )
 
     def _list_tasks(self, organization_id):
         attributes = [
@@ -185,7 +230,11 @@ class Exporter:
             "url",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/tasks", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/tasks",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("tasks"),
+        )
 
     def _list_teams(self, organization_id):
         attributes = [
@@ -193,7 +242,11 @@ class Exporter:
             "users-count",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/teams", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/teams",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("teams"),
+        )
 
     def _list_variable_sets(self, organization_id):
         attributes = [
@@ -205,7 +258,11 @@ class Exporter:
             "workspace-count",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/varsets", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/varsets",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("variable_sets"),
+        )
 
     def _list_variables(self, workspace_id, include_sensitive_attributes=False):
         attributes = [
@@ -222,10 +279,11 @@ class Exporter:
         ]
 
         return self._get_items(
-            f"/workspaces/{workspace_id}/vars",
+            api_path=f"/workspaces/{workspace_id}/vars",
             attributes=attributes,
             sensitive_attributes=sensitive_attributes,
             include_sensitive_attributes=include_sensitive_attributes,
+            include_pattern=self._get_include_pattern("variables"),
         )
 
     def _list_workspaces(self, organization_id):
@@ -240,7 +298,11 @@ class Exporter:
             "working-directory",
         ]
 
-        return self._get_items(f"/organizations/{organization_id}/workspaces", attributes)
+        return self._get_items(
+            api_path=f"/organizations/{organization_id}/workspaces",
+            attributes=attributes,
+            include_pattern=self._get_include_pattern("workspaces"),
+        )
 
     def _check_items(self, item_type: str, items: dict) -> dict:
         if item_type == "agent_pools":
