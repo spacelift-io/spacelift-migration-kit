@@ -6,6 +6,8 @@ exporter:
     # Specific to the Terraform exporter (exporter.name: terraform)
     api_endpoint: https://app.terraform.io
     api_token:
+    include:
+      workspaces: ^example-.*$
 
 importer:
   manager_stack:
