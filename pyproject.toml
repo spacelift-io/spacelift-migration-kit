@@ -3,7 +3,7 @@ line-length = 120
 target-version = ["py311"]
 
 [tool.pytest.ini_options]
-addopts = "--block-network --cov=spacemk --durations=10 --durations-min=1.0 --record-mode=once --strict-markers"
+addopts = "--block-network --cov=spacemk --durations=10 --durations-min=1.0 --record-mode=none --strict-markers"
 
 [tool.ruff]
 fix = true

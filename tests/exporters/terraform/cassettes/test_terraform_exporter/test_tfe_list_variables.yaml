@@ -1,0 +1,658 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/workspaces/ws-AhqVk8CoCrtAf1qk/vars
+  response:
+    body:
+      string: '{"data":[]}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '11'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:22:35 GMT
+      Etag:
+      - W/"8fe32e407a1038ee38753b70e5374b3a"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.26'
+      X-Request-Id:
+      - 434c22ac-dc59-5c6d-a866-075e95a9e5ab
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/workspaces/ws-kJpdEf9zNHR4PCqa/vars
+  response:
+    body:
+      string: '{"data":[{"id":"var-mbYASAkqaPtaLJko","type":"vars","attributes":{"key":"sensitive_hcl_env_var","value":null,"sensitive":true,"category":"env","hcl":true,"created-at":"2023-10-15T16:56:23.705Z","description":"HCL
+        environment variable","version-id":"36d857d4bf3667addd9799eb9e9e234709b719e0a562773ab2dfe7b74f0bcf2b"},"relationships":{"configurable":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}},"workspace":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}}},"links":{"self":"/api/v2/workspaces/ws-kJpdEf9zNHR4PCqa/vars/var-mbYASAkqaPtaLJko"}},{"id":"var-wW4gDMeGMNrbF2nx","type":"vars","attributes":{"key":"env_var","value":"foo","sensitive":false,"category":"env","hcl":false,"created-at":"2023-10-15T16:56:23.762Z","description":"Simple
+        environment variable","version-id":"79a5e5b1026ccc1f2aa83703f83c2168707afb4148c814b2900ee9062ea445aa"},"relationships":{"configurable":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}},"workspace":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}},"overwritten":{"data":[{"id":"var-QkSdZHAiy9h11Ezq","type":"vars"}]}},"links":{"self":"/api/v2/workspaces/ws-kJpdEf9zNHR4PCqa/vars/var-wW4gDMeGMNrbF2nx"}},{"id":"var-QmF9LKYPApGkvQGV","type":"vars","attributes":{"key":"sensitive_env_var","value":null,"sensitive":true,"category":"env","hcl":false,"created-at":"2023-10-15T16:56:23.889Z","description":"Sensitive
+        environment variable","version-id":"63798d6f8d30e00b9518d7c7c77fe737f6edb03d54fcb7ae5a8285b87e2df7d0"},"relationships":{"configurable":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}},"workspace":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}}},"links":{"self":"/api/v2/workspaces/ws-kJpdEf9zNHR4PCqa/vars/var-QmF9LKYPApGkvQGV"}},{"id":"var-Xa3vonHeCjqZ1rGP","type":"vars","attributes":{"key":"hcl_env_var","value":"[1,
+        2, 3, 4]","sensitive":false,"category":"env","hcl":true,"created-at":"2023-10-15T16:56:23.904Z","description":"HCL
+        environment variable","version-id":"00db88138cabb1603236fead42c9666508b147d500679ffa84e5a6c88615579e"},"relationships":{"configurable":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}},"workspace":{"data":{"id":"ws-kJpdEf9zNHR4PCqa","type":"workspaces"},"links":{"related":"/api/v2/organizations/smk-organization-1/workspaces/smk-workspace-1"}}},"links":{"self":"/api/v2/workspaces/ws-kJpdEf9zNHR4PCqa/vars/var-Xa3vonHeCjqZ1rGP"}}]}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3007'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:22:36 GMT
+      Etag:
+      - W/"b2300609a5faebb35f1cd07013a44204"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '28'
+      X-Ratelimit-Reset:
+      - '0.0'
+      X-Request-Id:
+      - ee5e5cf8-00f2-5171-6406-08652a72c1ee
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/workspaces/ws-Fwk2uepV1GCRjZ1u/vars
+  response:
+    body:
+      string: '{"data":[]}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '11'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:22:36 GMT
+      Etag:
+      - W/"8fe32e407a1038ee38753b70e5374b3a"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.615'
+      X-Request-Id:
+      - 6bb48f66-0a6c-0a2b-17e2-fb8ec173c82f
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/workspaces/ws-PriJg5gR27pd7GpA/vars
+  response:
+    body:
+      string: '{
+  "data": [
+    {
+      "id": "var-jra6LYtidTJ7TYaM",
+      "type": "vars",
+      "attributes": {
+        "key": "sensitive_hcl_env_var",
+        "value": null,
+        "sensitive": true,
+        "category": "env",
+        "hcl": true,
+        "created-at": "2023-10-15T16:56:23.100Z",
+        "description": "HCL environment variable",
+        "version-id": "be224e6550ce15c59f30286c1bb6c9c49bb15ba80e5a8e370cf7bdfb8b2e9544"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-PriJg5gR27pd7GpA/vars/var-jra6LYtidTJ7TYaM"
+      }
+    },
+
+    {
+      "id": "var-NjPvypbgkJmg3a6h",
+      "type": "vars",
+      "attributes": {
+        "key": "env_var",
+        "value": "foo",
+        "sensitive": false,
+        "category": "env",
+        "hcl": false,
+        "created-at": "2023-10-15T16:56:23.103Z",
+        "description": "Simple environment variable",
+        "version-id": "000c16cdfcc85041d26490abb743c44283b495cd161ab341fd20e8d94ce78a09"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        },
+        "overwritten": {
+          "data": [{ "id": "var-87EvaYdCS5HdFxvt", "type": "vars" }]
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-PriJg5gR27pd7GpA/vars/var-NjPvypbgkJmg3a6h"
+      }
+    },
+    {
+      "id": "var-YCWcVjuBLBC2YRDC",
+      "type": "vars",
+      "attributes": {
+        "key": "sensitive_env_var",
+        "value": null,
+        "sensitive": true,
+        "category": "env",
+        "hcl": false,
+        "created-at": "2023-10-15T16:56:23.147Z",
+        "description": "Sensitive environment variable",
+        "version-id": "19a2ffc2d8d9f80b1d8f2367b89c344d6974164d6a4bd7f7d7436567b55c48a4"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-PriJg5gR27pd7GpA/vars/var-YCWcVjuBLBC2YRDC"
+      }
+    },
+    {
+      "id": "var-wvHatiRsvYAi16N3",
+      "type": "vars",
+      "attributes": {
+        "key": "hcl_env_var",
+        "value": "[1, 2, 3, 4]",
+        "sensitive": false,
+        "category": "env",
+        "hcl": true,
+        "created-at": "2023-10-15T16:56:23.032Z",
+        "description": "HCL environment variable",
+        "version-id": "ff499ca9b9896a45fb2b912ba4d1f694039c1b613d1e0a7ceab7c24c78e1a29e"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-PriJg5gR27pd7GpA", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-2/workspaces/smk-workspace-1"
+          }
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-PriJg5gR27pd7GpA/vars/var-wvHatiRsvYAi16N3"
+      }
+    }
+  ]
+}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3007'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:22:36 GMT
+      Etag:
+      - W/"b6f5d109812571c5c24527fd5fdaf949"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '28'
+      X-Ratelimit-Reset:
+      - '0.251'
+      X-Request-Id:
+      - b8a33442-25a4-99f6-39e4-911742d650a7
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/workspaces/ws-dUtvk1dSMJR37Afp/vars
+  response:
+    body:
+      string: '{"data":[]}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '11'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:22:37 GMT
+      Etag:
+      - W/"8fe32e407a1038ee38753b70e5374b3a"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '27'
+      X-Ratelimit-Reset:
+      - '0.0'
+      X-Request-Id:
+      - b53f05ec-d322-e654-3daa-17396cf1ec89
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - '[REDACTED]'
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/vnd.api+json
+      User-Agent:
+      - python-requests/2.31.0
+    method: GET
+    uri: https://app.terraform.io/api/v2/workspaces/ws-ncC6dqgZ81QpBBGx/vars
+  response:
+    body:
+      string: '{
+  "data": [
+    {
+      "id": "var-JKy5HvZsRoQonWth",
+      "type": "vars",
+      "attributes": {
+        "key": "sensitive_hcl_env_var",
+        "value": null,
+        "sensitive": true,
+        "category": "env",
+        "hcl": true,
+        "created-at": "2023-10-15T16:56:23.241Z",
+        "description": "HCL environment variable",
+        "version-id": "24d84fce2934d99709f14568dd454b6dd4623a1055f659d1a7dc5c4dc9ae228f"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-ncC6dqgZ81QpBBGx/vars/var-JKy5HvZsRoQonWth"
+      }
+    },
+    {
+      "id": "var-skC6Mz888cuKiioa",
+      "type": "vars",
+      "attributes": {
+        "key": "env_var",
+        "value": "foo",
+        "sensitive": false,
+        "category": "env",
+        "hcl": false,
+        "created-at": "2023-10-15T16:56:23.582Z",
+        "description": "Simple environment variable",
+        "version-id": "369352c01bd9ef0887a9049b4a922990c856b6f7bd747b556e04e1f04c5888f7"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        },
+        "overwritten": {
+          "data": [{ "id": "var-yxdGLfP3EfWCF7x3", "type": "vars" }]
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-ncC6dqgZ81QpBBGx/vars/var-skC6Mz888cuKiioa"
+      }
+    },
+    {
+      "id": "var-ZyMkizto5Eg4FCcJ",
+      "type": "vars",
+      "attributes": {
+        "key": "sensitive_env_var",
+        "value": null,
+        "sensitive": true,
+        "category": "env",
+        "hcl": false,
+        "created-at": "2023-10-15T16:56:23.464Z",
+        "description": "Sensitive environment variable",
+        "version-id": "89b55dd0fa21c248bf3f6884b32581fe824815fbe38819bae5b8624e22460e2f"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-ncC6dqgZ81QpBBGx/vars/var-ZyMkizto5Eg4FCcJ"
+      }
+    },
+    {
+      "id": "var-w9pLUjqYBrwRHzvL",
+      "type": "vars",
+      "attributes": {
+        "key": "hcl_env_var",
+        "value": "[1, 2, 3, 4]",
+        "sensitive": false,
+        "category": "env",
+        "hcl": true,
+        "created-at": "2023-10-15T16:56:23.696Z",
+        "description": "HCL environment variable",
+        "version-id": "b8fc467e0e56f02c808165fc34e18d43db27d2dd08d2d0b9a67d93dcafa327e8"
+      },
+      "relationships": {
+        "configurable": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        },
+        "workspace": {
+          "data": { "id": "ws-ncC6dqgZ81QpBBGx", "type": "workspaces" },
+          "links": {
+            "related": "/api/v2/organizations/smk-organization-3/workspaces/smk-workspace-1"
+          }
+        }
+      },
+      "links": {
+        "self": "/api/v2/workspaces/ws-ncC6dqgZ81QpBBGx/vars/var-w9pLUjqYBrwRHzvL"
+      }
+    }
+  ]
+}'
+    headers:
+      Cache-Control:
+      - max-age=0, private, must-revalidate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '3007'
+      Content-Type:
+      - application/vnd.api+json; charset=utf-8
+      Date:
+      - Tue, 17 Oct 2023 00:22:37 GMT
+      Etag:
+      - W/"57a86db445c387f4bf6c4ad65837e259"
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Strict-Transport-Security:
+      - max-age=63072000; includeSubDomains; preload
+      Tfp-Api-Version:
+      - '2.6'
+      Tfp-Appname:
+      - Terraform Cloud
+      Vary:
+      - Accept-Encoding
+      - Accept, Origin
+      X-Content-Type-Options:
+      - nosniff
+      X-Download-Options:
+      - noopen
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Permitted-Cross-Domain-Policies:
+      - none
+      X-Ratelimit-Limit:
+      - '30'
+      X-Ratelimit-Remaining:
+      - '29'
+      X-Ratelimit-Reset:
+      - '0.543'
+      X-Request-Id:
+      - 80a9519d-4b58-cfc6-0ece-f57881fb3dfa
+      X-Xss-Protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

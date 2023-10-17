@@ -3,7 +3,6 @@
 .terraform/
 *.egg-info
 __pycache__
-cassettes
 terraform.tfstate*
 /.env
 /.pytest_cache
