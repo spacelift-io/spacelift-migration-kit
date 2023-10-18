@@ -42,6 +42,8 @@ spacemk.add_command(commands.migrate)
 def cli():
     try:
         spacemk()
+    except KeyError as e:
+        console.print(f"[error]Unknown key: {e}[/error]")
     except Exception as e:
         console.print(f"[error]{e}[/error]")
         sys.exit(1)
