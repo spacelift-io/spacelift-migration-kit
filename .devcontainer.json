@@ -15,7 +15,10 @@
     "source=spacemk-command-history,target=/command-history,type=volume", // Persists Bash history
     "source=spacemk-pre-commit-cache,target=/pre-commit-cache,type=volume" // Persist pre-commit cache
   ],
-  "postStartCommand": "pip install --editable .",
+  "onCreateCommand": {
+    "Install Dependencies": "pip install --no-cache-dir --requirement requirements.txt --upgrade",
+    "Install Spacelift Migration Kit": "pip install --editable ."
+  },
   "customizations": {
     "vscode": {
       "extensions": [
@@ -24,24 +27,10 @@
         "hashicorp.terraform",
         "ms-python.black-formatter",
         "ms-python.python",
+        "njpwerner.autodocstring",
+        "samuelcolvin.jinjahtml",
         "tamasfe.even-better-toml"
-      ],
-      "settings": {
-        "black-formatter.args": ["--line-length", "120"],
-        "editor.rulers": [120],
-        "[jsonc]": {
-          "editor.defaultFormatter": "esbenp.prettier-vscode",
-          "editor.formatOnSave": true
-        },
-        "[python]": {
-          "editor.defaultFormatter": "ms-python.black-formatter",
-          "editor.formatOnSave": true
-        },
-        "[terraform]": {
-          "editor.defaultFormatter": "hashicorp.terraform",
-          "editor.formatOnSave": true
-        }
-      }
+      ]
     }
   }
 }
