@@ -1,8 +1,11 @@
+import logging
 import sys
 
 import click
+from benedict import benedict
 from envyaml import EnvYAML
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.theme import Theme
 
 from spacemk import commands
@@ -15,12 +18,33 @@ from spacemk import commands
     help="Path to the configuration file.",
     type=click.Path(),
 )
+@click.option("-v", "--verbose", "verbosity", count=True, default=0, help="Level of verbosity for the output.")
 @click.pass_context
-def spacemk(ctx, config):
+def spacemk(ctx, config, verbosity):
+    debug_verbosity = 3
+    verbosity_to_level = [logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]
+
+    if verbosity > debug_verbosity:
+        verbosity = debug_verbosity
+
+    debug_enabled = verbosity == debug_verbosity
+
+    logging.basicConfig(
+        datefmt="[%X]",
+        format="%(message)s",
+        handlers=[
+            RichHandler(
+                omit_repeated_times=False,
+                rich_tracebacks=debug_enabled,
+                show_path=debug_enabled,
+                show_time=debug_enabled,
+            )
+        ],
+        level=verbosity_to_level[verbosity],
+    )
+
     ctx.ensure_object(dict)
-
-    ctx.obj["config"] = EnvYAML(config, flatten=False, strict=True)
-
+    ctx.obj["config"] = benedict(EnvYAML(config, flatten=False, include_environment=False))
     ctx.obj["console"] = console
 
 
@@ -43,9 +67,10 @@ def cli():
     try:
         spacemk()
     except KeyError as e:
-        console.print(f"[error]Unknown key: {e}[/error]")
+        logging.critical(f"[error]Unknown key: {e}[/error]")
+        sys.exit(1)
     except Exception as e:
-        console.print(f"[error]{e}[/error]")
+        logging.critical(e)
         sys.exit(1)
 
 
