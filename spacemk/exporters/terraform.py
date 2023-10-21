@@ -11,11 +11,9 @@ from slugify import slugify
 
 
 class Exporter:
-    def __init__(self, console, api_token, api_endpoint="https://app.terraform.io", include=None):
-        self._api_endpoint = api_endpoint
-        self._api_token = api_token
+    def __init__(self, config, console):
+        self._config = config
         self._console = console
-        self._include_patterns = include if include is not None else []
 
     def _add_agent_pool_checks(self, items):
         for key, item in enumerate(items):
@@ -59,11 +57,12 @@ class Exporter:
 
     def _call_api(self, api_path):
         headers = {
-            "Authorization": f"Bearer {self._api_token}",
+            "Authorization": f"Bearer {self._config.get('api_token')}",
             "Content-Type": "application/vnd.api+json",
         }
         data = []
-        url = f"{self._api_endpoint}/api/v2{api_path}"
+        api_endpoint = self._config.get("api_endpoint", "https://app.terraform.io")
+        url = f"{api_endpoint}/api/v2{api_path}"
 
         while True:
             try:
@@ -95,8 +94,8 @@ class Exporter:
         return data
 
     def _get_include_pattern(self, entity_type):
-        if entity_type in self._include_patterns:
-            return self._include_patterns[entity_type]
+        if entity_type in self._config.get("include"):
+            return self._config.get(f"include.{entity_type}")
 
         return ".*"
 
@@ -394,14 +393,14 @@ class Exporter:
             attributes = workspace["attributes"]
             data["stacks"].append(
                 {
-                    "autodeploy": attributes["auto-apply"],
-                    "branch": attributes["vcs-repo.branch"],
-                    "description": attributes["description"],
-                    "id": self._generate_id_from_name(attributes["name"]),
-                    "name": attributes["name"],
-                    "project_root": attributes["working-directory"],
-                    "repository": attributes["vcs-repo.repository-http-url"],
-                    "terraform_version": attributes["terraform-version"],
+                    "autodeploy": attributes.get("auto-apply"),
+                    "branch": attributes.get("vcs-repo.branch"),
+                    "description": attributes.get("description"),
+                    "id": self._generate_id_from_name(attributes.get("name")),
+                    "name": attributes.get("name"),
+                    "project_root": attributes.get("working-directory"),
+                    "repository": attributes.get("vcs-repo.repository-http-url"),
+                    "terraform_version": attributes.get("terraform-version"),
                 }
             )
 

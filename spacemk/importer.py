@@ -30,12 +30,12 @@ class Importer:
                       }"""
 
         variables = {
-            "apiKeyId": self._config["spacelift_api_key"]["id"],
-            "apiKeySecret": self._config["spacelift_api_key"]["secret"],
+            "apiKeyId": self._config.get("spacelift_api_key.id"),
+            "apiKeySecret": self._config.get("spacelift_api_key.secret"),
         }
 
         response = requests.post(
-            self._config["spacelift_api_key"]["endpoint"],
+            self._config.get("spacelift_api_key.endpoint"),
             json={"query": mutation, "variables": variables},
         )
 
@@ -61,24 +61,24 @@ class Importer:
                         }
                       }"""
 
-        vcs_user, vcs_repository = self._config["manager_stack"]["vcs"]["repository"].split("/")
+        vcs_user, vcs_repository = self._config.get("manager_stack.vcs.repository").split("/")
         variables = {
             "input": {
                 "administrative": True,
-                "branch": self._config["manager_stack"]["vcs"]["branch"],
-                "description": self._config["manager_stack"]["description"],
+                "branch": self._config.get("manager_stack.vcs.branch"),
+                "description": self._config.get("manager_stack.description"),
                 "githubActionDeploy": False,
-                "labels": self._config["manager_stack"]["labels"],
+                "labels": self._config.get("manager_stack.labels"),
                 "localPreviewEnabled": True,
-                "name": self._config["manager_stack"]["name"],
+                "name": self._config.get("manager_stack.name"),
                 "namespace": vcs_user,
-                "projectRoot": self._config["manager_stack"]["vcs"]["project_root"],
-                "provider": self._config["manager_stack"]["vcs"]["provider"].upper(),
+                "projectRoot": self._config.get("manager_stack.vcs.project_root"),
+                "provider": self._config.get("manager_stack.vcs.provider").upper(),
                 "repository": vcs_repository,
                 "space": "root",
                 "vendorConfig": {
                     "terraform": {
-                        "version": self._config["manager_stack"]["vendor"]["version"],
+                        "version": self._config.get("manager_stack.vendor.version"),
                         "workflowTool": "TERRAFORM_FOSS",
                         "useSmartSanitization": True,
                     }
