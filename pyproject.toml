@@ -7,6 +7,9 @@ addopts = "--block-network --cov=spacemk --durations=10 --durations-min=1.0 --re
 
 [tool.ruff]
 fix = true
+ignore = [
+  "TRY003", # raise-vanilla-args
+]
 line-length = 120
 select = [
   "A",    # flake8-builtins
