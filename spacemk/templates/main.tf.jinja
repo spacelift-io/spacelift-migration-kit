@@ -1,3 +1,11 @@
+{% macro argument(name, value, default=None, required=False, serialize=True) %}
+  {% if value is defined and (required or (not required and value != default)) %}
+  {{name}} = {% if serialize %}{{ value|totf }}{% else %}{{ value }}{% endif %}
+  {% elif required and value is not defined %}
+    {% raise "'" ~ name ~ "' argument is required but no value was provided" %}
+  {% endif %}
+{% endmacro %}
+
 terraform {
   required_providers {
     spacelift = {
@@ -7,13 +15,47 @@ terraform {
   }
 }
 
+{% for space in spaces %}
+resource "spacelift_space" "{{ space._migration_id }}" {
+  {{ argument("description", space.description) }}
+  {{ argument("name", space.name, required=True) }}
+  {{ argument("parent_space_id", "root", required=True) }}
+}
+
+{% endfor %}
+
 {% for stack in stacks %}
-resource "spacelift_stack" "{{ stack.id|replace("-", "_") }}" {
-  autodeploy        = "{{ stack.autodeploy }}"
-  branch            = "{{ stack.branch }}"
-  name              = "{{ stack.name }}"
-  project_root      = "{{ stack.project_root }}"
-  repository        = "{{ stack.repository }}"
-  terraform_version = "{{ stack.terraform_version }}"
+resource "spacelift_stack" "{{ stack._migration_id }}" {
+  {{ argument("auto_deploy", stack.auto_deploy, default=False) }}
+  {{ argument("branch", stack.vcs.branch, required=True) }}
+  {{ argument("description", stack.description) }}
+  {{ argument("local_preview", stack.local_preview) }}
+  {{ argument("labels", stack.labels) }}
+  {{ argument("manage_state", False) }}
+  {{ argument("name", stack.name, required=True) }}
+  {{ argument("project_root", stack.vcs.project_root) }}
+  {{ argument("repository", stack.vcs.repository, required=True) }}
+  {{ argument("terraform_version", stack.terraform.version, serialize=True) }}
+  {{ argument("space_id", "spacelift_space." ~ stack._relationships.space ~ ".id", serialize=False) }}
+
+  {% if stack.vcs.provider == "github_custom" %}
+  github_enterprise {
+    {{ argument("namespace", stack.vcs.namespace) }}
+  }
+  {% endif %}
+}
+
+{% endfor %}
+
+{% for variable in variables %}
+resource "spacelift_environment_variable" "{{ variable._migration_id }}" {
+  {{ argument("stack_id", "spacelift_stack." ~ variable._relationships.stack ~ ".id", serialize=False) }}
+  {{ argument("name", variable.name, required=True) }}
+  {% if variable.write_only %}
+    {{ argument("value", "null", serialize=False) }}
+  {% else %}
+    {{ argument("value", variable.value) }}
+  {% endif %}
+  {{ argument("write_only", variable.write_only) }}
 }
 {% endfor %}

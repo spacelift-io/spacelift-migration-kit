@@ -42,10 +42,3 @@ unfixable = [
 
 [tool.ruff.pylint]
 max-args = 6
-
-[tool.vulture]
-ignore_names = [
-  "_config", # KLUDGE: Remove once the remaining migrate sub-commands have been implemented
-  "Exporter"
-]
-paths = ["setup.py", "spacemk"]
