@@ -1,426 +1,585 @@
-# ruff: noqa: TRY002, TRY003
-import json
+# ruff: noqa: PERF401
+import logging
 import re
-from collections import defaultdict
 from http import HTTPStatus
-from pathlib import Path
 
 import requests
-from flatten_dict import flatten
+from benedict import benedict
+from rich.console import Console
 from slugify import slugify
 
+from .base import BaseExporter
 
-class Exporter:
-    def __init__(self, config, console):
-        self._config = config
-        self._console = console
 
-    def _add_agent_pool_checks(self, items):
-        for key, item in enumerate(items):
-            issues = []
+class TerraformExporter(BaseExporter):
+    def __init__(self, config: dict, console: Console):
+        super().__init__(config, console)
 
-            if "agent-count" in item["attributes"] and item["attributes"]["agent-count"] == 0:
-                issues.append("No agents")
+        self._property_mapping = {
+            "organizations": {
+                "attributes.email": "properties.email",
+                "attributes.name": "properties.name",
+                "id": "properties.id",
+            }
+        }
 
-            items[key]["issues"] = issues
+    def _call_api(self, url: str, method: str = "GET") -> dict:
+        logging.debug("Start calling API")
 
-        return items
-
-    def _add_policy_checks(self, items):
-        for key, item in enumerate(items):
-            issues = []
-
-            if "kind" in item["attributes"]:
-                if item["attributes"]["kind"] == "sentinel":
-                    issues.append("Sentinel policy")
-            else:
-                # Older Terraform Enterprise versions only supported Sentinel policies
-                issues.append("Sentinel policy")
-
-            items[key]["issues"] = issues
-
-        return items
-
-    def _add_workspace_checks(self, items):
-        for key, item in enumerate(items):
-            issues = []
-
-            if "resource-count" in item["attributes"] and item["attributes"]["resource-count"] == 0:
-                issues.append("No resources")
-
-            if "vcs-repo.repository-http-url" not in item["attributes"]:
-                issues.append("No VCS configuration")
-
-            items[key]["issues"] = issues
-
-        return items
-
-    def _call_api(self, api_path):
         headers = {
             "Authorization": f"Bearer {self._config.get('api_token')}",
             "Content-Type": "application/vnd.api+json",
         }
-        data = []
-        api_endpoint = self._config.get("api_endpoint", "https://app.terraform.io")
-        url = f"{api_endpoint}/api/v2{api_path}"
 
+        try:
+            response = requests.request(headers=headers, method=method, url=url)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            # Return None for non-existent API endpoints as we are most likely interacting with an older TFE version
+            if e.response.status_code == HTTPStatus.NOT_FOUND:
+                logging.warning(f"Non-existent API endpoint ({url}). Ignoring.")
+                return None
+
+            raise Exception(f"HTTP Error: {e}") from e  # noqa: TRY002
+        except requests.exceptions.ReadTimeout as e:
+            raise Exception(f"Timeout for {url}") from e  # noqa: TRY002
+        except requests.exceptions.ConnectionError as e:
+            raise Exception(f"Connection error for {url}") from e  # noqa: TRY002
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Error for {url}") from e  # noqa: TRY002
+
+        data = benedict(response.json())
+        logging.debug("Stop calling API")
+
+        return data
+
+    def _check_data(self, data: list[dict]) -> list[dict]:
+        logging.debug("Start checking data")
+
+        data["agent_pools"] = self._check_agent_pools_data(data.get("agent_pools"))
+        data["policies"] = self._check_policies_data(data.get("policies"))
+        data["workspaces"] = self._check_workspaces_data(data.get("workspaces"))
+
+        logging.debug("Stop checking data")
+
+        return data
+
+    def _check_agent_pools_data(self, data: list[dict]) -> list[dict]:
+        logging.debug("Start checking agent pools data")
+
+        for key, item in enumerate(data):
+            warnings = []
+
+            if item.get("attributes.agent-count") == 0:
+                warnings.append("No agents")
+
+            data[key]["warnings"] = ", ".join(warnings)
+
+        logging.debug("Stop checking agent pools data")
+
+        return data
+
+    def _check_policies_data(self, data: list[dict]) -> list[dict]:
+        logging.debug("Start checking policies data")
+
+        for key, item in enumerate(data):
+            warnings = []
+
+            # Older Terraform Enterprise versions only supported Sentinel policies
+            if not item.get("attributes.kind") or item.get("attributes.kind") == "sentinel":
+                warnings.append("Sentinel policy")
+
+            data[key]["warnings"] = ", ".join(warnings)
+
+        logging.debug("Stop checking policies data")
+
+        return data
+
+    def _check_workspaces_data(self, data: list[dict]) -> list[dict]:
+        logging.debug("Start checking workspaces data")
+
+        for key, item in enumerate(data):
+            warnings = []
+
+            if item.get("attributes.resource-count") == 0:
+                warnings.append("No resources")
+
+            if item.get("attributes.vcs-repo.service-provider") is None:
+                warnings.append("No VCS configuration")
+
+            data[key]["warnings"] = ", ".join(warnings)
+
+        logging.debug("Stop checking workspaces data")
+
+        return data
+
+    def _expand_relationships(self, data: dict) -> dict:
+        def find_entity(data: dict, type_: str, id_: str) -> dict:
+            # Pluralize the type
+            type_ = f"{type_}s"
+            for src_datum in data.get(type_):
+                # Clone to avoid modifying the original dict when removing the relationships
+                # on the expanded relationship
+                datum = src_datum.clone()
+
+                if datum.get("_source_id") == id_:
+                    del datum["_relationships"]
+
+                    return datum
+
+            return None
+
+        logging.debug("Start expanding relationships")
+
+        for entity_data in data.values():
+            for datum in entity_data:
+                relationships = {}
+                if datum.get("_relationships"):
+                    for type_, id_ in datum.get("_relationships").items():
+                        relationships[type_] = find_entity(data=data, id_=id_, type_=type_)
+
+                datum.update(
+                    {"_migration_id": self._generate_migration_id(datum.get("name")), "_relationships": relationships}
+                )
+
+        logging.debug("Stop expanding relationships")
+
+        return data
+
+    def _extract_data(self) -> list[dict]:
+        logging.debug("Start extracting data")
+        data = benedict(
+            {
+                "agent_pools": [],
+                "modules": [],
+                "organizations": self._extract_organization_data(),
+                "policies": [],
+                "policy_sets": [],
+                "projects": [],
+                "providers": [],
+                "tasks": [],
+                "teams": [],
+                "workspace_variables": [],
+                "workspaces": [],
+            }
+        )
+
+        for organization in data.organizations:
+            data["agent_pools"].extend(self._extract_agent_pools_data(organization))
+            data["modules"].extend(self._extract_modules_data(organization))
+            data["policies"].extend(self._extract_policies_data(organization))
+            data["policy_sets"].extend(self._extract_policy_sets_data(organization))
+            data["projects"].extend(self._extract_projects_data(organization))
+            data["providers"].extend(self._extract_providers_data(organization))
+            data["tasks"].extend(self._extract_tasks_data(organization))
+            data["teams"].extend(self._extract_teams_data(organization))
+            data["workspaces"].extend(self._extract_workspaces_data(organization))
+
+        for workspace in data.workspaces:
+            data["workspace_variables"].extend(self._extract_workspace_variables_data(workspace))
+
+        logging.debug("Stop extracting data")
+
+        return data
+
+    def _extract_data_from_api(
+        self, path: str, include_pattern: str | None = None, method: str = "GET", properties: list | None = None
+    ) -> list[dict]:
+        logging.debug("Start extracting data from API")
+
+        if include_pattern is None:
+            include_pattern = ".*"
+
+        endpoint = self._config.get("api_endpoint", "https://app.terraform.io")
+        url = f"{endpoint}/api/v2{path}"
+
+        raw_data = []
         while True:
-            try:
-                response = requests.get(url, headers=headers)
-                response.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                # Return None for non-existent API endpoints as we are most likely interacting with an older TFE version
-                if e.response.status_code == HTTPStatus.NOT_FOUND:
-                    self._console.print(f"[warning]Warning: Non-existent API endpoint ({url}). Ignoring.[/warning]")
-                    return None
+            response_payload = self._call_api(url, method=method)
+            raw_data.extend(response_payload["data"])
 
-                raise Exception(f"HTTP Error: {e}") from e
-            except requests.exceptions.ReadTimeout as e:
-                raise Exception(f"Timeout for {url}") from e
-            except requests.exceptions.ConnectionError as e:
-                raise Exception(f"Connection error for {url}") from e
-            except requests.exceptions.RequestException as e:
-                raise Exception(f"Error for {url}") from e
-
-            payload = response.json()
-            for item in payload["data"]:
-                data.append(item)  # noqa: PERF402 - https://github.com/astral-sh/ruff/issues/5580
-
-            if "links" in payload and payload["links"]["next"]:
-                url = payload["links"]["next"]
+            if response_payload.get("links.next"):
+                logging.debug("Pulling the next page from the API")
+                url = response_payload.get("links.next")
             else:
                 break
 
-        return data
-
-    def _get_include_pattern(self, entity_type):
-        if entity_type in self._config.get("include"):
-            return self._config.get(f"include.{entity_type}")
-
-        return ".*"
-
-    def _get_items(
-        self,
-        api_path,
-        attributes,
-        sensitive_attributes=None,
-        include_sensitive_attributes=False,
-        include_pattern=".*",
-    ):
-        if sensitive_attributes is None:
-            sensitive_attributes = []
-
-        if include_sensitive_attributes is True:
-            attributes = attributes + sensitive_attributes
-
-        data = self._call_api(api_path)
-        # Some non-critical problem occurred and no data could be retrieved
-        if data is None:
-            return []
-
         include_regex = re.compile(include_pattern)
 
-        items = []
-        for datum in data:
-            flat_datum = flatten(datum, reducer="dot")
-
-            if "attributes.name" in flat_datum and include_regex.match(flat_datum["attributes.name"]) is None:
+        data = []
+        for raw_datum in raw_data:
+            if raw_datum.get("attributes.name") and include_regex.match(raw_datum.get("attributes.name")) is None:
                 continue
 
-            item = {}
-            if "id" in flat_datum:
-                item["id"] = flat_datum["id"]
-            for attribute in attributes:
-                if f"attributes.{attribute}" in flat_datum:
-                    # Older TFE versions might not have all the attributes. We still want the attribute to exist
-                    # to avoid downstream errors or unnecessary checking so we use None as the default value.
-                    item[attribute] = flat_datum.get(f"attributes.{attribute}", None)
+            if properties:
+                # KLUDGE: There must be a cleaner way to handle this
+                datum = benedict()
+                for property_ in properties:
+                    datum[property_] = raw_datum.get(property_)
+                data.append(datum)
 
-            items.append({"attributes": item})
-
-        return items
-
-    def _list_agent_pools(self, organization_id):
-        attributes = [
-            "agent-count",
-            "name",
-            "organization-scoped",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/agent-pools",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("pool_agents"),
-        )
-
-    def _list_organizations(self):
-        return self._get_items(
-            api_path="/organizations", attributes=[], include_pattern=self._get_include_pattern("organizations")
-        )
-
-    def _list_policies(self, organization_id):
-        attributes = [
-            "description",
-            "enforcement-level",
-            "kind",
-            "name",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/policies",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("policies"),
-        )
-
-    def _list_policy_sets(self, organization_id):
-        attributes = [
-            "description",
-            "enforcement-level",
-            "global",
-            "kind",
-            "name",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/policy-sets",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("policy_sets"),
-        )
-
-    def _list_projects(self, organization_id):
-        attributes = ["name"]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/projects",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("projects"),
-        )
-
-    def _list_registry_modules(self, organization_id):
-        attributes = [
-            "name",
-            "namespace",
-            "provider",
-            "status",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/registry-modules",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("modules"),
-        )
-
-    def _list_registry_providers(self, organization_id):
-        attributes = [
-            "name",
-            "namespace",
-            "registry-name",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/registry-providers",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("providers"),
-        )
-
-    def _list_tasks(self, organization_id):
-        attributes = [
-            "category",
-            "description",
-            "enabled",
-            "name",
-            "url",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/tasks",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("tasks"),
-        )
-
-    def _list_teams(self, organization_id):
-        attributes = [
-            "name",
-            "users-count",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/teams",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("teams"),
-        )
-
-    def _list_variable_sets(self, organization_id):
-        attributes = [
-            "description",
-            "global",
-            "name",
-            "project-count",
-            "var-count",
-            "workspace-count",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/varsets",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("variable_sets"),
-        )
-
-    def _list_variables(self, workspace_id, include_sensitive_attributes=False):
-        attributes = [
-            "category",
-            "description",
-            "hcl",
-            "key",
-            "name",
-            "sensitive",
-        ]
-
-        sensitive_attributes = [
-            "value",
-        ]
-
-        return self._get_items(
-            api_path=f"/workspaces/{workspace_id}/vars",
-            attributes=attributes,
-            sensitive_attributes=sensitive_attributes,
-            include_sensitive_attributes=include_sensitive_attributes,
-            include_pattern=self._get_include_pattern("variables"),
-        )
-
-    def _list_workspaces(self, organization_id):
-        attributes = [
-            "auto-apply",
-            "description",
-            "name",
-            "resource-count",
-            "terraform-version",
-            "vcs-repo.branch",
-            "vcs-repo.repository-http-url",
-            "working-directory",
-        ]
-
-        return self._get_items(
-            api_path=f"/organizations/{organization_id}/workspaces",
-            attributes=attributes,
-            include_pattern=self._get_include_pattern("workspaces"),
-        )
-
-    def _check_items(self, item_type: str, items: dict) -> dict:
-        if item_type == "agent_pools":
-            items = self._add_agent_pool_checks(items)
-        elif item_type == "policies":
-            items = self._add_policy_checks(items)
-        elif item_type == "workspaces":
-            items = self._add_workspace_checks(items)
-
-        return items
-
-    def audit(self):
-        data = self._extract_data(include_sensitive_attributes=False)
-
-        for entity_type, entity_list in sorted(data.items()):
-            entity_list = self._check_items(entity_type, entity_list)  # noqa: PLW2901
-
-            title = entity_type.replace("_", " ").title()
-            count = len(entity_list)
-            entities_with_issues = [e for e in entity_list if "issues" in e and len(e["issues"]) > 0]
-            with_issues_count = len(entities_with_issues)
-            with_issues_message = f" (including {with_issues_count} with issues)" if with_issues_count > 0 else ""
-
-            self._console.print(f"{title}: {count}{with_issues_message}")
-
-            for entity in entities_with_issues:
-                entity_id = entity["attributes"]["id"]
-                entity_name = f" ({entity['attributes' ]['name']})" if "name" in entity["attributes"] else ""
-                issues = ", ".join(entity["issues"])
-                self._console.print(f"  - {entity_id}{entity_name}: {issues}", style="warning")
-
-    def _extract_data(self, include_sensitive_attributes=False) -> dict:
-        """Retrieve data from the source vendor
-
-        Args:
-            include_sensitive_attributes (bool): Include sensitive data when exporting
-
-        Returns:
-            dict: The extracted data
-        """
-        # Make non-existent keys an empty list to simplify the implementation
-        data = defaultdict(list)
-
-        organizations = self._list_organizations()
-        data["organizations"] = organizations
-
-        for organization in organizations:
-            organization_id = organization["attributes"]["id"]
-
-            data["agent_pools"].extend(self._list_agent_pools(organization_id))
-            data["policies"].extend(self._list_policies(organization_id))
-            data["policy_sets"].extend(self._list_policy_sets(organization_id))
-            data["projects"].extend(self._list_projects(organization_id))
-            data["registry_modules"].extend(self._list_registry_modules(organization_id))
-            data["registry_providers"].extend(self._list_registry_providers(organization_id))
-            data["tasks"].extend(self._list_tasks(organization_id))
-            data["teams"].extend(self._list_teams(organization_id))
-            data["variable_sets"].extend(self._list_variable_sets(organization_id))
-
-            workspaces = self._list_workspaces(organization_id)
-            data["workspaces"].extend(workspaces)
-
-            for workspace in workspaces:
-                workspace_id = workspace["attributes"]["id"]
-                data["variables"].extend(
-                    self._list_variables(workspace_id, include_sensitive_attributes=include_sensitive_attributes)
-                )
+        logging.debug("Stop extracting data from API")
 
         return data
 
-    def _generate_id_from_name(self, name: str) -> str:
-        return slugify(name)
+    def _extract_agent_pools_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting agent pools data")
 
-    def _transform_data(self, raw_data: dict) -> dict:
-        """Map the data extracted from the source vendor to Spacelift entities
+        properties = [
+            "attributes.agent-count",
+            "attributes.name",
+            "attributes.organization-scoped",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.agent_pools"),
+            path=f"/organizations/{organization.get('id')}/agent-pools",
+            properties=properties,
+        )
 
-        Args:
-            raw_data (dict): Data extracted from the source vendor
+        logging.debug("Stop extracting agent pools data")
 
-        Returns:
-            dict: Spacelift entities data
-        """
-        data = {"stacks": []}
+        return data
 
-        for workspace in raw_data["workspaces"]:
-            attributes = workspace["attributes"]
-            data["stacks"].append(
+    def _extract_modules_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting modules data")
+
+        properties = [
+            "attributes.name",
+            "attributes.namespace",
+            "attributes.provider",
+            "attributes.status",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.modules"),
+            path=f"/organizations/{organization.get('id')}/registry-modules",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting modules data")
+
+        return data
+
+    def _extract_organization_data(self) -> list[dict]:
+        logging.debug("Start extracting organizations data")
+
+        properties = ["attributes.email", "attributes.name", "id"]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.organizations"), path="/organizations", properties=properties
+        )
+
+        logging.debug("Stop extracting organizations data")
+
+        return data
+
+    def _extract_policies_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting policies data")
+
+        properties = [
+            "attributes.description",
+            "attributes.enforcement-level",
+            "attributes.kind",
+            "attributes.name",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.policies"),
+            path=f"/organizations/{organization.get('id')}/policies",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting policies data")
+
+        return data
+
+    def _extract_policy_sets_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting policy sets data")
+
+        properties = [
+            "attributes.description",
+            "attributes.enforcement-level",
+            "attributes.global",
+            "attributes.kind",
+            "attributes.name",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.policy_sets"),
+            path=f"/organizations/{organization.get('id')}/policy-sets",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting policy sets data")
+
+        return data
+
+    def _extract_projects_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting projects data")
+
+        properties = [
+            "attributes.name",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.projects"),
+            path=f"/organizations/{organization.get('id')}/projects",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting projects data")
+
+        return data
+
+    def _extract_providers_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting providers data")
+
+        properties = [
+            "attributes.name",
+            "attributes.namespace",
+            "attributes.registry-name",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.providers"),
+            path=f"/organizations/{organization.get('id')}/registry-providers",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting providers data")
+
+        return data
+
+    def _extract_tasks_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting tasks data")
+
+        properties = [
+            "attributes.category",
+            "attributes.description",
+            "attributes.enabled",
+            "attributes.name",
+            "attributes.url",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.tasks"),
+            path=f"/organizations/{organization.get('id')}/tasks",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting tasks data")
+
+        return data
+
+    def _extract_teams_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting teams data")
+
+        properties = [
+            "attributes.name",
+            "attributes.users-count",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.teams"),
+            path=f"/organizations/{organization.get('id')}/teams",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting teams data")
+
+        return data
+
+    def _extract_variable_sets_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting variable sets data")
+
+        properties = [
+            "attributes.description",
+            "attributes.global",
+            "attributes.name",
+            "attributes.project-count",
+            "attributes.var-count",
+            "attributes.workspace-count",
+            "id",
+            "relationships.organization.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.variable_sets"),
+            path=f"/organizations/{organization.get('id')}/varsets",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting variable sets data")
+
+        return data
+
+    def _extract_workspace_variables_data(self, workspace: dict) -> list[dict]:
+        logging.debug("Start extracting workspace variables data")
+
+        properties = [
+            "attributes.category",
+            "attributes.description",
+            "attributes.hcl",
+            "attributes.key",
+            "attributes.sensitive",
+            "attributes.value",
+            "id",
+            "relationships.workspace.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.workspace_variables"),
+            path=f"/workspaces/{workspace.get('id')}/vars",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting workspace variables data")
+
+        return data
+
+    def _extract_workspaces_data(self, organization: dict) -> list[dict]:
+        logging.debug("Start extracting workspaces data")
+
+        properties = [
+            "attributes.auto-apply",
+            "attributes.description",
+            "attributes.name",
+            "attributes.resource-count",
+            "attributes.terraform-version",
+            "attributes.vcs-repo.branch",
+            "attributes.vcs-repo.identifier",
+            "attributes.vcs-repo.service-provider",
+            "attributes.working-directory",
+            "id",
+            "relationships.organization.data.id",
+            "relationships.project.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.workspaces"),
+            path=f"/organizations/{organization.get('id')}/workspaces",
+            properties=properties,
+        )
+
+        logging.debug("Stop extracting workspaces data")
+
+        return data
+
+    def _find_entity(self, data: list[dict], id_: str) -> dict | None:
+        logging.debug(f"Start searching for entity ({id_})")
+
+        entity = None
+        for datum in data:
+            if datum.get("id") == id_:
+                entity = datum
+                break
+
+        logging.debug(f"Stop searching for entity ({id_})")
+
+        return entity
+
+    def _generate_migration_id(self, *args: str) -> str:
+        return slugify("_".join(args)).replace("-", "_")
+
+    def _map_spaces_data(self, src_data: dict) -> dict:
+        logging.debug("Start mapping spaces data")
+
+        data = []
+        for organization in src_data.get("organizations"):
+            data.append(
                 {
-                    "autodeploy": attributes.get("auto-apply"),
-                    "branch": attributes.get("vcs-repo.branch"),
-                    "description": attributes.get("description"),
-                    "id": self._generate_id_from_name(attributes.get("name")),
-                    "name": attributes.get("name"),
-                    "project_root": attributes.get("working-directory"),
-                    "repository": attributes.get("vcs-repo.repository-http-url"),
-                    "terraform_version": attributes.get("terraform-version"),
+                    "_source_id": organization.get("id"),
+                    "name": organization.get("attributes.name"),
                 }
             )
 
+        logging.debug("Stop mapping spaces data")
+
         return data
 
-    def _save_to_file(self, data: dict):
-        """Save the Spacelift entities data to a JSON file
+    def _map_stack_variables_data(self, src_data: dict) -> dict:
+        logging.debug("Start mapping stack variables data")
 
-        Args:
-            data (dict): Spacelift entities data
-        """
-        folder = Path(f"{__file__}/../../../tmp").resolve()
-        if not Path.exists(folder):
-            Path.mkdir(folder, parents=True)
+        data = []
+        for variable in src_data.get("workspace_variables"):
+            data.append(
+                {
+                    "_relationships": {"stack": variable.get("relationships.workspace.data.id")},
+                    "_source_id": variable.get("id"),
+                    "description": variable.get("attributes.description"),
+                    "name": variable.get("attributes.key"),
+                    "value": variable.get("attributes.value"),
+                    "write_only": variable.get("attributes.sensitive"),
+                }
+            )
 
-        with Path(f"{folder}/data.json").open("w") as fp:
-            json.dump(data, fp, indent=2, sort_keys=True)
+        logging.debug("Stop mapping stack variables data")
 
-    def export(self):
-        """Export data from the source vendor to Spacelift entities data and store that in a JSON file"""
-        data = self._extract_data(include_sensitive_attributes=True)
-        data = self._transform_data(data)
-        self._save_to_file(data)
+        return data
+
+    def _map_stacks_data(self, src_data: dict) -> dict:
+        logging.debug("Start mapping stacks data")
+
+        data = []
+        for workspace in src_data.get("workspaces"):
+            provider = workspace.get("attributes.vcs-repo.service-provider")
+            if provider is None:
+                organization_name = workspace.get("relationships.organization.data.id")
+                workspace_name = workspace.get("attributes.name")
+                logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
+            elif provider == "github":
+                provider = "github_custom"
+            else:
+                raise ValueError(f"Unknown VCS provider name ({provider})")
+
+            if workspace.get("attributes.vcs-repo.identifier"):
+                segments = workspace.get("attributes.vcs-repo.identifier").split("/")
+                vcs_namespace = segments[0]
+                vcs_repository = segments[1]
+            else:
+                vcs_namespace = None
+                vcs_repository = None
+
+            data.append(
+                {
+                    "_relationships": {"space": workspace.get("relationships.organization.data.id")},
+                    "_source_id": workspace.get("id"),
+                    "autodeploy": workspace.get("attributes.auto-apply"),
+                    "description": workspace.get("attributes.description"),
+                    "name": workspace.get("attributes.name"),
+                    "terraform": {"version": workspace.get("attributes.terraform-version")},
+                    "vcs": {
+                        "branch": workspace.get("attributes.vcs-repo.branch"),
+                        "namespace": vcs_namespace,
+                        "project_root": workspace.get("attributes.vcs-repo.working-directory"),
+                        "provider": provider,
+                        "repository": vcs_repository,
+                    },
+                }
+            )
+
+        logging.debug("Stop mapping stacks data")
+
+        return data
+
+    def _map_data(self, src_data: dict) -> dict:
+        logging.debug("Start mapping data")
+
+        data = benedict(
+            {
+                "spaces": self._map_spaces_data(src_data),
+                "stacks": self._map_stacks_data(src_data),
+                "stack_variables": self._map_stack_variables_data(src_data),  # Must be after stacks due to dependency
+            }
+        )
+
+        data = self._expand_relationships(data)
+
+        logging.debug("Stop mapping data")
+
+        return data

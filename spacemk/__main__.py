@@ -67,7 +67,7 @@ def cli():
     try:
         spacemk()
     except KeyError as e:
-        logging.critical(f"[error]Unknown key: {e}[/error]")
+        logging.critical(f"Unknown key: {e}")
         sys.exit(1)
     except Exception as e:
         logging.critical(e)

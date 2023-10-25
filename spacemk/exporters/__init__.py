@@ -1,21 +1,13 @@
-from importlib import import_module
+import sys
 
-
-def _import_class_from_string(path):
-    module_path, _, class_name = path.rpartition(".")
-    try:
-        mod = import_module(module_path)
-    except ModuleNotFoundError as e:
-        raise ValueError("Exporter name is incorrect") from e
-
-    return getattr(mod, class_name)
+from .terraform import TerraformExporter  # noqa: F401
 
 
 def load_exporter(config, console):
     if not config.get("name"):
         raise ValueError("Exporter name is missing")
 
-    name = config.get("name")
-    klass = _import_class_from_string(f"spacemk.exporters.{name}.Exporter")
+    class_name = f"{config.get('name').title()}Exporter"
+    class_ = getattr(sys.modules[__name__], class_name)
 
-    return klass(console=console, config=config.get("settings", {}))
+    return class_(console=console, config=config.get("settings", {}))

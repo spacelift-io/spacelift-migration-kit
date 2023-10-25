@@ -25,7 +25,7 @@ resource "spacelift_space" "{{ space._migration_id }}" {
 {% endfor %}
 
 {% for stack in stacks %}
-resource "spacelift_stack" "{{ stack._migration_id }}" {
+resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}" {
   {{ argument("auto_deploy", stack.auto_deploy, default=False) }}
   {{ argument("branch", stack.vcs.branch, required=True) }}
   {{ argument("description", stack.description) }}
@@ -36,7 +36,7 @@ resource "spacelift_stack" "{{ stack._migration_id }}" {
   {{ argument("project_root", stack.vcs.project_root) }}
   {{ argument("repository", stack.vcs.repository, required=True) }}
   {{ argument("terraform_version", stack.terraform.version, serialize=True) }}
-  {{ argument("space_id", "spacelift_space." ~ stack._relationships.space ~ ".id", serialize=False) }}
+  {{ argument("space_id", "spacelift_space." ~ stack._relationships.space._migration_id ~ ".id", serialize=False) }}
 
   {% if stack.vcs.provider == "github_custom" %}
   github_enterprise {
@@ -47,15 +47,14 @@ resource "spacelift_stack" "{{ stack._migration_id }}" {
 
 {% endfor %}
 
-{% for variable in variables %}
-resource "spacelift_environment_variable" "{{ variable._migration_id }}" {
-  {{ argument("stack_id", "spacelift_stack." ~ variable._relationships.stack ~ ".id", serialize=False) }}
+{% for variable in stack_variables %}
+resource "spacelift_environment_variable" "{{ variable._relationships.stack._migration_id }}_{{ variable._migration_id }}" {
   {{ argument("name", variable.name, required=True) }}
-  {% if variable.write_only %}
-    {{ argument("value", "null", serialize=False) }}
-  {% else %}
+  {{ argument("stack_id", "spacelift_stack." ~ variable._relationships.stack._migration_id ~ ".id", serialize=False) }}
+  {% if not variable.write_only %}
     {{ argument("value", variable.value) }}
   {% endif %}
-  {{ argument("write_only", variable.write_only) }}
+  {{ argument("write_only", variable.write_only, default=True) }}
 }
+
 {% endfor %}
