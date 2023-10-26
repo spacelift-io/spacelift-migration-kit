@@ -38,7 +38,7 @@ class TerraformExporter(BaseExporter):
             # Return None for non-existent API endpoints as we are most likely interacting with an older TFE version
             if e.response.status_code == HTTPStatus.NOT_FOUND:
                 logging.warning(f"Non-existent API endpoint ({url}). Ignoring.")
-                return None
+                return {"data": {}}
 
             raise Exception(f"HTTP Error: {e}") from e  # noqa: TRY002
         except requests.exceptions.ReadTimeout as e:
