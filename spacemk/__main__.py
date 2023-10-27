@@ -10,6 +10,8 @@ from rich.theme import Theme
 
 from spacemk import commands
 
+debug_enabled = False
+
 
 @click.group(help="Helper to move from various tools to Spacelift.")
 @click.option(
@@ -27,6 +29,7 @@ def spacemk(ctx, config, verbosity):
     if verbosity > debug_verbosity:
         verbosity = debug_verbosity
 
+    global debug_enabled  # noqa: PLW0603
     debug_enabled = verbosity == debug_verbosity
 
     logging.basicConfig(
@@ -67,10 +70,10 @@ def cli():
     try:
         spacemk()
     except KeyError as e:
-        logging.critical(f"Unknown key: {e}")
+        logging.critical(f"Unknown key: {e}", exc_info=debug_enabled)
         sys.exit(1)
     except Exception as e:
-        logging.critical(e)
+        logging.critical(e, exc_info=debug_enabled)
         sys.exit(1)
 
 
