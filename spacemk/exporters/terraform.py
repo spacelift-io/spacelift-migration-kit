@@ -2,7 +2,9 @@
 import logging
 import re
 from http import HTTPStatus
+from pathlib import Path
 
+import pydash
 import requests
 from benedict import benedict
 from rich.console import Console
@@ -23,7 +25,7 @@ class TerraformExporter(BaseExporter):
             }
         }
 
-    def _call_api(self, url: str, method: str = "GET") -> dict:
+    def _call_api(self, url: str, drop_response_properties: list | None = None, method: str = "GET") -> dict:
         logging.debug("Start calling API")
 
         headers = {
@@ -48,7 +50,12 @@ class TerraformExporter(BaseExporter):
         except requests.exceptions.RequestException as e:
             raise Exception(f"Error for {url}") from e  # noqa: TRY002
 
-        data = benedict(response.json())
+        if drop_response_properties:
+            # Drop properties, mostly when they contain the keypath separator benedict uses (ie ".")
+            data = benedict(pydash.omit(response.json(), drop_response_properties))
+        else:
+            data = benedict(response.json())
+
         logging.debug("Stop calling API")
 
         return data
@@ -110,6 +117,48 @@ class TerraformExporter(BaseExporter):
             data[key]["warnings"] = ", ".join(warnings)
 
         logging.debug("Stop checking workspaces data")
+
+        return data
+
+    def _download_state_files(self, data: dict) -> None:
+        logging.debug("Start downloading state files")
+
+        for workspace in data.get("workspaces"):
+            state_version_id = workspace.get("relationships.current-state-version.data.id")
+            if state_version_id:
+                state_version_data = self._extract_data_from_api(
+                    drop_response_properties=["data.attributes.providers"],
+                    path=f"/state-versions/{state_version_id}",
+                    properties=["attributes.hosted-state-download-url"],
+                )
+                url = state_version_data[0].get("attributes.hosted-state-download-url")
+
+                headers = {
+                    "Authorization": f"Bearer {self._config.get('api_token')}",
+                    "Content-Type": "application/vnd.api+json",
+                }
+
+                response = requests.get(allow_redirects=True, headers=headers, url=url)
+                organization_id = workspace.get("relationships.organization.data.id")
+                workspace_id = workspace.get("id")
+
+                folder = Path(f"{__file__}/../../../tmp/state-files/{organization_id}").resolve()
+                if not Path.exists(folder):
+                    Path.mkdir(folder, parents=True)
+
+                file_path = f"{folder}/{workspace_id}.tfstate"
+                with Path(file_path).open("w", encoding="utf-8") as fp:
+                    logging.debug(f"Saving state file for '{organization_id}/{workspace_id}' to '{file_path}'")
+                    fp.write(response.text)
+
+        logging.debug("Stop downloading state files")
+
+    def _enrich_data(self, data: dict) -> dict:
+        logging.debug("Start enriching data")
+
+        self._download_state_files(data)
+
+        logging.debug("Stop enriching data")
 
         return data
 
@@ -183,7 +232,12 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _extract_data_from_api(
-        self, path: str, include_pattern: str | None = None, method: str = "GET", properties: list | None = None
+        self,
+        path: str,
+        drop_response_properties: list | None = None,
+        include_pattern: str | None = None,
+        method: str = "GET",
+        properties: list | None = None,
     ) -> list[dict]:
         logging.debug("Start extracting data from API")
 
@@ -195,8 +249,11 @@ class TerraformExporter(BaseExporter):
 
         raw_data = []
         while True:
-            response_payload = self._call_api(url, method=method)
-            raw_data.extend(response_payload["data"])
+            response_payload = self._call_api(url, drop_response_properties=drop_response_properties, method=method)
+            if isinstance(response_payload["data"], dict):  # Individual resource
+                raw_data.append(response_payload["data"])
+            else:  # Collection of resources
+                raw_data.extend(response_payload["data"])
 
             if response_payload.get("links.next"):
                 logging.debug("Pulling the next page from the API")
@@ -457,6 +514,7 @@ class TerraformExporter(BaseExporter):
             "attributes.vcs-repo.service-provider",
             "attributes.working-directory",
             "id",
+            "relationships.current-state-version.data.id",
             "relationships.organization.data.id",
             "relationships.project.data.id",
         ]
