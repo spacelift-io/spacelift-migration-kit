@@ -1,6 +1,7 @@
 click==8.1.7
 envyaml==1.10.211231
 jinja2==3.1.2
+pydash==7.0.6
 pytest-cov==4.1.0
 pytest-dotenv==0.5.2
 pytest-recording==0.13.0
