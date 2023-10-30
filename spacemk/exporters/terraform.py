@@ -1,12 +1,17 @@
 # ruff: noqa: PERF401
+import json
 import logging
 import re
+import time
 from http import HTTPStatus
 from pathlib import Path
 
 import pydash
 import requests
 from benedict import benedict
+from python_on_whales import docker
+from python_on_whales.exceptions import NoSuchContainer
+from requests_toolbelt.utils import dump as request_dump
 from rich.console import Console
 from slugify import slugify
 
@@ -25,7 +30,13 @@ class TerraformExporter(BaseExporter):
             }
         }
 
-    def _call_api(self, url: str, drop_response_properties: list | None = None, method: str = "GET") -> dict:
+    def _call_api(
+        self,
+        url: str,
+        drop_response_properties: list | None = None,
+        method: str = "GET",
+        request_data: dict | None = None,
+    ) -> dict:
         logging.debug("Start calling API")
 
         headers = {
@@ -34,7 +45,11 @@ class TerraformExporter(BaseExporter):
         }
 
         try:
-            response = requests.request(headers=headers, method=method, url=url)
+            if request_data is not None:
+                request_data = json.dumps(request_data)
+
+            response = requests.request(data=request_data, headers=headers, method=method, url=url)
+            logging.debug(request_dump.dump_all(response).decode("utf-8"))
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
             # Return None for non-existent API endpoints as we are most likely interacting with an older TFE version
@@ -53,6 +68,9 @@ class TerraformExporter(BaseExporter):
         if drop_response_properties:
             # Drop properties, mostly when they contain the keypath separator benedict uses (ie ".")
             data = benedict(pydash.omit(response.json(), drop_response_properties))
+        elif len(response.content) == 0:
+            # The response has no content (e.g. 204 HTTP status code)
+            data = benedict()
         else:
             data = benedict(response.json())
 
@@ -120,6 +138,18 @@ class TerraformExporter(BaseExporter):
 
         return data
 
+    def _download_text_file(self, url: str) -> str:
+        logging.debug("Start downloading text file")
+
+        headers = {
+            "Authorization": f"Bearer {self._config.get('api_token')}",
+        }
+        response = requests.get(allow_redirects=True, headers=headers, url=url)
+
+        logging.debug("Stop downloading text file")
+
+        return response.text
+
     def _download_state_files(self, data: dict) -> None:
         logging.debug("Start downloading state files")
 
@@ -131,14 +161,11 @@ class TerraformExporter(BaseExporter):
                     path=f"/state-versions/{state_version_id}",
                     properties=["attributes.hosted-state-download-url"],
                 )
-                url = state_version_data[0].get("attributes.hosted-state-download-url")
 
-                headers = {
-                    "Authorization": f"Bearer {self._config.get('api_token')}",
-                    "Content-Type": "application/vnd.api+json",
-                }
+                state_file_content = self._download_text_file(
+                    url=state_version_data[0].get("attributes.hosted-state-download-url")
+                )
 
-                response = requests.get(allow_redirects=True, headers=headers, url=url)
                 organization_id = workspace.get("relationships.organization.data.id")
                 workspace_id = workspace.get("id")
 
@@ -149,14 +176,228 @@ class TerraformExporter(BaseExporter):
                 file_path = f"{folder}/{workspace_id}.tfstate"
                 with Path(file_path).open("w", encoding="utf-8") as fp:
                     logging.debug(f"Saving state file for '{organization_id}/{workspace_id}' to '{file_path}'")
-                    fp.write(response.text)
+                    fp.write(state_file_content)
 
         logging.debug("Stop downloading state files")
+
+    # KLUDGE: We should break this function down in smaller functions
+    def _enrich_workspace_variable_data(self, data: dict) -> dict:  # noqa: PLR0915
+        def find_workspace(data: dict, workspace_id: str) -> dict:
+            for workspace in data.get("workspaces"):
+                if workspace.get("id") == workspace_id:
+                    return workspace
+
+            logging.warning(f"Could not find workspace '{workspace_id}'")
+
+            return None
+
+        def find_variable(data: dict, variable_id: str) -> dict:
+            for variable in data.get("workspace_variables"):
+                if variable.get("id") == variable_id:
+                    return variable
+
+            logging.warning(f"Could not find variable '{variable_id}'")
+
+            return None
+
+        logging.debug("Start enriching workspace variables data")
+
+        # List organizations, workspaces and associated variables
+        organizations = benedict()
+        for variable in data.get("workspace_variables"):
+            if variable.get("attributes.sensitive") is False:
+                continue
+
+            workspace_id = variable.get("relationships.workspace.data.id")
+            organization_id = find_workspace(data, workspace_id).get("relationships.organization.data.id")
+
+            if organization_id not in organizations:
+                organizations[organization_id] = benedict()
+
+            if workspace_id not in organizations[organization_id]:
+                organizations[organization_id][workspace_id] = benedict()
+
+            organizations[organization_id][workspace_id][variable.get("id")] = variable.get("attributes.key")
+
+        if len(organizations) == 0 or len(organizations.keys()) == 0:
+            return data
+
+        for organization_id, workspaces in organizations.items():
+            logging.info(f"Start local TFC/TFE agent for organization '{organization_id}'")
+
+            agent_pool_request_data = {
+                "data": {
+                    "attributes": {
+                        "name": "SMK",
+                        "organization-scoped": True,
+                    },
+                    "type": "agent-pools",
+                }
+            }
+            agent_pool_data = self._extract_data_from_api(
+                method="POST",
+                path=f"/organizations/{organization_id}/agent-pools",
+                properties=["id"],
+                request_data=agent_pool_request_data,
+            )
+            agent_pool_id = agent_pool_data[0].get("id")
+            logging.info(f"Created '{agent_pool_id}' agent pool")
+
+            agent_token_request_data = {
+                "data": {
+                    "attributes": {
+                        "description": "SMK",
+                    },
+                    "type": "authentication-tokens",
+                }
+            }
+            agent_token_data = self._extract_data_from_api(
+                method="POST",
+                path=f"/agent-pools/{agent_pool_id}/authentication-tokens",
+                properties=["attributes.token", "id"],
+                request_data=agent_token_request_data,
+            )
+            tfc_agent_token_id = agent_token_data[0].get("id")
+            tfc_agent_token = agent_token_data[0].get("attributes.token")
+            logging.info(f"Created '{tfc_agent_token_id}' agent token")
+
+            try:
+                with docker.run(
+                    "jmfontaine/tfc-agent:smk-1",
+                    detach=True,
+                    envs={
+                        "TFC_AGENT_NAME": "SMK-Agent",
+                        "TFC_AGENT_TOKEN": tfc_agent_token,
+                    },
+                    name=f"smk-tfc-agent-{organization_id}",
+                    remove=True,
+                ) as tfc_agent_container_id:
+                    logging.debug(f"Running TFC Agent Docker container '{tfc_agent_container_id}'")
+
+                    for workspace_id, workspace_variables in workspaces.items():
+                        current_configuration_version_id = find_workspace(data, workspace_id).get(
+                            "relationships.current-configuration-version.data.id"
+                        )
+                        if current_configuration_version_id is None:
+                            logging.warning(
+                                f"Workspace '{organization_id}/{workspace_id}' has no current configuration. Ignoring."
+                            )
+                            continue
+
+                        logging.info(f"Backing up the '{organization_id}/{workspace_id}' workspace execution mode")
+                        workspace_data_backup = self._extract_data_from_api(
+                            path=f"/workspaces/{workspace_id}",
+                            properties=[
+                                "attributes.execution-mode",
+                                "attributes.setting-overwrites",
+                                "relationships.agent-pool",
+                            ],
+                        )[
+                            0
+                        ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+
+                        logging.info(f"Updating the '{organization_id}/{workspace_id}' workspace to use the TFC Agent")
+                        self._extract_data_from_api(
+                            method="PATCH",
+                            path=f"/workspaces/{workspace_id}",
+                            request_data={
+                                "data": {
+                                    "attributes": {
+                                        "agent-pool-id": agent_pool_id,
+                                        "execution-mode": "agent",
+                                        "setting-overwrites": {"execution-mode": True, "agent-pool": True},
+                                    },
+                                    "type": "workspaces",
+                                }
+                            },
+                        )
+
+                        logging.info(f"Trigger a plan for the '{organization_id}/{workspace_id}' workspace")
+                        run_data = self._extract_data_from_api(
+                            method="POST",
+                            path="/runs",
+                            properties=["relationships.plan.data.id"],
+                            request_data={
+                                "data": {
+                                    "attributes": {
+                                        "allow-empty-apply": False,
+                                        "plan-only": True,
+                                        "refresh": False,  # No need to waste time refreshing the state
+                                    },
+                                    "relationships": {
+                                        "workspace": {"data": {"id": workspace_id, "type": "workspaces"}},
+                                    },
+                                    "type": "runs",
+                                }
+                            },
+                        )[
+                            0
+                        ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+
+                        logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
+                        self._extract_data_from_api(
+                            method="PATCH",
+                            path=f"/workspaces/{workspace_id}",
+                            request_data={
+                                "data": {
+                                    "attributes": {
+                                        "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
+                                        "setting-overwrites": workspace_data_backup.get(
+                                            "attributes.setting-overwrites"
+                                        ),
+                                    },
+                                    "relationships": {
+                                        "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
+                                    },
+                                    "type": "workspaces",
+                                }
+                            },
+                        )
+
+                        logging.info("Retrieve the output for the plan")
+                        plan_id = run_data.get("relationships.plan.data.id")
+                        plan_data = self._extract_data_from_api(
+                            path=f"/plans/{plan_id}", properties=["attributes.log-read-url"]
+                        )[
+                            0
+                        ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+                        # KLUDGE: Looks like the logs are not immediately available.
+                        # If the logs are not available the response will have a 200 HTTP status but an empty body.
+                        # Ideally, we should check for this, wait, and try again until it succeeds.
+                        time.sleep(30)
+                        logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
+
+                        logging.info("Extract the env var values from the plan output")
+                        for line in logs_data.split("\n"):
+                            for workspace_variable_id, workspace_variable_name in workspace_variables.items():
+                                prefix = f"{workspace_variable_name}="
+                                if line.startswith(prefix):
+                                    variable = find_variable(data, workspace_variable_id)
+                                    variable["attributes.value"] = line.removeprefix(prefix)
+
+            except NoSuchContainer as e:
+                logging.warning(
+                    f"Could not find TFC Agent Docker container '{tfc_agent_container_id}' to stop it. Ignoring."
+                )
+                logging.debug(e)
+
+                logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
+
+            logging.info(f"Deleting '{agent_pool_id}' agent pool")
+            self._extract_data_from_api(
+                method="DELETE",
+                path=f"/agent-pools/{agent_pool_id}",
+            )
+
+        logging.info("Stop enriching workspace variables data")
+
+        return data
 
     def _enrich_data(self, data: dict) -> dict:
         logging.debug("Start enriching data")
 
         self._download_state_files(data)
+        data = self._enrich_workspace_variable_data(data)
 
         logging.debug("Stop enriching data")
 
@@ -238,6 +479,7 @@ class TerraformExporter(BaseExporter):
         include_pattern: str | None = None,
         method: str = "GET",
         properties: list | None = None,
+        request_data: dict | None = None,
     ) -> list[dict]:
         logging.debug("Start extracting data from API")
 
@@ -249,11 +491,15 @@ class TerraformExporter(BaseExporter):
 
         raw_data = []
         while True:
-            response_payload = self._call_api(url, drop_response_properties=drop_response_properties, method=method)
-            if isinstance(response_payload["data"], dict):  # Individual resource
-                raw_data.append(response_payload["data"])
-            else:  # Collection of resources
-                raw_data.extend(response_payload["data"])
+            response_payload = self._call_api(
+                url, drop_response_properties=drop_response_properties, method=method, request_data=request_data
+            )
+
+            if response_payload.get("data"):
+                if isinstance(response_payload["data"], dict):  # Individual resource
+                    raw_data.append(response_payload["data"])
+                else:  # Collection of resources
+                    raw_data.extend(response_payload["data"])
 
             if response_payload.get("links.next"):
                 logging.debug("Pulling the next page from the API")
@@ -514,6 +760,7 @@ class TerraformExporter(BaseExporter):
             "attributes.vcs-repo.service-provider",
             "attributes.working-directory",
             "id",
+            "relationships.current-configuration-version.data.id",
             "relationships.current-state-version.data.id",
             "relationships.organization.data.id",
             "relationships.project.data.id",
