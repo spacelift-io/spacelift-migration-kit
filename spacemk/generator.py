@@ -1,9 +1,14 @@
 import json
+import logging
+import os
+import subprocess
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, nodes
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
+
+from spacemk import is_command_available
 
 
 class RaiseExtension(Extension):
@@ -24,8 +29,26 @@ class Generator:
         self._config = config
         self._console = console
 
-    def _filter_totf(self, value):
+    def _filter_randomsuffix(self, value: str) -> str:
+        return f"{value}_{os.urandom(8).hex()}"
+
+    def _filter_totf(self, value: any) -> str:
         return json.dumps(value, ensure_ascii=False)
+
+    def _format_code(self) -> None:
+        if not is_command_available("terraform"):
+            logging.warning("Terraform is not installed. Skipping generated Terraform code formatting.")
+            return
+
+        code_folder_path = Path(f"{__file__}/../../tmp/code").resolve()
+        process = subprocess.run(
+            f"terraform fmt -no-color {code_folder_path}", capture_output=True, check=False, shell=True, text=True
+        )
+
+        if process.returncode != 0:
+            logging.warning(f"Could not format generated Terraform code: {process.stderr}")
+        else:
+            logging.info("Formatted generated Terraform code")
 
     def _generate_code(self, data: dict):
         env = Environment(
@@ -35,6 +58,7 @@ class Generator:
             lstrip_blocks=True,
             trim_blocks=True,
         )
+        env.filters["randomsuffix"] = self._filter_randomsuffix
         env.filters["totf"] = self._filter_totf
         template = env.get_template("main.tf.jinja")
         content = template.render(**data)
@@ -54,7 +78,28 @@ class Generator:
         with Path(f"{folder}/{filename}").open("w", encoding="utf-8") as fp:
             fp.write(content)
 
+    def _validate_code(self) -> None:
+        if not is_command_available("terraform"):
+            logging.warning("Terraform is not installed. Skipping generated Terraform code validation.")
+            return
+
+        code_folder_path = Path(f"{__file__}/../../tmp/code").resolve()
+        process = subprocess.run(
+            f"terraform -chdir={code_folder_path} init -backend=false -no-color && terraform -chdir={code_folder_path} validate -no-color",  # noqa: E501
+            capture_output=True,
+            check=False,
+            shell=True,
+            text=True,
+        )
+
+        if process.returncode != 0:
+            logging.warning(f"Generated Terraform code is invalid: {process.stderr}")
+        else:
+            logging.info("Generated Terraform code is valid")
+
     def generate(self):
         """Generate source code for managing Spacelift entities"""
         data = self._load_data()
         self._generate_code(data)
+        self._format_code()
+        self._validate_code()
