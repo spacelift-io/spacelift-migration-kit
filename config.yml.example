@@ -1,29 +1,10 @@
 # These are all the possible properties for the configuration files.
 # The values included in this file are the default values for the property they are associated with.
 exporter:
-  name:
+  name: # Valid values: terraform
   settings:
     # Specific to the Terraform exporter (exporter.name: terraform)
     api_endpoint: https://app.terraform.io
     api_token:
     include:
       workspaces: ^example-.*$
-
-importer:
-  manager_stack:
-    description:
-    name: Migration Kit Manager
-    labels:
-      - migration-kit
-    vendor:
-      name: terraform
-      version: 1.5.7
-    vcs:
-      branch: main
-      project_root:
-      provider: # Valid values: azure_devops, bitbucket_cloud, bitbucket_datacenter, github, github_enterprise, gitlab
-      repository:
-  spacelift_api_key:
-    endpoint:
-    id: $SPACELIFT_API_KEY_ID
-    secret: $SPACELIFT_API_KEY_SECRET
