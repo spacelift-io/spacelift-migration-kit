@@ -463,6 +463,7 @@ class TerraformExporter(BaseExporter):
             data["providers"].extend(self._extract_providers_data(organization))
             data["tasks"].extend(self._extract_tasks_data(organization))
             data["teams"].extend(self._extract_teams_data(organization))
+            data["variable_sets"].extend(self._extract_variable_sets_data(organization))
             data["workspaces"].extend(self._extract_workspaces_data(organization))
 
         for workspace in data.workspaces:
