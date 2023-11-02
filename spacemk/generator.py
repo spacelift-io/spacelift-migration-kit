@@ -43,7 +43,7 @@ class Generator:
     def _load_data(self) -> dict:
         path = Path(f"{__file__}/../../tmp/data.json").resolve()
 
-        with path.open("r") as fp:
+        with path.open("r", encoding="utf-8") as fp:
             return json.load(fp)
 
     def _save_to_file(self, filename: str, content: str):
@@ -51,7 +51,7 @@ class Generator:
         if not Path.exists(folder):
             Path.mkdir(folder, parents=True)
 
-        with Path(f"{folder}/{filename}").open("w") as fp:
+        with Path(f"{folder}/{filename}").open("w", encoding="utf-8") as fp:
             fp.write(content)
 
     def generate(self):

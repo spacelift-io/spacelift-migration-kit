@@ -6,7 +6,7 @@ class Importer:
         self._config = config
         self._console = console
 
-        self._api_token = self._get_api_token()
+        # self._api_token = self._get_api_token() # noqa: ERA001
 
     def _call_api(self, operation, variables=None):
         headers = {
@@ -92,5 +92,10 @@ class Importer:
 
     def create(self):
         """Create Spacelift manager stack and entities"""
-        manager_stack_id = self._create_manager_stack()
-        self._trigger_manager_stack(manager_stack_id)
+        # manager_stack_id = self._create_manager_stack() # noqa: ERA001
+        # self._trigger_manager_stack(manager_stack_id) # noqa: ERA001
+        self._console.print(
+            "Once the generated code has been pushed to a git repository, create an administrative Spacelift stack"
+            " in the 'root' space that points to the repository."
+            "It will create all the other Spacelift resources."
+        )
