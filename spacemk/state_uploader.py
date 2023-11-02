@@ -5,4 +5,4 @@ class StateUploader:
 
     def upload_state_files(self):
         """Upload Terraform state files to state backend"""
-        self._console.print(f"{self.__class__.__name__}.upload_state_files()")
+        pass
