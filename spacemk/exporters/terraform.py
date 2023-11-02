@@ -206,7 +206,7 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        if not is_command_available("docker ps", execute=True):
+        if not is_command_available(["docker", "ps"], execute=True):
             logging.warning("Docker is not installed. Skipping enriching workspace variables data.")
             return data
 
@@ -384,6 +384,13 @@ class TerraformExporter(BaseExporter):
                                 if line.startswith(prefix):
                                     variable = find_variable(data, workspace_variable_id)
                                     variable["attributes.value"] = line.removeprefix(prefix)
+
+                                # KLUDGE: Ideally this should be retrieved independently for more clarity.
+                                if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
+                                    branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
+                                    workspace = find_workspace(data, workspace_id)
+                                    if workspace and not workspace.get("attributes.vcs-repo.branch"):
+                                        workspace["attributes.vcs-repo.branch"] = branch_name
 
             except NoSuchContainer as e:
                 logging.warning(
