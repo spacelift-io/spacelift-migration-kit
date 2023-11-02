@@ -827,13 +827,27 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _map_stack_variables_data(self, src_data: dict) -> dict:
+        def find_workspace(data: dict, workspace_id: str) -> dict:
+            for workspace in data.get("workspaces"):
+                if workspace.get("id") == workspace_id:
+                    return workspace
+
+            logging.warning(f"Could not find workspace '{workspace_id}'")
+
+            return None
+
         logging.debug("Start mapping stack variables data")
 
         data = []
         for variable in src_data.get("workspace_variables"):
+            workspace = find_workspace(data=src_data, workspace_id=variable.get("relationships.workspace.data.id"))
+
             data.append(
                 {
-                    "_relationships": {"stack": variable.get("relationships.workspace.data.id")},
+                    "_relationships": {
+                        "space": workspace.get("relationships.organization.data.id"),
+                        "stack": variable.get("relationships.workspace.data.id"),
+                    },
                     "_source_id": variable.get("id"),
                     "description": variable.get("attributes.description"),
                     "name": variable.get("attributes.key"),
