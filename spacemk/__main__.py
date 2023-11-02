@@ -47,7 +47,7 @@ def spacemk(ctx, config, verbosity):
     )
 
     ctx.ensure_object(dict)
-    ctx.obj["config"] = benedict(EnvYAML(config, flatten=False, include_environment=False))
+    ctx.obj["config"] = benedict(EnvYAML(config, flatten=False, include_environment=True))
     ctx.obj["console"] = console
 
 
