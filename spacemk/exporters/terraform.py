@@ -15,6 +15,8 @@ from requests_toolbelt.utils import dump as request_dump
 from rich.console import Console
 from slugify import slugify
 
+from spacemk import is_command_available
+
 from .base import BaseExporter
 
 
@@ -203,6 +205,10 @@ class TerraformExporter(BaseExporter):
             logging.warning(f"Could not find variable '{variable_id}'")
 
             return None
+
+        if not is_command_available("docker ps", execute=True):
+            logging.warning("Docker is not installed. Skipping enriching workspace variables data.")
+            return data
 
         logging.debug("Start enriching workspace variables data")
 
