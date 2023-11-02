@@ -157,7 +157,11 @@ class TerraformExporter(BaseExporter):
             state_version_id = workspace.get("relationships.current-state-version.data.id")
             if state_version_id:
                 state_version_data = self._extract_data_from_api(
-                    drop_response_properties=["data.attributes.providers"],
+                    drop_response_properties=[
+                        "data.attributes.modules",
+                        "data.attributes.providers",
+                        "data.attributes.resources",
+                    ],
                     path=f"/state-versions/{state_version_id}",
                     properties=["attributes.hosted-state-download-url"],
                 )
