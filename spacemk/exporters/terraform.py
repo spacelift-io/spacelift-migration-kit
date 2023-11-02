@@ -453,6 +453,7 @@ class TerraformExporter(BaseExporter):
                 "providers": [],
                 "tasks": [],
                 "teams": [],
+                "variable_sets": [],
                 "workspace_variables": [],
                 "workspaces": [],
             }
