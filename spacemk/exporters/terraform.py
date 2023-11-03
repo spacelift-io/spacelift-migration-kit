@@ -870,7 +870,7 @@ class TerraformExporter(BaseExporter):
                 organization_name = workspace.get("relationships.organization.data.id")
                 workspace_name = workspace.get("attributes.name")
                 logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
-            elif provider in ["github", "github_enterprise"]:
+            elif provider in ["github", "github_app", "github_enterprise"]:
                 provider = "github_custom"
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
