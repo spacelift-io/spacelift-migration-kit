@@ -18,6 +18,7 @@ terraform {
 {% for space in spaces %}
 resource "spacelift_space" "{{ space._migration_id }}" {
   {{ argument("description", space.description) }}
+  {{ argument("inherit_entities", True, default=False) }}
   {{ argument("name", space.name, required=True) }}
   {{ argument("parent_space_id", "root", required=True) }}
 }
