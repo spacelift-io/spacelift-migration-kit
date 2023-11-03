@@ -63,7 +63,9 @@ console = Console(theme=custom_theme)
 spacemk.add_command(commands.audit)
 spacemk.add_command(commands.clean)
 spacemk.add_command(commands.config)
-spacemk.add_command(commands.migrate)
+spacemk.add_command(commands.export)
+spacemk.add_command(commands.generate)
+# spacemk.add_command(commands.migrate) # noqa: ERA001
 
 
 def cli():
