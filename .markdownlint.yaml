@@ -9,7 +9,7 @@ MD004: # Unordered list style
 MD007: # Unordered list indentation
   indent: 4
 MD013: # Line length
-  line_length: 120
+  line_length: 500
 MD029: # Ordered list item prefix
   style: ordered
 MD049: # Emphasis style should be consistent
