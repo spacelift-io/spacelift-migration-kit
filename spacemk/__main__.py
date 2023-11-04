@@ -21,8 +21,8 @@ debug_enabled = False
 @click.option("-v", "--verbose", "verbosity", count=True, default=0, help="Level of verbosity for the output.")
 @click.pass_context
 def spacemk(ctx, config, verbosity):
-    debug_verbosity = 3
-    verbosity_to_level = [logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG]
+    debug_verbosity = 2
+    verbosity_to_level = [logging.WARNING, logging.INFO, logging.DEBUG]
 
     if verbosity > debug_verbosity:
         verbosity = debug_verbosity
@@ -36,7 +36,7 @@ def spacemk(ctx, config, verbosity):
         handlers=[
             RichHandler(
                 omit_repeated_times=False,
-                rich_tracebacks=debug_enabled,
+                rich_tracebacks=True,
                 show_path=debug_enabled,
                 show_time=debug_enabled,
             )
@@ -58,11 +58,8 @@ if custom_commands_folder.exists() and custom_commands_folder.is_dir():
 def cli():
     try:
         spacemk()
-    except KeyError as e:
-        logging.critical(f"Unknown key: {e}", exc_info=debug_enabled)
-        sys.exit(1)
-    except Exception as e:
-        logging.critical(e, exc_info=debug_enabled)
+    except Exception:
+        logging.exception("The command failed")
         sys.exit(1)
 
 
