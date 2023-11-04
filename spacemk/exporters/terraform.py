@@ -15,8 +15,7 @@ from requests_toolbelt.utils import dump as request_dump
 from slugify import slugify
 
 from spacemk import get_tmp_subfolder, is_command_available
-
-from .base import BaseExporter
+from spacemk.exporters import BaseExporter
 
 
 class TerraformExporter(BaseExporter):
