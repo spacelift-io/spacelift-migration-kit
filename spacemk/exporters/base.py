@@ -7,6 +7,8 @@ from pathlib import Path
 import click
 import xlsxwriter
 
+from spacemk import get_tmp_folder
+
 
 class BaseExporter(ABC):
     def __init__(self, config: dict):
@@ -35,9 +37,7 @@ class BaseExporter(ABC):
         Args:
             data (dict): Source provider entity data
         """
-        logging.info("Default report display")
-
-        logging.debug("Start displaying report")
+        logging.info("Start displaying default report")
 
         for entity_type, entity_list in sorted(data.items()):
             title = entity_type.replace("_", " ").title()
@@ -49,7 +49,7 @@ class BaseExporter(ABC):
             else:
                 self._print(f"{title}: {count}")
 
-        logging.debug("Stop displaying report")
+        logging.info("Stop displaying default report")
 
     def _enrich_data(self, data: dict) -> dict:
         """Enrich source provider data
@@ -62,20 +62,6 @@ class BaseExporter(ABC):
         """
         logging.info("No data enrichment implemented")
         return data
-
-    def _ensure_tmp_folder_exists(self) -> Path:
-        logging.debug("Start ensuring the 'tmp' folder exists")
-
-        folder = Path(f"{__file__}/../../../tmp").resolve()
-        if not Path.exists(folder):
-            logging.info("Creating 'tmp' folder")
-            Path.mkdir(folder, parents=True)
-        else:
-            logging.info("The 'tmp' folder already exists. Skipping creation.")
-
-        logging.debug("Stop ensuring the 'tmp' folder exists")
-
-        return folder
 
     @abstractmethod
     def _extract_data(self) -> dict:
@@ -125,14 +111,13 @@ class BaseExporter(ABC):
         Args:
             data (dict): Spacelift entities data
         """
-        logging.debug("Start saving data to file")
+        logging.info("Start saving data to file")
 
-        folder_path = self._ensure_tmp_folder_exists()
-
-        with Path(f"{folder_path}/data.json").open("w") as fp:
+        path = Path(get_tmp_folder(), "data.json")
+        with path.open("w") as fp:
             json.dump(data, fp, indent=2, sort_keys=True)
 
-        logging.debug("Stop saving data to file")
+        logging.info("Stop saving data to file")
 
     def _save_report_to_file(self, data: dict) -> None:
         """Save source provider data report to file
@@ -140,12 +125,10 @@ class BaseExporter(ABC):
         Args:
             data (dict): Source provider entity data
         """
-        logging.info("Default report saving to file")
+        logging.info("Start saving default report to file")
 
-        logging.debug("Start saving report to file")
-
-        folder_path = self._ensure_tmp_folder_exists()
-        workbook = xlsxwriter.Workbook(f"{folder_path}/report.xlsx")
+        path = Path(get_tmp_folder(), "report.xlsx")
+        workbook = xlsxwriter.Workbook(path)
 
         for entity_type_name in data:
             worksheet_name = entity_type_name.replace("_", " ").title()
@@ -170,14 +153,14 @@ class BaseExporter(ABC):
 
         workbook.close()
 
-        logging.debug("Stop saving report to file")
+        logging.info("Stop saving default report to file")
 
     def audit(self) -> None:
         """Audit the source provider data
 
         A report is displayed in the terminal, and optionally, the extracted data can be saved to file.
         """
-        logging.debug("Start auditing data")
+        logging.info("Start auditing data")
 
         data = self._extract_data()
         data = self._filter_data(data)
@@ -185,11 +168,11 @@ class BaseExporter(ABC):
         self._save_report_to_file(data)
         self._display_report(data)
 
-        logging.debug("Stop auditing data")
+        logging.info("Stop auditing data")
 
     def export(self) -> None:
         """Export data from the source provider and map it to Spacelift entitty types"""
-        logging.debug("Start exporting data")
+        logging.info("Start exporting data")
 
         data = self._extract_data()
         data = self._filter_data(data)
@@ -197,4 +180,4 @@ class BaseExporter(ABC):
         data = self._map_data(data)
         self._save_data_to_file(data)
 
-        logging.debug("Stop exporting data")
+        logging.info("Stop exporting data")
