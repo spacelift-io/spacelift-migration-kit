@@ -4,8 +4,8 @@ import os
 import subprocess
 from pathlib import Path
 
-from jinja2 import Environment, PackageLoader, nodes
-from jinja2.exceptions import TemplateRuntimeError
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, nodes
+from jinja2.exceptions import TemplateNotFound, TemplateRuntimeError
 from jinja2.ext import Extension
 
 from spacemk import is_command_available
@@ -54,14 +54,23 @@ class Generator:
         env = Environment(
             autoescape=False,
             extensions=[RaiseExtension],
-            loader=PackageLoader("spacemk"),
+            loader=ChoiceLoader(
+                [
+                    FileSystemLoader(Path(f"{Path(__file__).parent.resolve()}/../../custom/templates").resolve()),
+                    FileSystemLoader(Path(f"{Path(__file__).parent.resolve()}/templates").resolve()),
+                ]
+            ),
             lstrip_blocks=True,
             trim_blocks=True,
         )
         env.filters["randomsuffix"] = self._filter_randomsuffix
         env.filters["totf"] = self._filter_totf
-        template = env.get_template("main.tf.jinja")
-        content = template.render(**data)
+
+        try:
+            content = env.get_template(name="main.tf.jinja").render(**data)
+        except TemplateNotFound as e:
+            raise Exception(f"Template not found '{e.message}'") from e  # noqa: TRY002
+
         self._save_to_file("main.tf", content)
 
     def _load_data(self) -> dict:
