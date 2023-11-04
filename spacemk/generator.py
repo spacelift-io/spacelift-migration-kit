@@ -67,7 +67,7 @@ class Generator:
         try:
             content = env.get_template(name="main.tf.jinja", parent="base.tf.jinja").render(**data)
         except TemplateNotFound as e:
-            raise Exception(f"Template not found '{e.message}'") from e  # noqa: TRY002
+            raise FileNotFoundError(f"Template not found '{e.message}'") from e
 
         self._save_to_file("main.tf", content)
 
