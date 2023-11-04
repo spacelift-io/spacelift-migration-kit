@@ -67,7 +67,7 @@ class Generator:
         env.filters["totf"] = self._filter_totf
 
         try:
-            content = env.get_template(name="main.tf.jinja").render(**data)
+            content = env.get_template(name="main.tf.jinja", parent="base.tf.jinja").render(**data)
         except TemplateNotFound as e:
             raise Exception(f"Template not found '{e.message}'") from e  # noqa: TRY002
 
