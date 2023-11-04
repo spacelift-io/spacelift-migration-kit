@@ -44,8 +44,7 @@ def spacemk(ctx, config, verbosity):
         level=verbosity_to_level[verbosity],
     )
 
-    ctx.ensure_object(dict)
-    ctx.obj["config"] = benedict(EnvYAML(config, flatten=False, include_environment=True))
+    ctx.meta["config"] = benedict(EnvYAML(config, flatten=False, include_environment=True))
 
 
 commands_folder = Path(f"{Path(__file__).parent.resolve()}/commands").resolve()
