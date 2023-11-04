@@ -8,5 +8,5 @@ from spacemk.generator import Generator
 def generate(ctx):
     config = ctx.obj["config"]
 
-    generator = Generator(config=config.get("generator", {}), console=ctx.obj["console"])
+    generator = Generator(config=config.get("generator", {}))
     generator.generate()

@@ -6,9 +6,7 @@ import ccl
 import click
 from benedict import benedict
 from envyaml import EnvYAML
-from rich.console import Console
 from rich.logging import RichHandler
-from rich.theme import Theme
 
 debug_enabled = False
 
@@ -48,17 +46,7 @@ def spacemk(ctx, config, verbosity):
 
     ctx.ensure_object(dict)
     ctx.obj["config"] = benedict(EnvYAML(config, flatten=False, include_environment=True))
-    ctx.obj["console"] = console
 
-
-custom_theme = Theme(
-    {
-        "error": "bold red",
-        "path": "blue",
-        "warning": "yellow",
-    }
-)
-console = Console(theme=custom_theme)
 
 commands_folder = Path(f"{Path(__file__).parent.resolve()}/commands").resolve()
 ccl.register_commands(group=spacemk, source=commands_folder)
