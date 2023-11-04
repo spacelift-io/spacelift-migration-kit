@@ -1,3 +1,4 @@
+import logging
 import subprocess
 from pathlib import Path
 from shutil import which
@@ -8,7 +9,10 @@ def ensure_folder_exists(path: Path | str) -> None:
         path = Path(path).resolve()
 
     if not path.exists():
+        logging.debug(f"Creating the '{path}' folder")
         path.mkdir(parents=True)
+    else:
+        logging.debug(f"The '{path}' folder already exists. Skipping creation.")
 
 
 def get_tmp_folder() -> Path:

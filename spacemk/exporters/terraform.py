@@ -38,7 +38,7 @@ class TerraformExporter(BaseExporter):
         method: str = "GET",
         request_data: dict | None = None,
     ) -> dict:
-        logging.debug("Start calling API")
+        logging.info("Start calling API")
 
         headers = {
             "Authorization": f"Bearer {self._config.get('api_token')}",
@@ -75,23 +75,23 @@ class TerraformExporter(BaseExporter):
         else:
             data = benedict(response.json())
 
-        logging.debug("Stop calling API")
+        logging.info("Stop calling API")
 
         return data
 
     def _check_data(self, data: list[dict]) -> list[dict]:
-        logging.debug("Start checking data")
+        logging.info("Start checking data")
 
         data["agent_pools"] = self._check_agent_pools_data(data.get("agent_pools"))
         data["policies"] = self._check_policies_data(data.get("policies"))
         data["workspaces"] = self._check_workspaces_data(data.get("workspaces"))
 
-        logging.debug("Stop checking data")
+        logging.info("Stop checking data")
 
         return data
 
     def _check_agent_pools_data(self, data: list[dict]) -> list[dict]:
-        logging.debug("Start checking agent pools data")
+        logging.info("Start checking agent pools data")
 
         for key, item in enumerate(data):
             warnings = []
@@ -101,12 +101,12 @@ class TerraformExporter(BaseExporter):
 
             data[key]["warnings"] = ", ".join(warnings)
 
-        logging.debug("Stop checking agent pools data")
+        logging.info("Stop checking agent pools data")
 
         return data
 
     def _check_policies_data(self, data: list[dict]) -> list[dict]:
-        logging.debug("Start checking policies data")
+        logging.info("Start checking policies data")
 
         for key, item in enumerate(data):
             warnings = []
@@ -117,12 +117,12 @@ class TerraformExporter(BaseExporter):
 
             data[key]["warnings"] = ", ".join(warnings)
 
-        logging.debug("Stop checking policies data")
+        logging.info("Stop checking policies data")
 
         return data
 
     def _check_workspaces_data(self, data: list[dict]) -> list[dict]:
-        logging.debug("Start checking workspaces data")
+        logging.info("Start checking workspaces data")
 
         for key, item in enumerate(data):
             warnings = []
@@ -135,24 +135,24 @@ class TerraformExporter(BaseExporter):
 
             data[key]["warnings"] = ", ".join(warnings)
 
-        logging.debug("Stop checking workspaces data")
+        logging.info("Stop checking workspaces data")
 
         return data
 
     def _download_text_file(self, url: str) -> str:
-        logging.debug("Start downloading text file")
+        logging.info("Start downloading text file")
 
         headers = {
             "Authorization": f"Bearer {self._config.get('api_token')}",
         }
         response = requests.get(allow_redirects=True, headers=headers, url=url)
 
-        logging.debug("Stop downloading text file")
+        logging.info("Stop downloading text file")
 
         return response.text
 
     def _download_state_files(self, data: dict) -> None:
-        logging.debug("Start downloading state files")
+        logging.info("Start downloading state files")
 
         for workspace in data.get("workspaces"):
             state_version_id = workspace.get("relationships.current-state-version.data.id")
@@ -179,7 +179,7 @@ class TerraformExporter(BaseExporter):
                     logging.debug(f"Saving state file for '{organization_id}/{workspace_id}' to '{path}'")
                     fp.write(state_file_content)
 
-        logging.debug("Stop downloading state files")
+        logging.info("Stop downloading state files")
 
     # KLUDGE: We should break this function down in smaller functions
     def _enrich_workspace_variable_data(self, data: dict) -> dict:  # noqa: PLR0915
@@ -205,7 +205,7 @@ class TerraformExporter(BaseExporter):
             logging.warning("Docker is not installed. Skipping enriching workspace variables data.")
             return data
 
-        logging.debug("Start enriching workspace variables data")
+        logging.info("Start enriching workspace variables data")
 
         # List organizations, workspaces and associated variables
         organizations = benedict()
@@ -406,12 +406,12 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _enrich_data(self, data: dict) -> dict:
-        logging.debug("Start enriching data")
+        logging.info("Start enriching data")
 
         self._download_state_files(data)
         data = self._enrich_workspace_variable_data(data)
 
-        logging.debug("Stop enriching data")
+        logging.info("Stop enriching data")
 
         return data
 
@@ -431,7 +431,7 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        logging.debug("Start expanding relationships")
+        logging.info("Start expanding relationships")
 
         for entity_data in data.values():
             for datum in entity_data:
@@ -444,12 +444,12 @@ class TerraformExporter(BaseExporter):
                     {"_migration_id": self._generate_migration_id(datum.get("name")), "_relationships": relationships}
                 )
 
-        logging.debug("Stop expanding relationships")
+        logging.info("Stop expanding relationships")
 
         return data
 
     def _extract_data(self) -> list[dict]:
-        logging.debug("Start extracting data")
+        logging.info("Start extracting data")
         data = benedict(
             {
                 "agent_pools": [],
@@ -482,7 +482,7 @@ class TerraformExporter(BaseExporter):
         for workspace in data.workspaces:
             data["workspace_variables"].extend(self._extract_workspace_variables_data(workspace))
 
-        logging.debug("Stop extracting data")
+        logging.info("Stop extracting data")
 
         return data
 
@@ -495,7 +495,7 @@ class TerraformExporter(BaseExporter):
         properties: list | None = None,
         request_data: dict | None = None,
     ) -> list[dict]:
-        logging.debug("Start extracting data from API")
+        logging.info("Start extracting data from API")
 
         if include_pattern is None:
             include_pattern = ".*"
@@ -535,12 +535,12 @@ class TerraformExporter(BaseExporter):
                     datum[property_] = raw_datum.get(property_)
                 data.append(datum)
 
-        logging.debug("Stop extracting data from API")
+        logging.info("Stop extracting data from API")
 
         return data
 
     def _extract_agent_pools_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting agent pools data")
+        logging.info("Start extracting agent pools data")
 
         properties = [
             "attributes.agent-count",
@@ -555,12 +555,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting agent pools data")
+        logging.info("Stop extracting agent pools data")
 
         return data
 
     def _extract_modules_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting modules data")
+        logging.info("Start extracting modules data")
 
         properties = [
             "attributes.name",
@@ -576,24 +576,24 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting modules data")
+        logging.info("Stop extracting modules data")
 
         return data
 
     def _extract_organization_data(self) -> list[dict]:
-        logging.debug("Start extracting organizations data")
+        logging.info("Start extracting organizations data")
 
         properties = ["attributes.email", "attributes.name", "id"]
         data = self._extract_data_from_api(
             include_pattern=self._config.get("include.organizations"), path="/organizations", properties=properties
         )
 
-        logging.debug("Stop extracting organizations data")
+        logging.info("Stop extracting organizations data")
 
         return data
 
     def _extract_policies_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting policies data")
+        logging.info("Start extracting policies data")
 
         properties = [
             "attributes.description",
@@ -609,12 +609,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting policies data")
+        logging.info("Stop extracting policies data")
 
         return data
 
     def _extract_policy_sets_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting policy sets data")
+        logging.info("Start extracting policy sets data")
 
         properties = [
             "attributes.description",
@@ -631,12 +631,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting policy sets data")
+        logging.info("Stop extracting policy sets data")
 
         return data
 
     def _extract_projects_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting projects data")
+        logging.info("Start extracting projects data")
 
         properties = [
             "attributes.name",
@@ -649,12 +649,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting projects data")
+        logging.info("Stop extracting projects data")
 
         return data
 
     def _extract_providers_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting providers data")
+        logging.info("Start extracting providers data")
 
         properties = [
             "attributes.name",
@@ -669,12 +669,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting providers data")
+        logging.info("Stop extracting providers data")
 
         return data
 
     def _extract_tasks_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting tasks data")
+        logging.info("Start extracting tasks data")
 
         properties = [
             "attributes.category",
@@ -691,12 +691,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting tasks data")
+        logging.info("Stop extracting tasks data")
 
         return data
 
     def _extract_teams_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting teams data")
+        logging.info("Start extracting teams data")
 
         properties = [
             "attributes.name",
@@ -710,12 +710,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting teams data")
+        logging.info("Stop extracting teams data")
 
         return data
 
     def _extract_variable_sets_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting variable sets data")
+        logging.info("Start extracting variable sets data")
 
         properties = [
             "attributes.description",
@@ -733,12 +733,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting variable sets data")
+        logging.info("Stop extracting variable sets data")
 
         return data
 
     def _extract_workspace_variables_data(self, workspace: dict) -> list[dict]:
-        logging.debug("Start extracting workspace variables data")
+        logging.info("Start extracting workspace variables data")
 
         properties = [
             "attributes.category",
@@ -756,12 +756,12 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting workspace variables data")
+        logging.info("Stop extracting workspace variables data")
 
         return data
 
     def _extract_workspaces_data(self, organization: dict) -> list[dict]:
-        logging.debug("Start extracting workspaces data")
+        logging.info("Start extracting workspaces data")
 
         properties = [
             "attributes.auto-apply",
@@ -785,7 +785,7 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
-        logging.debug("Stop extracting workspaces data")
+        logging.info("Stop extracting workspaces data")
 
         return data
 
@@ -806,7 +806,7 @@ class TerraformExporter(BaseExporter):
         return slugify("_".join(args)).replace("-", "_")
 
     def _map_spaces_data(self, src_data: dict) -> dict:
-        logging.debug("Start mapping spaces data")
+        logging.info("Start mapping spaces data")
 
         data = []
         for organization in src_data.get("organizations"):
@@ -817,7 +817,7 @@ class TerraformExporter(BaseExporter):
                 }
             )
 
-        logging.debug("Stop mapping spaces data")
+        logging.info("Stop mapping spaces data")
 
         return data
 
@@ -831,7 +831,7 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        logging.debug("Start mapping stack variables data")
+        logging.info("Start mapping stack variables data")
 
         data = []
         for variable in src_data.get("workspace_variables"):
@@ -851,12 +851,12 @@ class TerraformExporter(BaseExporter):
                 }
             )
 
-        logging.debug("Stop mapping stack variables data")
+        logging.info("Stop mapping stack variables data")
 
         return data
 
     def _map_stacks_data(self, src_data: dict) -> dict:
-        logging.debug("Start mapping stacks data")
+        logging.info("Start mapping stacks data")
 
         data = []
         for workspace in src_data.get("workspaces"):
@@ -896,12 +896,12 @@ class TerraformExporter(BaseExporter):
                 }
             )
 
-        logging.debug("Stop mapping stacks data")
+        logging.info("Stop mapping stacks data")
 
         return data
 
     def _map_data(self, src_data: dict) -> dict:
-        logging.debug("Start mapping data")
+        logging.info("Start mapping data")
 
         data = benedict(
             {
@@ -913,6 +913,6 @@ class TerraformExporter(BaseExporter):
 
         data = self._expand_relationships(data)
 
-        logging.debug("Stop mapping data")
+        logging.info("Stop mapping data")
 
         return data
