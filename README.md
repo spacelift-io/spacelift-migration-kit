@@ -55,7 +55,7 @@ Finally, trigger a run to create the Spacelift entities.
 
 ### Cleanup
 
-The `spacemk clean` command deletes all temporary local files in the `tmp` folder.
+All temporary local artifacts are stored in the `tmp` folder. Delete some or all of it to clean up.
 
 Additionally, you can destroy the Spacelift resources created by the manager stack, and then the manager stack to fully remove the migration artifacts.
 
