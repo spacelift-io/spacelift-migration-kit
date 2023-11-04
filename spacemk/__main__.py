@@ -47,10 +47,12 @@ def spacemk(ctx, config, verbosity):
     ctx.meta["config"] = benedict(EnvYAML(config, flatten=False, include_environment=True))
 
 
-commands_folder = Path(f"{Path(__file__).parent.resolve()}/commands").resolve()
+current_file_path = Path(__file__).parent.resolve()
+
+commands_folder = Path(f"{current_file_path}/commands").resolve()
 ccl.register_commands(group=spacemk, source=commands_folder)
 
-custom_commands_folder = Path(f"{__file__}/../../custom/commands").resolve()
+custom_commands_folder = Path(f"{current_file_path}/../custom/commands").resolve()
 if custom_commands_folder.exists() and custom_commands_folder.is_dir():
     ccl.register_commands(group=spacemk, source=custom_commands_folder)
 
