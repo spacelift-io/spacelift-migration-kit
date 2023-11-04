@@ -11,7 +11,7 @@ def _get_exporter_class(exporter_name: str, path: Path) -> Any:
     module = SourceFileLoader("exporters", path.as_posix()).load_module()
 
     if not hasattr(module, class_name):
-        raise Exception(f"Could not find '{class_name}' custom exporter class in '{path}'")  # noqa: TRY002
+        raise ValueError(f"Could not find '{class_name}' custom exporter class in '{path}'")
 
     class_ = getattr(module, class_name)
 
@@ -39,6 +39,6 @@ def load_exporter(config):
             logging.debug(f"Loading custom '{exporter_name}' exporter")
             class_ = _get_exporter_class(exporter_name=exporter_name, path=custom_exporter_path)
         else:
-            raise Exception(f"Could not find '{exporter_name}' exporter file")  # noqa: TRY002
+            raise FileNotFoundError(f"Could not find '{exporter_name}' exporter file")
 
     return class_(config=config.get("settings", {}))

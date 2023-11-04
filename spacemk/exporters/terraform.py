@@ -57,13 +57,13 @@ class TerraformExporter(BaseExporter):
                 logging.warning(f"Non-existent API endpoint ({url}). Ignoring.")
                 return {"data": {}}
 
-            raise Exception(f"HTTP Error: {e}") from e  # noqa: TRY002
+            raise RuntimeError(f"HTTP Error: {e}") from e
         except requests.exceptions.ReadTimeout as e:
-            raise Exception(f"Timeout for {url}") from e  # noqa: TRY002
+            raise RuntimeError(f"Timeout for {url}") from e
         except requests.exceptions.ConnectionError as e:
-            raise Exception(f"Connection error for {url}") from e  # noqa: TRY002
+            raise RuntimeError(f"Connection error for {url}") from e
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Error for {url}") from e  # noqa: TRY002
+            raise RuntimeError(f"Error for {url}") from e
 
         if drop_response_properties:
             # Drop properties, mostly when they contain the keypath separator benedict uses (ie ".")
