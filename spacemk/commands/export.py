@@ -8,5 +8,5 @@ from spacemk.exporters import load_exporter
 def export(ctx):
     config = ctx.obj["config"]
 
-    exporter = load_exporter(config=config.get("exporter", {}), console=ctx.obj["console"])
+    exporter = load_exporter(config=config.get("exporter", {}))
     exporter.export()

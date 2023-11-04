@@ -12,7 +12,6 @@ from benedict import benedict
 from python_on_whales import docker
 from python_on_whales.exceptions import NoSuchContainer
 from requests_toolbelt.utils import dump as request_dump
-from rich.console import Console
 from slugify import slugify
 
 from spacemk import is_command_available
@@ -21,8 +20,8 @@ from .base import BaseExporter
 
 
 class TerraformExporter(BaseExporter):
-    def __init__(self, config: dict, console: Console):
-        super().__init__(config, console)
+    def __init__(self, config: dict):
+        super().__init__(config)
 
         self._property_mapping = {
             "organizations": {
