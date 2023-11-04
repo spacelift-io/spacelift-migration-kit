@@ -10,8 +10,8 @@ python-benedict==0.32.1
 python-on-whales==0.65.0
 python-slugify==8.0.1
 pyyaml==6.0.1
-requests==2.31.0
 requests-toolbelt==1.0.0
+requests==2.31.0
 rich==13.6.0
 vcrpy==5.1.0
 xlsxwriter==3.1.9
