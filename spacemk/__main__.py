@@ -10,8 +10,6 @@ from rich.console import Console
 from rich.logging import RichHandler
 from rich.theme import Theme
 
-from spacemk import commands
-
 debug_enabled = False
 
 
@@ -62,15 +60,11 @@ custom_theme = Theme(
 )
 console = Console(theme=custom_theme)
 
-spacemk.add_command(commands.audit)
-spacemk.add_command(commands.clean)
-spacemk.add_command(commands.config)
-spacemk.add_command(commands.export)
-spacemk.add_command(commands.generate)
-# spacemk.add_command(commands.migrate) # noqa: ERA001
+commands_folder = Path(f"{Path(__file__).parent.resolve()}/commands").resolve()
+ccl.register_commands(group=spacemk, source=commands_folder)
 
 custom_commands_folder = Path(f"{__file__}/../../custom/commands").resolve()
-if custom_commands_folder.exists():
+if custom_commands_folder.exists() and custom_commands_folder.is_dir():
     ccl.register_commands(group=spacemk, source=custom_commands_folder)
 
 
