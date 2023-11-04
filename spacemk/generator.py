@@ -25,9 +25,6 @@ class RaiseExtension(Extension):
 
 
 class Generator:
-    def __init__(self, config):
-        self._config = config
-
     def _filter_randomsuffix(self, value: str) -> str:
         return f"{value}_{os.urandom(8).hex()}"
 
