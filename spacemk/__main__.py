@@ -1,6 +1,8 @@
 import logging
 import sys
+from pathlib import Path
 
+import ccl
 import click
 from benedict import benedict
 from envyaml import EnvYAML
@@ -66,6 +68,10 @@ spacemk.add_command(commands.config)
 spacemk.add_command(commands.export)
 spacemk.add_command(commands.generate)
 # spacemk.add_command(commands.migrate) # noqa: ERA001
+
+custom_commands_folder = Path(f"{__file__}/../../custom/commands").resolve()
+if custom_commands_folder.exists():
+    ccl.register_commands(group=spacemk, source=custom_commands_folder)
 
 
 def cli():
