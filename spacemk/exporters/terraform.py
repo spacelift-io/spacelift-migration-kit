@@ -14,7 +14,7 @@ from python_on_whales.exceptions import NoSuchContainer
 from requests_toolbelt.utils import dump as request_dump
 from slugify import slugify
 
-from spacemk import is_command_available
+from spacemk import get_tmp_subfolder, is_command_available
 
 from .base import BaseExporter
 
@@ -174,13 +174,9 @@ class TerraformExporter(BaseExporter):
                 organization_id = workspace.get("relationships.organization.data.id")
                 workspace_id = workspace.get("id")
 
-                folder = Path(f"{__file__}/../../../tmp/state-files/{organization_id}").resolve()
-                if not Path.exists(folder):
-                    Path.mkdir(folder, parents=True)
-
-                file_path = f"{folder}/{workspace_id}.tfstate"
-                with Path(file_path).open("w", encoding="utf-8") as fp:
-                    logging.debug(f"Saving state file for '{organization_id}/{workspace_id}' to '{file_path}'")
+                path = Path(get_tmp_subfolder(f"state-files/{organization_id}"), f"{workspace_id}.tfstate")
+                with path.open("w", encoding="utf-8") as fp:
+                    logging.debug(f"Saving state file for '{organization_id}/{workspace_id}' to '{path}'")
                     fp.write(state_file_content)
 
         logging.debug("Stop downloading state files")
