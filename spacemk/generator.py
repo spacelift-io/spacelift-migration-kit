@@ -8,7 +8,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, nodes
 from jinja2.exceptions import TemplateNotFound, TemplateRuntimeError
 from jinja2.ext import Extension
 
-from spacemk import is_command_available
+from spacemk import get_tmp_folder, get_tmp_subfolder, is_command_available
 
 
 class RaiseExtension(Extension):
@@ -36,9 +36,9 @@ class Generator:
             logging.warning("Terraform is not installed. Skipping generated Terraform code formatting.")
             return
 
-        code_folder_path = Path(f"{__file__}/../../tmp/code").resolve()
+        folder_path = get_tmp_subfolder("code")
         process = subprocess.run(
-            f"terraform fmt -no-color {code_folder_path}", capture_output=True, check=False, shell=True, text=True
+            f"terraform fmt -no-color {folder_path}", capture_output=True, check=False, shell=True, text=True
         )
 
         if process.returncode != 0:
@@ -47,13 +47,15 @@ class Generator:
             logging.info("Formatted generated Terraform code")
 
     def _generate_code(self, data: dict):
+        current_file_path = Path(__file__).parent.resolve()
+
         env = Environment(
             autoescape=False,
             extensions=[RaiseExtension],
             loader=ChoiceLoader(
                 [
-                    FileSystemLoader(Path(f"{Path(__file__).parent.resolve()}/../../custom/templates").resolve()),
-                    FileSystemLoader(Path(f"{Path(__file__).parent.resolve()}/templates").resolve()),
+                    FileSystemLoader(Path(f"{current_file_path}/../../custom/templates").resolve()),
+                    FileSystemLoader(Path(f"{current_file_path}/templates").resolve()),
                 ]
             ),
             lstrip_blocks=True,
@@ -70,17 +72,15 @@ class Generator:
         self._save_to_file("main.tf", content)
 
     def _load_data(self) -> dict:
-        path = Path(f"{__file__}/../../tmp/data.json").resolve()
+        path = Path(get_tmp_folder(), "data.json")
 
         with path.open("r", encoding="utf-8") as fp:
             return json.load(fp)
 
     def _save_to_file(self, filename: str, content: str):
-        folder = Path(f"{__file__}/../../tmp/code").resolve()
-        if not Path.exists(folder):
-            Path.mkdir(folder, parents=True)
+        path = Path(get_tmp_subfolder("code"), filename)
 
-        with Path(f"{folder}/{filename}").open("w", encoding="utf-8") as fp:
+        with path.open("w", encoding="utf-8") as fp:
             fp.write(content)
 
     def _validate_code(self) -> None:
@@ -88,9 +88,9 @@ class Generator:
             logging.warning("Terraform is not installed. Skipping generated Terraform code validation.")
             return
 
-        code_folder_path = Path(f"{__file__}/../../tmp/code").resolve()
+        path = get_tmp_subfolder("code")
         process = subprocess.run(
-            f"terraform -chdir={code_folder_path} init -backend=false -no-color && terraform -chdir={code_folder_path} validate -no-color",  # noqa: E501
+            f"terraform -chdir={path} init -backend=false -no-color && terraform -chdir={path} validate -no-color",
             capture_output=True,
             check=False,
             shell=True,
