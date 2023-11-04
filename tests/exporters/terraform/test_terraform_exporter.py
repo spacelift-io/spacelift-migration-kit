@@ -3,7 +3,6 @@ import os
 from unittest.mock import ANY
 
 import pytest
-from rich.console import Console
 
 from spacemk.exporters import load_exporter, terraform
 
@@ -19,7 +18,7 @@ def terraform_exporter():
         },
     }
 
-    return load_exporter(config=config, console=Console())
+    return load_exporter(config=config)
 
 
 @pytest.mark.vcr()

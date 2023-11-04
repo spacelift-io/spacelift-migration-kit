@@ -4,20 +4,18 @@ from abc import ABC, abstractmethod
 from functools import reduce
 from pathlib import Path
 
+import click
 import xlsxwriter
-from rich.console import Console
 
 
 class BaseExporter(ABC):
-    def __init__(self, config: dict, console: Console):
+    def __init__(self, config: dict):
         """Constructor
 
         Args:
             config (dict): Exporter configuration
-            console (Console): Console to use to display test in the terminal
         """
         self._config = config
-        self._console = console
 
     def _check_data(self, data: dict) -> dict:
         """Check source provider data and add warnings as needed
@@ -119,7 +117,7 @@ class BaseExporter(ABC):
         Args:
             message (str): Message to prijnt to the terminal
         """
-        self._console.print(message)
+        click.echo(message)
 
     def _save_data_to_file(self, data: dict) -> None:
         """Save the Spacelift entities data to a JSON file
