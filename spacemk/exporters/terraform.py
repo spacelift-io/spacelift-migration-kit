@@ -857,10 +857,14 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Start mapping stack variables data")
 
+        prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
         for variable in src_data.get("workspace_variables"):
-            workspace = find_workspace(data=src_data, workspace_id=variable.get("relationships.workspace.data.id"))
+            if not re.search(prog, variable.get("attributes.key")):
+                logging.warning(f"Workspace variable name '{variable.get('attributes.key')}' is invalid. Skipping.")
+                continue
 
+            workspace = find_workspace(data=src_data, workspace_id=variable.get("relationships.workspace.data.id"))
             data.append(
                 {
                     "_relationships": {
