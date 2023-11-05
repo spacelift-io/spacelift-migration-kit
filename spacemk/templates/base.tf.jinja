@@ -11,7 +11,7 @@ terraform {
   {% endblock %}
 }
 
-{% block header %}{% endblock %}
+{% block header_extra %}{% endblock %}
 
 {% block spaces %}
 {% for space in spaces %}
@@ -68,4 +68,4 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
 {% endfor %}
 {% endblock %}
 
-{% block footer %}{% endblock %}
+{% block footer_extra %}{% endblock %}
