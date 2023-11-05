@@ -8,5 +8,4 @@ terraform.tfstate*
 /.pytest_cache
 /.ruff_cache
 /config.yml
-/custom
 /tmp
