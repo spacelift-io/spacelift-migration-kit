@@ -376,10 +376,18 @@ class TerraformExporter(BaseExporter):
                             for workspace_variable_id, workspace_variable_name in workspace_variables.items():
                                 prefix = f"{workspace_variable_name}="
                                 if line.startswith(prefix):
-                                    variable = find_variable(data, workspace_variable_id)
-                                    variable["attributes.value"] = line.removeprefix(prefix)
+                                    value = line.removeprefix(prefix)
+                                    masked_value = "*" * len(value)
 
-                                # KLUDGE: Ideally this should be retrieved independently for more clarity.
+                                    logging.debug(
+                                        f"Found sensitive env var: '{workspace_variable_name}={masked_value}'"
+                                    )
+
+                                    variable = find_variable(data, workspace_variable_id)
+                                    variable["attributes.value"] = value
+
+                                # KLUDGE: Ideally this should be retrieved independently for more clarity,
+                                # and only if needed.
                                 if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
                                     branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
                                     workspace = find_workspace(data, workspace_id)
