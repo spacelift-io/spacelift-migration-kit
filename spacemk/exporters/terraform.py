@@ -84,6 +84,7 @@ class TerraformExporter(BaseExporter):
         data["agent_pools"] = self._check_agent_pools_data(data.get("agent_pools"))
         data["policies"] = self._check_policies_data(data.get("policies"))
         data["workspaces"] = self._check_workspaces_data(data.get("workspaces"))
+        data["workspace_variables"] = self._check_workspace_variables_data(data.get("workspace_variables"))
 
         logging.info("Stop checking data")
 
@@ -117,6 +118,22 @@ class TerraformExporter(BaseExporter):
             data[key]["warnings"] = ", ".join(warnings)
 
         logging.info("Stop checking policies data")
+
+        return data
+
+    def _check_workspace_variables_data(self, data: list[dict]) -> list[dict]:
+        logging.info("Start checking workspace variables data")
+
+        prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
+        for key, item in enumerate(data):
+            warnings = []
+
+            if not re.search(prog, item.get("attributes.key")):
+                warnings.append("Key is an invalid env var name")
+
+            data[key]["warnings"] = ", ".join(warnings)
+
+        logging.info("Stop checking workspace variables data")
 
         return data
 
