@@ -54,7 +54,7 @@ class Generator:
             extensions=[RaiseExtension],
             loader=ChoiceLoader(
                 [
-                    FileSystemLoader(Path(f"{current_file_path}/../../custom/templates").resolve()),
+                    FileSystemLoader(Path(f"{current_file_path}/../custom/templates").resolve()),
                     FileSystemLoader(Path(f"{current_file_path}/templates").resolve()),
                 ]
             ),
@@ -66,6 +66,7 @@ class Generator:
 
         try:
             content = env.get_template(name="main.tf.jinja", parent="base.tf.jinja").render(**data)
+            print(type(content))
         except TemplateNotFound as e:
             raise FileNotFoundError(f"Template not found '{e.message}'") from e
 
