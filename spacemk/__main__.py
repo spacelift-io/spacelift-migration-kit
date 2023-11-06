@@ -5,6 +5,7 @@ from pathlib import Path
 import ccl
 import click
 from benedict import benedict
+from dotenv import load_dotenv
 from envyaml import EnvYAML
 from rich.logging import RichHandler
 
@@ -21,6 +22,8 @@ debug_enabled = False
 @click.option("-v", "--verbose", "verbosity", count=True, default=0, help="Level of verbosity for the output.")
 @click.pass_context
 def spacemk(ctx, config, verbosity):
+    load_dotenv()
+
     debug_verbosity = 2
     verbosity_to_level = [logging.WARNING, logging.INFO, logging.DEBUG]
 
