@@ -7,6 +7,7 @@ terraform {
       source  = "spacelift-io/spacelift"
       version = "~> 1.0"
     }
+    {% block required_providers_extra %}{% endblock %}
   }
   {% endblock %}
 }
@@ -20,9 +21,11 @@ resource "spacelift_space" "{{ space._migration_id }}" {
   {{ argument("inherit_entities", True, default=False) }}
   {{ argument("name", space.name, required=True) }}
   {{ argument("parent_space_id", "root", required=True) }}
+  {% block space_arguments_extra %}{% endblock %}
 }
-
+{% block space_extra %}{% endblock %}
 {% endfor %}
+{% block spaces_extra %}{% endblock %}
 {% endblock %}
 
 {% block stacks %}
@@ -40,6 +43,7 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   {{ argument("repository", stack.vcs.repository, required=True) }}
   {{ argument("terraform_version", stack.terraform.version, serialize=True) }}
   {{ argument("space_id", "spacelift_space." ~ stack._relationships.space._migration_id ~ ".id", serialize=False) }}
+  {% block stack_arguments_extra %}{% endblock %}
 
   {% if stack.vcs.provider == "github_custom" %}
   github_enterprise {
@@ -47,9 +51,11 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   }
   {% endif %}
 }
+{% block stack_extra %}{% endblock %}
 {% endif %}
 
 {% endfor %}
+{% block stacks_extra %}{% endblock %}
 {% endblock %}
 
 {% block stack_variables %}
@@ -62,10 +68,13 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
     {{ argument("value", variable.value) }}
   {% endif %}
   {{ argument("write_only", variable.write_only, default=True) }}
+  {% block stack_variable_arguments_extra %}{% endblock %}
 }
+{% block stack_variable_extra %}{% endblock %}
 {% endif %}
 
 {% endfor %}
+{% block stack_variables_extra %}{% endblock %}
 {% endblock %}
 
 {% block footer_extra %}{% endblock %}
