@@ -191,7 +191,7 @@ git clone --bare git@github.com:spacelift-io/spacelift-migration-kit.git
 ```
 
 <!-- markdownlint-disable-next-line MD029 -->
-2. Create a new private repository on GitHub and name it `spacelift-migration-kit`.
+2. Create a new private repository in your VCS provider and name it `spacelift-migration-kit`.
 
 <!-- markdownlint-disable-next-line MD029 -->
 3. Mirror-push your bare clone to your new `spacelift-migration-kit` repository.
@@ -202,7 +202,7 @@ git clone --bare git@github.com:spacelift-io/spacelift-migration-kit.git
    ```
 
 <!-- markdownlint-disable-next-line MD029 -->
-4. Remove the temporary local repository you created in step 1.
+4. Remove the temporary local clone you created in step 1.
 
 ```shell
 cd ..
@@ -217,7 +217,7 @@ git clone git@github.com:<ACCOUNT NAME>/spacelift-migration-kit.git
 ```
 
 <!-- markdownlint-disable-next-line MD029 -->
-6. Add the original `spacelift-migration-kit` repository as `upstream` to fetch updates.
+6. Add the original `spacelift-migration-kit` repository as `upstream` to fetch updates. The example below uses GitHub but you can use any git VCS provider information.
 
 ```shell
 git remote add upstream git@github.com:spacelift-io/spacelift-migration-kit.git
