@@ -18,6 +18,8 @@ Copy the `config.yml.example` file to `config.yml` and edit it as needed.
 Environment variables can be referenced by their name preceded by the `$` sign (e.g., `$API_TOKEN`).
 This is helpful if you do not want to store sensitive information in the configuration file.
 
+If a `.env` file is present at the root of the Spacelift Migration Kit folder, it will be automatically loaded when running `spacemk` and  the tests, and the environment variables it contains will be available to that process.
+
 ### Audit
 
 This step is optional but recommended. It will analyze your current setup and display statistics in the terminal. Also, an Excel file with the list of entities to be migrated is created (`tmp/report.xlsx`).
@@ -160,6 +162,14 @@ class CustomExporter(BaseExporter):
         …
 
         return data
+```
+
+### Custom Python Packages
+
+If the custom Python code requires packages not included in Spacelift Migration Kit, you can create a `requirements.txt` file in the `custom` folder and install those dependencies with the following command:
+
+```shell
+pip install -r custom/requirements.txt
 ```
 
 ### Storing Customizations
