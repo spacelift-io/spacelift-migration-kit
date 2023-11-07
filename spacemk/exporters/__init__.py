@@ -7,7 +7,7 @@ from spacemk.exporters.base import BaseExporter
 
 
 def _get_exporter_class(exporter_name: str, path: Path) -> Any:
-    class_name = f"{exporter_name.title()}Exporter"
+    class_name = f"{exporter_name.title().replace('_', '')}Exporter"
     module = SourceFileLoader("exporters", path.as_posix()).load_module()
 
     if not hasattr(module, class_name):
