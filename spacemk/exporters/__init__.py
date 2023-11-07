@@ -28,16 +28,18 @@ def load_exporter(config):
         raise ValueError("Exporter name is missing")
 
     current_file_path = Path(__file__).parent.resolve()
-    native_exporter_path = Path(current_file_path, f"./{exporter_name}.py").resolve()
-    if native_exporter_path.exists():
-        logging.debug(f"Loading native '{exporter_name}' exporter")
-        class_ = _get_exporter_class(exporter_name=exporter_name, path=native_exporter_path)
+
+    custom_exporter_path = Path(current_file_path, f"../../custom/exporters/{exporter_name}.py").resolve()
+    if custom_exporter_path.exists():
+        logging.debug(f"Loading custom '{exporter_name}' exporter")
+        class_ = _get_exporter_class(exporter_name=exporter_name, path=custom_exporter_path)
     else:
-        logging.debug(f"Could not find native '{exporter_name}' exporter. Looking for a customer exporter.")
-        custom_exporter_path = Path(current_file_path, f"../../custom/exporters/{exporter_name}.py").resolve()
-        if custom_exporter_path.exists():
-            logging.debug(f"Loading custom '{exporter_name}' exporter")
-            class_ = _get_exporter_class(exporter_name=exporter_name, path=custom_exporter_path)
+        logging.debug(f"Could not find custom '{exporter_name}' exporter. Looking for a native exporter.")
+
+        native_exporter_path = Path(current_file_path, f"./{exporter_name}.py").resolve()
+        if native_exporter_path.exists():
+            logging.debug(f"Loading native '{exporter_name}' exporter")
+            class_ = _get_exporter_class(exporter_name=exporter_name, path=native_exporter_path)
         else:
             raise FileNotFoundError(f"Could not find '{exporter_name}' exporter file")
 
