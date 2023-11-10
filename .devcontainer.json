@@ -18,6 +18,7 @@
   ],
   "onCreateCommand": {
     "Install Dependencies": "pip install --no-cache-dir --requirement requirements.txt --upgrade",
+    "Install Custom Dependencies": "pip install --no-cache-dir --requirement custom/requirements.txt --upgrade || true",
     "Install Spacelift Migration Kit": "pip install --editable ."
   },
   "customizations": {
