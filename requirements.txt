@@ -6,13 +6,13 @@ pydash==7.0.6
 pytest-cov==4.1.0
 pytest-dotenv==0.5.2
 pytest-recording==0.13.0
-python-benedict==0.32.1
+python-benedict==0.33.0
 python-dotenv==0.21.1
-python-on-whales==0.65.0
+python-on-whales==0.67.0
 python-slugify==8.0.1
 pyyaml==6.0.1
 requests-toolbelt==1.0.0
 requests==2.31.0
-rich==13.6.0
+rich==13.7.0
 vcrpy==5.1.0
 xlsxwriter==3.1.9
