@@ -6,6 +6,7 @@ import time
 from http import HTTPStatus
 from pathlib import Path
 
+import click
 import pydash
 import requests
 from benedict import benedict
@@ -121,6 +122,17 @@ class TerraformExporter(BaseExporter):
 
         return data
 
+    def _check_requirements(self, action: str) -> None:  # noqa: ARG002
+        """Check if the exporter requirements are met"""
+        logging.info("Start checking requirements")
+
+        if not is_command_available(["docker", "ps"], execute=True):
+            logging.warning("Docker is not available. Sensitive variables will not be retrieved.")
+
+            click.confirm("Do you want to continue?", abort=True)
+
+        logging.info("Stop checking requirements")
+
     def _check_workspace_variables_data(self, data: list[dict]) -> list[dict]:
         logging.info("Start checking workspace variables data")
 
@@ -218,7 +230,7 @@ class TerraformExporter(BaseExporter):
             return None
 
         if not is_command_available(["docker", "ps"], execute=True):
-            logging.warning("Docker is not installed. Skipping enriching workspace variables data.")
+            logging.warning("Docker is not available. Skipping enriching workspace variables data.")
             return data
 
         logging.info("Start enriching workspace variables data")
