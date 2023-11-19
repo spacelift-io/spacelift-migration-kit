@@ -31,6 +31,14 @@ class BaseExporter(ABC):
         logging.info("No data checks implemented. Skipping.")
         return data
 
+    def _check_requirements(self, action: str) -> None:  # noqa: ARG002
+        """Check if the exporter requirements are met
+
+        Args:
+            action (str): Type of action to perform. Valid values are "audit" and "export".
+        """
+        logging.info("No requirement checks defined. Skipping.")
+
     def _display_report(self, data: dict) -> None:
         """Display data report in the terminal
 
@@ -162,6 +170,7 @@ class BaseExporter(ABC):
         """
         logging.info("Start auditing data")
 
+        self._check_requirements(action="audit")
         data = self._extract_data()
         data = self._filter_data(data)
         data = self._check_data(data)
@@ -174,6 +183,7 @@ class BaseExporter(ABC):
         """Export data from the source provider and map it to Spacelift entitty types"""
         logging.info("Start exporting data")
 
+        self._check_requirements(action="export")
         data = self._extract_data()
         data = self._filter_data(data)
         data = self._enrich_data(data)
