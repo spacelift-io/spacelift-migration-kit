@@ -4,6 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 
+import click
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, nodes
 from jinja2.exceptions import TemplateNotFound, TemplateRuntimeError
 from jinja2.ext import Extension
@@ -25,6 +26,17 @@ class RaiseExtension(Extension):
 
 
 class Generator:
+    def _check_requirements(self) -> None:
+        """Check if the exporter requirements are met"""
+        logging.info("Start checking requirements")
+
+        if not is_command_available("terraform"):
+            logging.warning("Terraform is not available. Generated source code will not be formatted or validated.")
+
+            click.confirm("Do you want to continue?", abort=True)
+
+        logging.info("Stop checking requirements")
+
     def _filter_randomsuffix(self, value: str) -> str:
         return f"{value}_{os.urandom(8).hex()}"
 
@@ -104,6 +116,7 @@ class Generator:
 
     def generate(self):
         """Generate source code for managing Spacelift entities"""
+        self._check_requirements()
         data = self._load_data()
         self._generate_code(data)
         self._format_code()
