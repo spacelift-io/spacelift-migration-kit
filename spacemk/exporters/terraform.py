@@ -382,40 +382,36 @@ class TerraformExporter(BaseExporter):
 
                     logging.info("Retrieve the output for the plan")
                     plan_id = run_data.get("relationships.plan.data.id")
-                    plan_data = self._extract_data_from_api(
-                        path=f"/plans/{plan_id}", properties=["attributes.log-read-url"]
-                    )[
-                        0
-                    ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
-                    # KLUDGE: Looks like the logs are not immediately available.
-                    # If the logs are not available the response will have a 200 HTTP status but an empty body.
-                    # Ideally, we should check for this, wait, and try again until it succeeds.
-                    time.sleep(30)
-                    logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
+                    plan_data = self._get_plan(id=plan_id)
 
-                    logging.debug("Plan output:")
-                    logging.debug(logs_data)
+                    if plan_data.get("attributes.attributes.log-read-url"):
+                        logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
 
-                    logging.info("Extract the env var values from the plan output")
-                    for line in logs_data.split("\n"):
-                        for workspace_variable_id, workspace_variable_name in workspace_variables.items():
-                            prefix = f"{workspace_variable_name}="
-                            if line.startswith(prefix):
-                                value = line.removeprefix(prefix)
-                                masked_value = "*" * len(value)
+                        logging.debug("Plan output:")
+                        logging.debug(logs_data)
 
-                                logging.debug(f"Found sensitive env var: '{workspace_variable_name}={masked_value}'")
+                        logging.info("Extract the env var values from the plan output")
+                        for line in logs_data.split("\n"):
+                            for workspace_variable_id, workspace_variable_name in workspace_variables.items():
+                                prefix = f"{workspace_variable_name}="
+                                if line.startswith(prefix):
+                                    value = line.removeprefix(prefix)
+                                    masked_value = "*" * len(value)
 
-                                variable = find_variable(data, workspace_variable_id)
-                                variable["attributes.value"] = value
+                                    logging.debug(
+                                        f"Found sensitive env var: '{workspace_variable_name}={masked_value}'"
+                                    )
 
-                            # KLUDGE: Ideally this should be retrieved independently for more clarity,
-                            # and only if needed.
-                            if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
-                                branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
-                                workspace = find_workspace(data, workspace_id)
-                                if workspace and not workspace.get("attributes.vcs-repo.branch"):
-                                    workspace["attributes.vcs-repo.branch"] = branch_name
+                                    variable = find_variable(data, workspace_variable_id)
+                                    variable["attributes.value"] = value
+
+                                # KLUDGE: Ideally this should be retrieved independently for more clarity,
+                                # and only if needed.
+                                if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
+                                    branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
+                                    workspace = find_workspace(data, workspace_id)
+                                    if workspace and not workspace.get("attributes.vcs-repo.branch"):
+                                        workspace["attributes.vcs-repo.branch"] = branch_name
 
                 if agent_container.exists() and agent_container.state.running:
                     logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
@@ -838,6 +834,26 @@ class TerraformExporter(BaseExporter):
 
     def _generate_migration_id(self, *args: str) -> str:
         return slugify("_".join(args)).replace("-", "_")
+
+    def _get_plan(self, id_: str) -> dict:
+        while True:
+            data = self._extract_data_from_api(
+                path=f"/plans/{id_}", properties=["attributes.log-read-url", "attributes.status"]
+            )[
+                0
+            ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+
+            if data.get("attributes.status") == "finished":
+                break
+            elif data.get("attributes.status") in ["canceled", "errored", "unreachable"]:  # noqa: RET508
+                logging.warning(f"Plan '{id_}' has status '{data.get('attributes.status')}'. Ignoring.")
+                data = {}
+                break
+            else:
+                logging.debug(f"Plan '{id_}' is not finished yet. Waiting 3 seconds before retrying.")
+                time.sleep(3)
+
+        return data
 
     def _map_spaces_data(self, src_data: dict) -> dict:
         logging.info("Start mapping spaces data")
