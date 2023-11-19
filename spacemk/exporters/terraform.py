@@ -423,17 +423,30 @@ class TerraformExporter(BaseExporter):
                                 workspace = find_workspace(data, workspace_id)
                                 if workspace and not workspace.get("attributes.vcs-repo.branch"):
                                     workspace["attributes.vcs-repo.branch"] = branch_name
-            finally:
-                logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
-                logging.debug(agent_container.logs())
-                logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
-                agent_container.stop()
 
-            logging.info(f"Deleting '{agent_pool_id}' agent pool")
-            self._extract_data_from_api(
-                method="DELETE",
-                path=f"/agent-pools/{agent_pool_id}",
-            )
+                if agent_container.exists() and agent_container.state.running:
+                    logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
+                    logging.debug(agent_container.logs())
+                else:
+                    logging.warning(
+                        f"Local TFC/TFE agent Docker container '{agent_container_id}' "
+                        "was already stopped when we tried to pull the logs. Skipping."
+                    )
+            finally:
+                logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
+                if agent_container.exists() and agent_container.state.running:
+                    agent_container.stop()
+                else:
+                    logging.warning(
+                        f"Local TFC/TFE agent Docker container '{agent_container_id}' "
+                        "was already stopped when we tried to stop it. Skipping."
+                    )
+
+                logging.info(f"Deleting '{agent_pool_id}' agent pool")
+                self._extract_data_from_api(
+                    method="DELETE",
+                    path=f"/agent-pools/{agent_pool_id}",
+                )
 
         logging.info("Stop enriching workspace variables data")
 
