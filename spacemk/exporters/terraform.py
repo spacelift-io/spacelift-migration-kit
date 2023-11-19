@@ -11,7 +11,6 @@ import pydash
 import requests
 from benedict import benedict
 from python_on_whales import docker
-from python_on_whales.exceptions import NoSuchContainer
 from requests_toolbelt.utils import dump as request_dump
 from slugify import slugify
 
@@ -210,7 +209,7 @@ class TerraformExporter(BaseExporter):
         logging.info("Stop downloading state files")
 
     # KLUDGE: We should break this function down in smaller functions
-    def _enrich_workspace_variable_data(self, data: dict) -> dict:  # noqa: PLR0915
+    def _enrich_workspace_variable_data(self, data: dict) -> dict:  # noqa: PLR0912, PLR0915
         def find_workspace(data: dict, workspace_id: str) -> dict:
             for workspace in data.get("workspaces"):
                 if workspace.get("id") == workspace_id:
@@ -295,7 +294,7 @@ class TerraformExporter(BaseExporter):
             logging.info(f"Created '{tfc_agent_token_id}' agent token")
 
             try:
-                with docker.run(
+                agent_container = docker.run(
                     "jmfontaine/tfc-agent:smk-1",
                     detach=True,
                     envs={
@@ -304,132 +303,128 @@ class TerraformExporter(BaseExporter):
                     },
                     name=f"smk-tfc-agent-{organization_id}",
                     remove=True,
-                ) as tfc_agent_container_id:
-                    logging.debug(f"Running TFC Agent Docker container '{tfc_agent_container_id}'")
-
-                    for workspace_id, workspace_variables in workspaces.items():
-                        current_configuration_version_id = find_workspace(data, workspace_id).get(
-                            "relationships.current-configuration-version.data.id"
-                        )
-                        if current_configuration_version_id is None:
-                            logging.warning(
-                                f"Workspace '{organization_id}/{workspace_id}' has no current configuration. Ignoring."
-                            )
-                            continue
-
-                        logging.info(f"Backing up the '{organization_id}/{workspace_id}' workspace execution mode")
-                        workspace_data_backup = self._extract_data_from_api(
-                            path=f"/workspaces/{workspace_id}",
-                            properties=[
-                                "attributes.execution-mode",
-                                "attributes.setting-overwrites",
-                                "relationships.agent-pool",
-                            ],
-                        )[
-                            0
-                        ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
-
-                        logging.info(f"Updating the '{organization_id}/{workspace_id}' workspace to use the TFC Agent")
-                        self._extract_data_from_api(
-                            method="PATCH",
-                            path=f"/workspaces/{workspace_id}",
-                            request_data={
-                                "data": {
-                                    "attributes": {
-                                        "agent-pool-id": agent_pool_id,
-                                        "execution-mode": "agent",
-                                        "setting-overwrites": {"execution-mode": True, "agent-pool": True},
-                                    },
-                                    "type": "workspaces",
-                                }
-                            },
-                        )
-
-                        logging.info(f"Trigger a plan for the '{organization_id}/{workspace_id}' workspace")
-                        run_data = self._extract_data_from_api(
-                            method="POST",
-                            path="/runs",
-                            properties=["relationships.plan.data.id"],
-                            request_data={
-                                "data": {
-                                    "attributes": {
-                                        "allow-empty-apply": False,
-                                        "plan-only": True,
-                                        "refresh": False,  # No need to waste time refreshing the state
-                                    },
-                                    "relationships": {
-                                        "workspace": {"data": {"id": workspace_id, "type": "workspaces"}},
-                                    },
-                                    "type": "runs",
-                                }
-                            },
-                        )[
-                            0
-                        ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
-
-                        logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
-                        self._extract_data_from_api(
-                            method="PATCH",
-                            path=f"/workspaces/{workspace_id}",
-                            request_data={
-                                "data": {
-                                    "attributes": {
-                                        "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
-                                        "setting-overwrites": workspace_data_backup.get(
-                                            "attributes.setting-overwrites"
-                                        ),
-                                    },
-                                    "relationships": {
-                                        "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
-                                    },
-                                    "type": "workspaces",
-                                }
-                            },
-                        )
-
-                        logging.info("Retrieve the output for the plan")
-                        plan_id = run_data.get("relationships.plan.data.id")
-                        plan_data = self._extract_data_from_api(
-                            path=f"/plans/{plan_id}", properties=["attributes.log-read-url"]
-                        )[
-                            0
-                        ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
-                        # KLUDGE: Looks like the logs are not immediately available.
-                        # If the logs are not available the response will have a 200 HTTP status but an empty body.
-                        # Ideally, we should check for this, wait, and try again until it succeeds.
-                        time.sleep(30)
-                        logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
-
-                        logging.info("Extract the env var values from the plan output")
-                        for line in logs_data.split("\n"):
-                            for workspace_variable_id, workspace_variable_name in workspace_variables.items():
-                                prefix = f"{workspace_variable_name}="
-                                if line.startswith(prefix):
-                                    value = line.removeprefix(prefix)
-                                    masked_value = "*" * len(value)
-
-                                    logging.debug(
-                                        f"Found sensitive env var: '{workspace_variable_name}={masked_value}'"
-                                    )
-
-                                    variable = find_variable(data, workspace_variable_id)
-                                    variable["attributes.value"] = value
-
-                                # KLUDGE: Ideally this should be retrieved independently for more clarity,
-                                # and only if needed.
-                                if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
-                                    branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
-                                    workspace = find_workspace(data, workspace_id)
-                                    if workspace and not workspace.get("attributes.vcs-repo.branch"):
-                                        workspace["attributes.vcs-repo.branch"] = branch_name
-
-            except NoSuchContainer as e:
-                logging.warning(
-                    f"Could not find TFC Agent Docker container '{tfc_agent_container_id}' to stop it. Ignoring."
                 )
-                logging.debug(e)
+                # Store the container ID in case it gets stopped and we need it for the error message
+                agent_container_id = agent_container.id
 
+                logging.debug(f"Running local TFC/TFE agent Docker container '{agent_container_id}'")
+
+                for workspace_id, workspace_variables in workspaces.items():
+                    current_configuration_version_id = find_workspace(data, workspace_id).get(
+                        "relationships.current-configuration-version.data.id"
+                    )
+                    if current_configuration_version_id is None:
+                        logging.warning(
+                            f"Workspace '{organization_id}/{workspace_id}' has no current configuration. Ignoring."
+                        )
+                        continue
+
+                    logging.info(f"Backing up the '{organization_id}/{workspace_id}' workspace execution mode")
+                    workspace_data_backup = self._extract_data_from_api(
+                        path=f"/workspaces/{workspace_id}",
+                        properties=[
+                            "attributes.execution-mode",
+                            "attributes.setting-overwrites",
+                            "relationships.agent-pool",
+                        ],
+                    )[
+                        0
+                    ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+
+                    logging.info(f"Updating the '{organization_id}/{workspace_id}' workspace to use the TFC Agent")
+                    self._extract_data_from_api(
+                        method="PATCH",
+                        path=f"/workspaces/{workspace_id}",
+                        request_data={
+                            "data": {
+                                "attributes": {
+                                    "agent-pool-id": agent_pool_id,
+                                    "execution-mode": "agent",
+                                    "setting-overwrites": {"execution-mode": True, "agent-pool": True},
+                                },
+                                "type": "workspaces",
+                            }
+                        },
+                    )
+
+                    logging.info(f"Trigger a plan for the '{organization_id}/{workspace_id}' workspace")
+                    run_data = self._extract_data_from_api(
+                        method="POST",
+                        path="/runs",
+                        properties=["relationships.plan.data.id"],
+                        request_data={
+                            "data": {
+                                "attributes": {
+                                    "allow-empty-apply": False,
+                                    "plan-only": True,
+                                    "refresh": False,  # No need to waste time refreshing the state
+                                },
+                                "relationships": {
+                                    "workspace": {"data": {"id": workspace_id, "type": "workspaces"}},
+                                },
+                                "type": "runs",
+                            }
+                        },
+                    )[
+                        0
+                    ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+
+                    logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
+                    self._extract_data_from_api(
+                        method="PATCH",
+                        path=f"/workspaces/{workspace_id}",
+                        request_data={
+                            "data": {
+                                "attributes": {
+                                    "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
+                                    "setting-overwrites": workspace_data_backup.get("attributes.setting-overwrites"),
+                                },
+                                "relationships": {
+                                    "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
+                                },
+                                "type": "workspaces",
+                            }
+                        },
+                    )
+
+                    logging.info("Retrieve the output for the plan")
+                    plan_id = run_data.get("relationships.plan.data.id")
+                    plan_data = self._extract_data_from_api(
+                        path=f"/plans/{plan_id}", properties=["attributes.log-read-url"]
+                    )[
+                        0
+                    ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+                    # KLUDGE: Looks like the logs are not immediately available.
+                    # If the logs are not available the response will have a 200 HTTP status but an empty body.
+                    # Ideally, we should check for this, wait, and try again until it succeeds.
+                    time.sleep(30)
+                    logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
+
+                    logging.info("Extract the env var values from the plan output")
+                    for line in logs_data.split("\n"):
+                        for workspace_variable_id, workspace_variable_name in workspace_variables.items():
+                            prefix = f"{workspace_variable_name}="
+                            if line.startswith(prefix):
+                                value = line.removeprefix(prefix)
+                                masked_value = "*" * len(value)
+
+                                logging.debug(f"Found sensitive env var: '{workspace_variable_name}={masked_value}'")
+
+                                variable = find_variable(data, workspace_variable_id)
+                                variable["attributes.value"] = value
+
+                            # KLUDGE: Ideally this should be retrieved independently for more clarity,
+                            # and only if needed.
+                            if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
+                                branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
+                                workspace = find_workspace(data, workspace_id)
+                                if workspace and not workspace.get("attributes.vcs-repo.branch"):
+                                    workspace["attributes.vcs-repo.branch"] = branch_name
+            finally:
+                logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
+                logging.debug(agent_container.logs())
                 logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
+                agent_container.stop()
 
             logging.info(f"Deleting '{agent_pool_id}' agent pool")
             self._extract_data_from_api(
