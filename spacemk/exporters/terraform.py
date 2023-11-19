@@ -400,6 +400,9 @@ class TerraformExporter(BaseExporter):
                     time.sleep(30)
                     logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
 
+                    logging.debug("Plan output:")
+                    logging.debug(logs_data)
+
                     logging.info("Extract the env var values from the plan output")
                     for line in logs_data.split("\n"):
                         for workspace_variable_id, workspace_variable_name in workspace_variables.items():
