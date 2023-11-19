@@ -295,7 +295,7 @@ class TerraformExporter(BaseExporter):
 
             try:
                 agent_container = docker.run(
-                    "jmfontaine/tfc-agent:smk-1",
+                    self._config.get("agent_image", "jmfontaine/tfc-agent:smk-latest"),
                     detach=True,
                     envs={
                         "TFC_AGENT_NAME": "SMK-Agent",
@@ -307,7 +307,10 @@ class TerraformExporter(BaseExporter):
                 # Store the container ID in case it gets stopped and we need it for the error message
                 agent_container_id = agent_container.id
 
-                logging.debug(f"Running local TFC/TFE agent Docker container '{agent_container_id}'")
+                logging.debug(
+                    f"Running local TFC/TFE agent Docker container '{agent_container_id}' "
+                    f"using image '{agent_container.config.image}'"
+                )
 
                 for workspace_id, workspace_variables in workspaces.items():
                     current_configuration_version_id = find_workspace(data, workspace_id).get(
