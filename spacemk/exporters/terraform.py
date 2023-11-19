@@ -10,7 +10,7 @@ import click
 import pydash
 import requests
 from benedict import benedict
-from python_on_whales import docker
+from python_on_whales import Container, docker
 from requests_toolbelt.utils import dump as request_dump
 from slugify import slugify
 
@@ -294,23 +294,13 @@ class TerraformExporter(BaseExporter):
             logging.info(f"Created '{tfc_agent_token_id}' agent token")
 
             try:
-                agent_container = docker.run(
-                    self._config.get("agent_image", "jmfontaine/tfc-agent:smk-latest"),
-                    detach=True,
-                    envs={
-                        "TFC_AGENT_NAME": "SMK-Agent",
-                        "TFC_AGENT_TOKEN": tfc_agent_token,
-                    },
-                    name=f"smk-tfc-agent-{organization_id}",
-                    remove=True,
+                agent_container_name = f"smk-tfc-agent-{organization_id}"
+                agent_container = self._start_agent_container(
+                    container_name=agent_container_name, token=tfc_agent_token
                 )
+
                 # Store the container ID in case it gets stopped and we need it for the error message
                 agent_container_id = agent_container.id
-
-                logging.debug(
-                    f"Running local TFC/TFE agent Docker container '{agent_container_id}' "
-                    f"using image '{agent_container.config.image}'"
-                )
 
                 for workspace_id, workspace_variables in workspaces.items():
                     current_configuration_version_id = find_workspace(data, workspace_id).get(
@@ -437,13 +427,7 @@ class TerraformExporter(BaseExporter):
                     )
             finally:
                 logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
-                if agent_container.exists() and agent_container.state.running:
-                    agent_container.stop()
-                else:
-                    logging.warning(
-                        f"Local TFC/TFE agent Docker container '{agent_container_id}' "
-                        "was already stopped when we tried to stop it. Skipping."
-                    )
+                self._stop_agent_container(agent_container)
 
                 logging.info(f"Deleting '{agent_pool_id}' agent pool")
                 self._extract_data_from_api(
@@ -974,3 +958,26 @@ class TerraformExporter(BaseExporter):
         logging.info("Stop mapping data")
 
         return data
+
+    def _start_agent_container(self, container_name: str, token: str) -> Container:
+        container = docker.run(
+            detach=True,
+            envs={
+                "TFC_AGENT_NAME": "SMK-Agent",
+                "TFC_AGENT_TOKEN": token,
+            },
+            image=self._config.get("agent_image", "jmfontaine/tfc-agent:smk-latest"),
+            name=container_name,
+            remove=True,
+        )
+
+        logging.debug(f"Using TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
+
+        return container
+
+    def _stop_agent_container(self, container: Container):
+        if not container.exists() or not container.state.running:
+            logging.warning(f"Local TFC/TFE agent '{container}' is already stopped before trying to stop it. Ignoring.")
+
+        logging.debug(f"Stopping TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
+        container.stop()
