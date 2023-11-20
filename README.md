@@ -18,7 +18,7 @@ Copy the `config.yml.example` file to `config.yml` and edit it as needed.
 Environment variables can be referenced by their name preceded by the `$` sign (e.g., `$API_TOKEN`).
 This is helpful if you do not want to store sensitive information in the configuration file.
 
-If a `.env` file is present at the root of the Spacelift Migration Kit folder, it will be automatically loaded when running `spacemk` and  the tests, and the environment variables it contains will be available to that process.
+If a `.env` file is present at the root of the Spacelift Migration Kit folder, it will be automatically loaded when running `spacemk` and the tests, and the environment variables it contains will be available to that process.
 
 ### Audit
 
@@ -55,6 +55,14 @@ Point it to the repository, and possibly folder, where you stored the Terraform 
 
 Finally, trigger a run to create the Spacelift entities.
 
+### Set Sensitive Variable Values
+
+This step can be skipped if there are no sensitive variables defined.
+
+To avoid storing sensitive variable values in Terraform code and the state file, the `generate` command does not set the value for those variables.
+
+Once the stacks have been created, run the `spacemk set-sensitive-env-vars` command to set the value for the sensitive environment variables.
+
 ### Cleanup
 
 All temporary local artifacts are stored in the `tmp` folder. Delete some or all of it to clean up.
@@ -74,7 +82,7 @@ Spacelift Migration Kit has been designed to be easily extended and modified. Al
 
 The `generate` command uses a [Jinja template](https://jinja.palletsprojects.com/) that can be overridden partially or entirely by creating a file named `main.tf.jinja` in the `custom/templates` folder.
 
-To selectively override pieces of the base template,  add the following instruction at the top of the custom template:
+To selectively override pieces of the base template, add the following instruction at the top of the custom template:
 
 ```jinja2
 {% extends "base.tf.jinja" %}
@@ -184,16 +192,16 @@ For those advanced use cases, the proposed approach is to create a private clone
 
 Here are the steps to create the private clone:
 
+<!-- markdownlint-disable MD029 -->
+
 1. Create a bare clone of the repository. This is temporary and will be removed, so just do it wherever.
 
 ```shell
 git clone --bare git@github.com:spacelift-io/spacelift-migration-kit.git
 ```
 
-<!-- markdownlint-disable-next-line MD029 -->
 2. Create a new private repository in your VCS provider and name it `spacelift-migration-kit`.
 
-<!-- markdownlint-disable-next-line MD029 -->
 3. Mirror-push your bare clone to your new `spacelift-migration-kit` repository.
 
    ```shell
@@ -201,7 +209,6 @@ git clone --bare git@github.com:spacelift-io/spacelift-migration-kit.git
    git push --mirror git@github.com:<ACCOUNT NAME>/spacelift-migration-kit.git
    ```
 
-<!-- markdownlint-disable-next-line MD029 -->
 4. Remove the temporary local clone you created in step 1.
 
 ```shell
@@ -209,14 +216,12 @@ cd ..
 rm -rf spacelift-migration-kit.git
 ```
 
-<!-- markdownlint-disable-next-line MD029 -->
 5. You can now clone your `spacelift-migration-kit` repository on your machine where you see fit.
 
 ```shell
 git clone git@github.com:<ACCOUNT NAME>/spacelift-migration-kit.git
 ```
 
-<!-- markdownlint-disable-next-line MD029 -->
 6. Add the original `spacelift-migration-kit` repository as `upstream` to fetch updates. The example below uses GitHub but you can use any git VCS provider information.
 
 ```shell
@@ -224,7 +229,6 @@ git remote add upstream git@github.com:spacelift-io/spacelift-migration-kit.git
 git remote set-url --push upstream DISABLE
 ```
 
-<!-- markdownlint-disable-next-line MD029 -->
 7. The git remotes for your local clone, listed with `git remote -v` should look like this:
 
 ```shell
@@ -234,8 +238,8 @@ upstream git@github.com:spacelift-io/spacelift-migration-kit.git (fetch)
 upstream DISABLE (push)
 ```
 
-<!-- markdownlint-disable-next-line MD029 -->
 8. Interact with your `origin` remote as usual. You can pull changes from the original repository by fetching from the `upstream` remote and rebasing on top of your local branch.
+<!-- markdownlint-enable MD029 -->
 
 ```shell
 git fetch upstream
@@ -254,4 +258,4 @@ There should not be any conflicts if you keep your modifications in the `custom`
 
 If you found a bug or want to submit a feature request, please use the repository issues.
 
-If you need help or guidance, please reach out to your Solutions Engineer or to our [support](https://docs.spacelift.io/product/support/).
+If you need help or guidance, please reach out to your Solutions Engineer or our [support](https://docs.spacelift.io/product/support/).
