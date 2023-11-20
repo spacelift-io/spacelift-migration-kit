@@ -939,6 +939,10 @@ class TerraformExporter(BaseExporter):
                 vcs_namespace = None
                 vcs_repository = None
 
+            terraform_version = workspace.get("attributes.terraform-version")
+            if terraform_version == "latest":
+                terraform_version = "1.5.7"
+
             data.append(
                 {
                     "_relationships": {"space": workspace.get("relationships.organization.data.id")},
@@ -947,7 +951,7 @@ class TerraformExporter(BaseExporter):
                     "description": workspace.get("attributes.description"),
                     "name": workspace.get("attributes.name"),
                     "slug": self._build_stack_slug(workspace),
-                    "terraform": {"version": workspace.get("attributes.terraform-version")},
+                    "terraform": {"version": terraform_version},
                     "vcs": {
                         "branch": workspace.get("attributes.vcs-repo.branch"),
                         "namespace": vcs_namespace,
