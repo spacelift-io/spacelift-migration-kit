@@ -1,7 +1,10 @@
+import json
 import logging
 import subprocess
 from pathlib import Path
 from shutil import which
+
+from benedict import benedict
 
 
 def ensure_folder_exists(path: Path | str) -> None:
@@ -40,3 +43,15 @@ def is_command_available(command: str | list[str], execute: bool = False) -> boo
             return False
 
     return which(command) is not None
+
+
+def load_normalized_data() -> dict:
+    path = Path(get_tmp_folder(), "data.json")
+    with path.open("r", encoding="utf-8") as fp:
+        return benedict(json.load(fp))
+
+
+def save_normalized_data(data: dict) -> None:
+    path = Path(get_tmp_folder(), "data.json")
+    with path.open("w", encoding="utf-8") as fp:
+        json.dump(data, fp, indent=2, sort_keys=True)

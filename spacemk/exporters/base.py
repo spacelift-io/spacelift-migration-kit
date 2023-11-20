@@ -1,4 +1,3 @@
-import json
 import logging
 from abc import ABC, abstractmethod
 from functools import reduce
@@ -7,7 +6,7 @@ from pathlib import Path
 import click
 import xlsxwriter
 
-from spacemk import get_tmp_folder
+from spacemk import get_tmp_folder, save_normalized_data
 
 
 class BaseExporter(ABC):
@@ -113,20 +112,6 @@ class BaseExporter(ABC):
         """
         click.echo(message)
 
-    def _save_data_to_file(self, data: dict) -> None:
-        """Save the Spacelift entities data to a JSON file
-
-        Args:
-            data (dict): Spacelift entities data
-        """
-        logging.info("Start saving data to file")
-
-        path = Path(get_tmp_folder(), "data.json")
-        with path.open("w") as fp:
-            json.dump(data, fp, indent=2, sort_keys=True)
-
-        logging.info("Stop saving data to file")
-
     def _save_report_to_file(self, data: dict) -> None:
         """Save source provider data report to file
 
@@ -188,6 +173,6 @@ class BaseExporter(ABC):
         data = self._filter_data(data)
         data = self._enrich_data(data)
         data = self._map_data(data)
-        self._save_data_to_file(data)
+        save_normalized_data(data)
 
         logging.info("Stop exporting data")
