@@ -9,7 +9,7 @@ from jinja2 import ChoiceLoader, Environment, FileSystemLoader, nodes
 from jinja2.exceptions import TemplateNotFound, TemplateRuntimeError
 from jinja2.ext import Extension
 
-from spacemk import get_tmp_folder, get_tmp_subfolder, is_command_available
+from spacemk import get_tmp_subfolder, is_command_available, load_normalized_data
 
 
 class RaiseExtension(Extension):
@@ -83,12 +83,6 @@ class Generator:
 
         self._save_to_file("main.tf", content)
 
-    def _load_data(self) -> dict:
-        path = Path(get_tmp_folder(), "data.json")
-
-        with path.open("r", encoding="utf-8") as fp:
-            return json.load(fp)
-
     def _save_to_file(self, filename: str, content: str):
         path = Path(get_tmp_subfolder("code"), filename)
 
@@ -117,7 +111,7 @@ class Generator:
     def generate(self):
         """Generate source code for managing Spacelift entities"""
         self._check_requirements()
-        data = self._load_data()
+        data = load_normalized_data()
         self._generate_code(data)
         self._format_code()
         self._validate_code()
