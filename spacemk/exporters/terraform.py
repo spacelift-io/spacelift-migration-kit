@@ -384,7 +384,7 @@ class TerraformExporter(BaseExporter):
                     plan_id = run_data.get("relationships.plan.data.id")
                     plan_data = self._get_plan(id_=plan_id)
 
-                    if plan_data.get("attributes.attributes.log-read-url"):
+                    if plan_data.get("attributes.log-read-url"):
                         logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
 
                         logging.debug("Plan output:")
