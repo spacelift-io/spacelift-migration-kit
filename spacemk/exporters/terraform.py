@@ -382,7 +382,7 @@ class TerraformExporter(BaseExporter):
 
                     logging.info("Retrieve the output for the plan")
                     plan_id = run_data.get("relationships.plan.data.id")
-                    plan_data = self._get_plan(id=plan_id)
+                    plan_data = self._get_plan(id_=plan_id)
 
                     if plan_data.get("attributes.attributes.log-read-url"):
                         logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
