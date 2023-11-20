@@ -30,6 +30,9 @@ class TerraformExporter(BaseExporter):
             }
         }
 
+    def _build_stack_slug(self, workspace: dict) -> str:
+        return slugify(workspace.get("attributes.name"))
+
     def _call_api(
         self,
         url: str,
@@ -943,6 +946,7 @@ class TerraformExporter(BaseExporter):
                     "autodeploy": workspace.get("attributes.auto-apply"),
                     "description": workspace.get("attributes.description"),
                     "name": workspace.get("attributes.name"),
+                    "slug": self._build_stack_slug(workspace),
                     "terraform": {"version": workspace.get("attributes.terraform-version")},
                     "vcs": {
                         "branch": workspace.get("attributes.vcs-repo.branch"),
