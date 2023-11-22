@@ -169,6 +169,56 @@ class TerraformExporter(BaseExporter):
 
         return data
 
+    def _create_agent_pool(self, organization_id: str) -> str:
+        agent_pool_request_data = {
+            "data": {
+                "attributes": {
+                    "name": "SMK",
+                    "organization-scoped": True,
+                },
+                "type": "agent-pools",
+            }
+        }
+        agent_pool_data = self._extract_data_from_api(
+            method="POST",
+            path=f"/organizations/{organization_id}/agent-pools",
+            properties=["id"],
+            request_data=agent_pool_request_data,
+        )
+        agent_pool_id = agent_pool_data[0].get("id")
+        logging.info(f"Created '{agent_pool_id}' agent pool")
+
+        return agent_pool_id
+
+    def _create_agent_token(self, agent_pool_id: str) -> str:
+        agent_token_request_data = {
+            "data": {
+                "attributes": {
+                    "description": "SMK",
+                },
+                "type": "authentication-tokens",
+            }
+        }
+        agent_token_data = self._extract_data_from_api(
+            method="POST",
+            path=f"/agent-pools/{agent_pool_id}/authentication-tokens",
+            properties=["attributes.token", "id"],
+            request_data=agent_token_request_data,
+        )
+        agent_token_id = agent_token_data[0].get("id")
+        agent_token = agent_token_data[0].get("attributes.token")
+
+        logging.info(f"Created '{agent_token_id}' agent token")
+
+        return agent_token
+
+    def _delete_agent_pool(self, id_: str) -> None:
+        logging.info(f"Deleting '{id_}' agent pool")
+        self._extract_data_from_api(
+            method="DELETE",
+            path=f"/agent-pools/{id_}",
+        )
+
     def _download_text_file(self, url: str) -> str:
         logging.info("Start downloading text file")
 
@@ -260,46 +310,12 @@ class TerraformExporter(BaseExporter):
         for organization_id, workspaces in organizations.items():
             logging.info(f"Start local TFC/TFE agent for organization '{organization_id}'")
 
-            agent_pool_request_data = {
-                "data": {
-                    "attributes": {
-                        "name": "SMK",
-                        "organization-scoped": True,
-                    },
-                    "type": "agent-pools",
-                }
-            }
-            agent_pool_data = self._extract_data_from_api(
-                method="POST",
-                path=f"/organizations/{organization_id}/agent-pools",
-                properties=["id"],
-                request_data=agent_pool_request_data,
-            )
-            agent_pool_id = agent_pool_data[0].get("id")
-            logging.info(f"Created '{agent_pool_id}' agent pool")
-
-            agent_token_request_data = {
-                "data": {
-                    "attributes": {
-                        "description": "SMK",
-                    },
-                    "type": "authentication-tokens",
-                }
-            }
-            agent_token_data = self._extract_data_from_api(
-                method="POST",
-                path=f"/agent-pools/{agent_pool_id}/authentication-tokens",
-                properties=["attributes.token", "id"],
-                request_data=agent_token_request_data,
-            )
-            tfc_agent_token_id = agent_token_data[0].get("id")
-            tfc_agent_token = agent_token_data[0].get("attributes.token")
-            logging.info(f"Created '{tfc_agent_token_id}' agent token")
+            agent_pool_id = self._create_agent_pool(organization_id=organization_id)
 
             try:
                 agent_container_name = f"smk-tfc-agent-{organization_id}"
                 agent_container = self._start_agent_container(
-                    container_name=agent_container_name, token=tfc_agent_token
+                    agent_pool_id=agent_pool_id, container_name=agent_container_name
                 )
 
                 # Store the container ID in case it gets stopped and we need it for the error message
@@ -428,11 +444,7 @@ class TerraformExporter(BaseExporter):
                 logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
                 self._stop_agent_container(agent_container)
 
-                logging.info(f"Deleting '{agent_pool_id}' agent pool")
-                self._extract_data_from_api(
-                    method="DELETE",
-                    path=f"/agent-pools/{agent_pool_id}",
-                )
+                self._delete_agent_pool(id_=agent_pool_id)
 
         logging.info("Stop enriching workspace variables data")
 
@@ -983,7 +995,9 @@ class TerraformExporter(BaseExporter):
 
         return data
 
-    def _start_agent_container(self, container_name: str, token: str) -> Container:
+    def _start_agent_container(self, agent_pool_id: str, container_name: str) -> Container:
+        token = self._create_agent_token(agent_pool_id=agent_pool_id)
+
         container = docker.run(
             detach=True,
             envs={
