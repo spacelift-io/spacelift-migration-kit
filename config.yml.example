@@ -8,3 +8,9 @@ exporter:
     api_token:
     include:
       workspaces: ^example-.*$
+
+spacelift:
+  api:
+    api_key_endpoint: https://<ACCOUNT NAME>>.app.spacelift.io/graphql
+    api_key_id:
+    api_key_secret:
