@@ -85,6 +85,7 @@ class TerraformExporter(BaseExporter):
         logging.info("Start checking data")
 
         data["agent_pools"] = self._check_agent_pools_data(data.get("agent_pools"))
+        data["modules"] = self._check_modules_data(data.get("modules"))
         data["policies"] = self._check_policies_data(data.get("policies"))
         data["workspaces"] = self._check_workspaces_data(data.get("workspaces"))
         data["workspace_variables"] = self._check_workspace_variables_data(data.get("workspace_variables"))
@@ -105,6 +106,21 @@ class TerraformExporter(BaseExporter):
             data[key]["warnings"] = ", ".join(warnings)
 
         logging.info("Stop checking agent pools data")
+
+        return data
+
+    def _check_modules_data(self, data: list[dict]) -> list[dict]:
+        logging.info("Start checking modules data")
+
+        for key, item in enumerate(data):
+            warnings = []
+
+            if item.get("attributes.status") != "setup_complete":
+                warnings.append("Setup incomplete")
+
+            data[key]["warnings"] = ", ".join(warnings)
+
+        logging.info("Stop checking modules data")
 
         return data
 
