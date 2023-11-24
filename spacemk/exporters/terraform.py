@@ -481,12 +481,13 @@ class TerraformExporter(BaseExporter):
             # Pluralize the type
             type_ = f"{type_}s"
             for src_datum in data.get(type_):
-                # Clone to avoid modifying the original dict when removing the relationships
-                # on the expanded relationship
-                datum = src_datum.clone()
+                if src_datum.get("_source_id") == id_:
+                    # Clone to avoid modifying the original dict when removing the relationships
+                    # on the expanded relationship
+                    datum = src_datum.clone()
 
-                if datum.get("_source_id") == id_:
-                    del datum["_relationships"]
+                    if "_relationships" in datum:
+                        del datum["_relationships"]
 
                     return datum
 
@@ -627,15 +628,34 @@ class TerraformExporter(BaseExporter):
             "attributes.name",
             "attributes.namespace",
             "attributes.provider",
-            "attributes.status",
+            "attributes.registry-name",
             "id",
-            "relationships.organization.data.id",
         ]
-        data = self._extract_data_from_api(
+        list_data = self._extract_data_from_api(
             include_pattern=self._config.get("include.modules"),
             path=f"/organizations/{organization.get('id')}/registry-modules",
             properties=properties,
         )
+
+        data = []
+        for list_datum in list_data:
+            module_data = self._extract_data_from_api(
+                path=f"/organizations/{organization.get('id')}/registry-modules/{list_datum.get('attributes.registry-name')}/{list_datum.get('attributes.namespace')}/{list_datum.get('attributes.name')}/{list_datum.get('attributes.provider')}",
+                properties=[
+                    "attributes.name",
+                    "attributes.provider",
+                    "attributes.registry-name",
+                    "attributes.status",
+                    "attributes.vcs-repo.branch",
+                    "attributes.vcs-repo.identifier",
+                    "id",
+                    "relationships.organization.data.id",
+                ],
+            )[
+                0
+            ]  # KLUDE: There should be a way to pull single item from the API instead of a list of items
+
+            data.append(module_data)
 
         logging.info("Stop extracting modules data")
 
@@ -886,6 +906,40 @@ class TerraformExporter(BaseExporter):
 
         return data
 
+    def _map_modules_data(self, src_data: dict) -> dict:
+        logging.info("Start mapping modules data")
+
+        data = []
+        for module in src_data.get("modules"):
+            if module.get("attributes.vcs-repo.identifier"):
+                segments = module.get("attributes.vcs-repo.identifier").split("/")
+                vcs_namespace = segments[0]
+                vcs_repository = segments[1]
+            else:
+                vcs_namespace = None
+                vcs_repository = None
+
+            data.append(
+                {
+                    "_relationships": {"space": module.get("relationships.organization.data.id")},
+                    "_source_id": module.get("id"),
+                    "name": module.get("attributes.name"),
+                    "status": module.get("attributes.status"),
+                    "terraform_provider": module.get("attributes.provider"),
+                    "visibility": module.get("attributes.registry-name"),
+                    "vcs": {
+                        "branch": module.get("attributes.vcs-repo.branch"),
+                        "namespace": vcs_namespace,
+                        "provider": "github_custom",  # KLUDGE: TFC/TFE does not provide that information
+                        "repository": vcs_repository,
+                    },
+                }
+            )
+
+        logging.info("Stop mapping modules data")
+
+        return data
+
     def _map_spaces_data(self, src_data: dict) -> dict:
         logging.info("Start mapping spaces data")
 
@@ -999,7 +1053,8 @@ class TerraformExporter(BaseExporter):
 
         data = benedict(
             {
-                "spaces": self._map_spaces_data(src_data),
+                "spaces": self._map_spaces_data(src_data),  # KLUDGE: Must be first due to dependency
+                "modules": self._map_modules_data(src_data),
                 "stacks": self._map_stacks_data(src_data),
                 "stack_variables": self._map_stack_variables_data(src_data),  # Must be after stacks due to dependency
             }
