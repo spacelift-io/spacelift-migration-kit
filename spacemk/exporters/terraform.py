@@ -993,10 +993,25 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _map_stacks_data(self, src_data: dict) -> dict:
+        def find_workspace_variable_with_invalid_name(data: dict, workspace_id: str) -> dict:
+            prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
+            variables = []
+
+            for variable in data.get("workspace_variables"):
+                if (
+                    variable.get("relationships.workspace.data.id") == workspace_id
+                    and re.search(prog, variable.get("attributes.key")) is None
+                ):
+                    variables.append(variable)
+
+            return variables
+
         logging.info("Start mapping stacks data")
 
         data = []
         for workspace in src_data.get("workspaces"):
+            variables_with_invalid_name = find_workspace_variable_with_invalid_name(src_data, workspace.get("id"))
+
             provider = workspace.get("attributes.vcs-repo.service-provider")
             if provider is None:
                 organization_name = workspace.get("relationships.organization.data.id")
@@ -1025,6 +1040,7 @@ class TerraformExporter(BaseExporter):
                     "_source_id": workspace.get("id"),
                     "autodeploy": workspace.get("attributes.auto-apply"),
                     "description": workspace.get("attributes.description"),
+                    "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0,
                     "name": workspace.get("attributes.name"),
                     "slug": self._build_stack_slug(workspace),
                     "terraform": {"version": terraform_version},
