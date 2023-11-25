@@ -75,6 +75,7 @@ class Spacelift:
                 logging.warning(
                     f"Sensitive environment variable '{env_var.get('name')}' has a dash in its name. Skipping."
                 )
+                continue
 
             env_vars.append(env_var)
 
