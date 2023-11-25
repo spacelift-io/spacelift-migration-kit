@@ -64,6 +64,13 @@ To avoid storing sensitive variable values in Terraform code and the state file,
 Once the stacks have been created, set the values for the `spacelift` section of the `config.yml` file and run the
 `spacemk set-sensitive-env-vars` command to set the value for the sensitive environment variables.
 
+### Create Module Versions
+
+This step can be skipped if there are no modules defined.
+
+Once the modules have been created, set the values for the `github` section of the `config.yml` file and run the
+`spacemk create-module-versions` command to re-create existing module versions.
+
 ### Cleanup
 
 All temporary local artifacts are stored in the `tmp` folder. Delete some or all of it to clean up.
