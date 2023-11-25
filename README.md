@@ -64,6 +64,19 @@ To avoid storing sensitive variable values in Terraform code and the state file,
 Once the stacks have been created, set the values for the `spacelift` section of the `config.yml` file and run the
 `spacemk set-sensitive-env-vars` command to set the value for the sensitive environment variables.
 
+### Set Terraform Variables with Invalid Names
+
+This step can be skipped if there are no Terraform variables with an invalid name.
+
+Among [the different ways to pass variable values to Terraform](https://developer.hashicorp.com/terraform/language/values/variables#using-input-variable-values), Spacelift uses environment variables named `TF_VAR_` followed by the name of a declared variable.
+
+However, Terraform allows the use of characters in variable names that are not allowed in environment variable names (e.g., `-`).
+
+To work around this issue, the Spacelift Migration Kit identifies Terraform variables with invalid names and stores them in a mounted file named `tf_vars_with_invalid_name.auto.tfvars` so that it gets automatically loaded by Terraform.
+
+Once the stacks have been created, set the values for the `spacelift` section of the `config.yml` file and run the
+`spacemk set-tf-vars-with-invalid-name` command to set the values for the Terraform variables with invalid names.
+
 ### Create Module Versions
 
 This step can be skipped if there are no modules defined.
