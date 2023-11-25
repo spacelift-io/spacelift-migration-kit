@@ -971,14 +971,6 @@ class TerraformExporter(BaseExporter):
         prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
         for variable in src_data.get("workspace_variables"):
-            if not re.search(prog, variable.get("attributes.key")):
-                logging.warning(f"Workspace variable name '{variable.get('attributes.key')}' is invalid. Skipping.")
-                continue
-
-            variable_name = variable.get("attributes.key")
-            if variable.get("attributes.category") == "terraform":
-                variable_name = f"TF_VAR_{variable_name}"
-
             workspace = find_workspace(data=src_data, workspace_id=variable.get("relationships.workspace.data.id"))
             data.append(
                 {
@@ -988,7 +980,9 @@ class TerraformExporter(BaseExporter):
                     },
                     "_source_id": variable.get("id"),
                     "description": variable.get("attributes.description"),
-                    "name": variable_name,
+                    "name": variable.get("attributes.key"),
+                    "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
+                    "valid_name": re.search(prog, variable.get("attributes.key")) is not None,
                     "value": variable.get("attributes.value"),
                     "write_only": variable.get("attributes.sensitive"),
                 }
