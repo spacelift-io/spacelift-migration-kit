@@ -9,6 +9,9 @@ exporter:
     include:
       workspaces: ^example-.*$
 
+github:
+  api_token:
+
 spacelift:
   api:
     api_key_endpoint: https://<ACCOUNT NAME>>.app.spacelift.io/graphql
