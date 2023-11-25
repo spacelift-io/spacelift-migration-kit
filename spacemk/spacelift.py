@@ -1,4 +1,5 @@
 import logging
+from base64 import b64encode
 
 import requests
 from benedict import benedict
@@ -154,6 +155,22 @@ class Spacelift:
 
         return versions
 
+    def _get_stacks_with_invalid_env_var_names(self) -> list:
+        data = load_normalized_data()
+
+        return [stack for stack in data.get("stacks") if stack.get("has_variables_with_invalid_name") is True]
+
+    def _get_terraform_var_with_invalid_name_for_stack(self, stack_source_id: str) -> list:
+        data = load_normalized_data()
+
+        return [
+            var
+            for var in data.get("stack_variables")
+            if var.get("_relationships.stack._source_id") == stack_source_id
+            and var.get("type") == "terraform"
+            and var.get("valid_name") is False
+        ]
+
     def create_module_version(self, commit_sha: str, module: str, version: str):
         versions = self._get_module_versions(module=module)
 
@@ -162,6 +179,33 @@ class Spacelift:
         else:
             self._create_module_version(commit_sha=commit_sha, module=module, version=version)
             logging.debug(f"Created version '{version}' using commit '{commit_sha}' for module '{module}'")
+
+    def _set_mounted_file_content(self, content: str, filename: str, stack_id: str) -> None:
+        operation = """
+          mutation UpdateStackConfig($stackId: ID!, $input: ConfigInput!) {
+            stackConfigAdd(stack: $stackId, config: $input) {
+              id
+            }
+          }
+        """
+
+        variables = {
+            "stackId": stack_id,
+            "input": {
+                "id": filename,
+                "type": "FILE_MOUNT",
+                "value": b64encode(content.encode()).decode(),
+                "writeOnly": True,
+            },
+        }
+
+        response = self._call_api(operation=operation, variables=variables)
+
+        if response.get("errors"):
+            logging.warning(
+                f"Error setting mounted file '{filename}' for stack '{stack_id}': "
+                f"{response.get('errors[0].message')}"
+            )
 
     def set_sensitive_env_vars(self) -> None:
         env_vars = self._get_sensitive_env_vars()
@@ -173,3 +217,15 @@ class Spacelift:
                     f"No value for '{env_var.get('_relationships.stack.slug')}/{env_var.get('name')}' "
                     "sensitive environment variable. Skipping."
                 )
+
+    def set_terraform_vars_with_invalid_name(self) -> None:
+        for stack in self._get_stacks_with_invalid_env_var_names():
+            mounted_file_content = ""
+            for env_var in self._get_terraform_var_with_invalid_name_for_stack(stack_source_id=stack.get("_source_id")):
+                mounted_file_content += f"{env_var.get('name')}=\"{env_var.get('value')}\"\n"
+
+            self._set_mounted_file_content(
+                content=mounted_file_content,
+                filename="tf_vars_with_invalid_name.auto.tfvars",
+                stack_id=stack.get("slug"),
+            )
