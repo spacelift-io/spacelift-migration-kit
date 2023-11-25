@@ -59,6 +59,10 @@ resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }
   {{ argument("content", 'base64encode("placeholder = \\"placeholder\\"")', serialize=False) }}
   {{ argument("relative_path", "tf_vars_with_invalid_name.auto.tfvars") }}
   {{ argument("stack_id", "spacelift_stack." ~ stack._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", serialize=False) }}
+
+  lifecycle {
+    {{ argument("ignore_changes", "[content]", serialize=False) }}
+  }
 }
 {% endif %}
 
@@ -84,6 +88,13 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
     {{ argument("value", variable.value) }}
   {% endif %}
   {{ argument("write_only", variable.write_only, default=True) }}
+
+  {% if variable.write_only %}
+  lifecycle {
+    {{ argument("ignore_changes", "[value]", serialize=False) }}
+  }
+  {% endif %}
+
   {% block stack_variable_arguments_extra scoped %}{% endblock %}
 }
 {% block stack_variable_extra scoped %}{% endblock %}
