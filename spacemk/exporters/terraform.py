@@ -894,9 +894,9 @@ class TerraformExporter(BaseExporter):
                 0
             ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
 
-            if data.get("attributes.status") == "finished":
+            if data.get("attributes.status") in ["errored", "finished"]:
                 break
-            elif data.get("attributes.status") in ["canceled", "errored", "unreachable"]:  # noqa: RET508
+            elif data.get("attributes.status") in ["canceled", "unreachable"]:  # noqa: RET508
                 logging.warning(f"Plan '{id_}' has status '{data.get('attributes.status')}'. Ignoring.")
                 data = {}
                 break
