@@ -58,8 +58,12 @@ class Spacelift:
                 json=payload,
                 url=self._config.get("api.api_key_endpoint"),
             )
+            data = benedict(response.json())
 
-            self._api_jwt_token = response.json()["data"]["apiKeyUser"]["jwt"]
+            if "errors" in data:
+                raise RuntimeError(f"Spacelift API Error: {data.get('errors[0].message')}")
+
+            self._api_jwt_token = data.get("data.apiKeyUser.jwt")
 
         return self._api_jwt_token
 
