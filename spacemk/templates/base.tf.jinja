@@ -78,9 +78,9 @@ resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }
 {% if variable._relationships.stack.vcs.repository and variable.valid_name %}
 resource "spacelift_environment_variable" "{{ variable._relationships.space._migration_id }}_{{ variable._relationships.stack._migration_id }}_{{ variable._migration_id }}" {
   {% if variable.type == "terraform" %}
-    {{ argument("name", variable.name, required=True) }}
-  {% else %}
     {{ argument("name", "TF_VAR_" ~ variable.name, required=True) }}
+  {% else %}
+    {{ argument("name", variable.name, required=True) }}
   {% endif %}
 
   {{ argument("stack_id", "spacelift_stack." ~ variable._relationships.space._migration_id ~ "_" ~ variable._relationships.stack._migration_id ~ ".id", serialize=False) }}
