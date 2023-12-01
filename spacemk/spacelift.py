@@ -82,6 +82,13 @@ class Spacelift:
                 )
                 continue
 
+            if "\n" in env_var.get("value"):
+                logging.warning(
+                    f"Sensitive environment variable '{env_var.get('name')}' has a '\\n' character in its value. "
+                    "Skipping."
+                )
+                continue
+
             env_vars.append(env_var)
 
         return env_vars
@@ -226,7 +233,10 @@ class Spacelift:
         for stack in self._get_stacks_with_invalid_env_var_names():
             mounted_file_content = ""
             for env_var in self._get_terraform_var_with_invalid_name_for_stack(stack_source_id=stack.get("_source_id")):
-                mounted_file_content += f"{env_var.get('name')}=\"{env_var.get('value')}\"\n"
+                if env_var.get("hcl"):
+                    mounted_file_content += f"{env_var.get('name')} = {env_var.get('value')}\n"
+                else:
+                    mounted_file_content += f"{env_var.get('name')} = \"{env_var.get('value')}\"\n"
 
             self._set_mounted_file_content(
                 content=mounted_file_content,

@@ -972,6 +972,17 @@ class TerraformExporter(BaseExporter):
         data = []
         for variable in src_data.get("workspace_variables"):
             workspace = find_workspace(data=src_data, workspace_id=variable.get("relationships.workspace.data.id"))
+
+            is_name_valid = True
+
+            if re.search(prog, variable.get("attributes.key")) is None:
+                is_name_valid = False
+
+            # KLUDGE: This should be its own function but to save time we are hijacking this function
+            # and will refactor later
+            if variable.get("attributes.category") == "terraform" and "\n" in variable.get("attributes.value"):
+                is_name_valid = False
+
             data.append(
                 {
                     "_relationships": {
@@ -980,9 +991,10 @@ class TerraformExporter(BaseExporter):
                     },
                     "_source_id": variable.get("id"),
                     "description": variable.get("attributes.description"),
+                    "hcl": variable.get("attributes.hcl"),
                     "name": variable.get("attributes.key"),
                     "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
-                    "valid_name": re.search(prog, variable.get("attributes.key")) is not None,
+                    "valid_name": is_name_valid,
                     "value": variable.get("attributes.value"),
                     "write_only": variable.get("attributes.sensitive"),
                 }
@@ -1003,6 +1015,13 @@ class TerraformExporter(BaseExporter):
                     and re.search(prog, variable.get("attributes.key")) is None
                 ):
                     variables.append(variable)
+                    continue
+
+                # KLUDGE: This should be its own function but to save time we are hijacking this function
+                # and will refactor later
+                if variable.get("attributes.category") == "terraform" and "\n" in variable.get("attributes.value"):
+                    variables.append(variable)
+                    continue
 
             return variables
 
