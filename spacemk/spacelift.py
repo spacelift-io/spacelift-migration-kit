@@ -82,7 +82,7 @@ class Spacelift:
                 )
                 continue
 
-            if "\n" in env_var.get("value"):
+            if env_var.get("value") and "\n" in env_var.get("value"):
                 logging.warning(
                     f"Sensitive environment variable '{env_var.get('name')}' has a '\\n' character in its value. "
                     "Skipping."

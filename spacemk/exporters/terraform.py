@@ -980,7 +980,11 @@ class TerraformExporter(BaseExporter):
 
             # KLUDGE: This should be its own function but to save time we are hijacking this function
             # and will refactor later
-            if variable.get("attributes.category") == "terraform" and "\n" in variable.get("attributes.value"):
+            if (
+                variable.get("attributes.category") == "terraform"
+                and variable.get("attributes.value")
+                and "\n" in variable.get("attributes.value")
+            ):
                 is_name_valid = False
 
             data.append(
@@ -1019,7 +1023,11 @@ class TerraformExporter(BaseExporter):
 
                 # KLUDGE: This should be its own function but to save time we are hijacking this function
                 # and will refactor later
-                if variable.get("attributes.category") == "terraform" and "\n" in variable.get("attributes.value"):
+                if (
+                    variable.get("attributes.category") == "terraform"
+                    and variable.get("attributes.value")
+                    and "\n" in variable.get("attributes.value")
+                ):
                     variables.append(variable)
                     continue
 
