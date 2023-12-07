@@ -8,7 +8,7 @@ from spacemk import load_normalized_data
 from spacemk.spacelift import Spacelift
 
 
-def _get_repository_tags(github_api_token: str, namespace: str, repository: str) -> dict:
+def _get_repository_tags(endpoint: str, github_api_token: str, namespace: str, repository: str) -> dict:
     data = {}
 
     headers = {
@@ -17,7 +17,7 @@ def _get_repository_tags(github_api_token: str, namespace: str, repository: str)
     }
 
     try:
-        url = f"https://api.github.com/repos/{namespace}/{repository}/tags"
+        url = f"{endpoint}/repos/{namespace}/{repository}/tags"
         response = requests.get(headers=headers, url=url)
         logging.debug(request_dump.dump_all(response).decode("utf-8"))
         response.raise_for_status()
@@ -47,6 +47,7 @@ def create_module_versions(config):
             continue
 
         tags = _get_repository_tags(
+            endpoint=config.get("github.endpoint", "https://api.github.com"),
             github_api_token=config.get("github.api_token"),
             namespace=module.get("vcs.namespace"),
             repository=module.get("vcs.repository"),
