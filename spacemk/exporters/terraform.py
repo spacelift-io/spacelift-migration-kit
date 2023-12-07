@@ -1074,7 +1074,7 @@ class TerraformExporter(BaseExporter):
                     "vcs": {
                         "branch": workspace.get("attributes.vcs-repo.branch"),
                         "namespace": vcs_namespace,
-                        "project_root": workspace.get("attributes.vcs-repo.working-directory"),
+                        "project_root": workspace.get("attributes.working-directory"),
                         "provider": provider,
                         "repository": vcs_repository,
                     },
