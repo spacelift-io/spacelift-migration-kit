@@ -397,24 +397,6 @@ class TerraformExporter(BaseExporter):
                         0
                     ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
 
-                    logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
-                    self._extract_data_from_api(
-                        method="PATCH",
-                        path=f"/workspaces/{workspace_id}",
-                        request_data={
-                            "data": {
-                                "attributes": {
-                                    "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
-                                    "setting-overwrites": workspace_data_backup.get("attributes.setting-overwrites"),
-                                },
-                                "relationships": {
-                                    "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
-                                },
-                                "type": "workspaces",
-                            }
-                        },
-                    )
-
                     logging.info("Retrieve the output for the plan")
                     plan_id = run_data.get("relationships.plan.data.id")
                     plan_data = self._get_plan(id_=plan_id)
@@ -447,6 +429,24 @@ class TerraformExporter(BaseExporter):
                                     workspace = find_workspace(data, workspace_id)
                                     if workspace and not workspace.get("attributes.vcs-repo.branch"):
                                         workspace["attributes.vcs-repo.branch"] = branch_name
+
+                    logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
+                    self._extract_data_from_api(
+                        method="PATCH",
+                        path=f"/workspaces/{workspace_id}",
+                        request_data={
+                            "data": {
+                                "attributes": {
+                                    "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
+                                    "setting-overwrites": workspace_data_backup.get("attributes.setting-overwrites"),
+                                },
+                                "relationships": {
+                                    "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
+                                },
+                                "type": "workspaces",
+                            }
+                        },
+                    )
 
                 if agent_container.exists() and agent_container.state.running:
                     logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
