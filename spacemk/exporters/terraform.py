@@ -1114,6 +1114,7 @@ class TerraformExporter(BaseExporter):
             },
             image=self._config.get("agent_image", "jmfontaine/tfc-agent:smk-latest"),
             name=container_name,
+            pull="always",
             remove=True,
         )
 
