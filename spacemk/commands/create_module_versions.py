@@ -17,7 +17,7 @@ def _get_repository_tags(endpoint: str, github_api_token: str, namespace: str, r
     }
 
     try:
-        url = f"{endpoint}/repos/{namespace}/{repository}/tags"
+        url = f"{endpoint}/repos/{namespace}/{repository}/tags?per_page=100"
         response = requests.get(headers=headers, url=url)
         logging.debug(request_dump.dump_all(response).decode("utf-8"))
         response.raise_for_status()
