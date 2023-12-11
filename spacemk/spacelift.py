@@ -240,6 +240,6 @@ class Spacelift:
 
             self._set_mounted_file_content(
                 content=mounted_file_content,
-                filename="tf_vars_with_invalid_name.auto.tfvars",
+                filename="source/tf_vars_with_invalid_name.auto.tfvars",
                 stack_id=stack.get("slug"),
             )
