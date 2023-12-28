@@ -142,7 +142,7 @@ STATE_DOWNLOAD_URL=$(curl -sSL --fail \
   "https://app.terraform.io/api/v2/workspaces/${TFC_WORKSPACE_ID}/current-state-version" \
   | jq -r '.data.attributes."hosted-state-download-url"' )
 
-curl -sSL --fail -o state.tfstate "${STATE_DOWNLOAD_URL}"
+curl -sSL --fail --header "Authorization: Bearer $TFC_TOKEN" -o state.tfstate "${STATE_DOWNLOAD_URL}"
 terraform state push -force state.tfstate
 ```
 
