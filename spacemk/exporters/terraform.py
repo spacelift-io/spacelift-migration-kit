@@ -242,6 +242,7 @@ class TerraformExporter(BaseExporter):
             "Authorization": f"Bearer {self._config.get('api_token')}",
         }
         response = requests.get(allow_redirects=True, headers=headers, url=url)
+        logging.debug(request_dump.dump_all(response).decode("utf-8"))
 
         logging.info("Stop downloading text file")
 
@@ -266,6 +267,10 @@ class TerraformExporter(BaseExporter):
                 state_file_content = self._download_text_file(
                     url=state_version_data[0].get("attributes.hosted-state-download-url")
                 )
+
+                # KLUDGE: The Terraform API response is returned a "application/octet-stream"
+                # and includes encoded unicode characters that need to be decoded before saving the state file
+                state_file_content = json.dumps(json.loads(state_file_content), indent=2)
 
                 organization_id = workspace.get("relationships.organization.data.id")
                 workspace_id = workspace.get("id")
