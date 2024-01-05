@@ -1,4 +1,5 @@
 import logging
+import os
 from base64 import b64encode
 
 import requests
@@ -240,6 +241,8 @@ class Spacelift:
 
             self._set_mounted_file_content(
                 content=mounted_file_content,
-                filename="source/tf_vars_with_invalid_name.auto.tfvars",
+                filename=os.path.normpath(
+                    f"source/{stack.get('vcs.project_root')}/tf_vars_with_invalid_name.auto.tfvars"
+                ),
                 stack_id=stack.get("slug"),
             )
