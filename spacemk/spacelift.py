@@ -103,10 +103,12 @@ class Spacelift:
           }
         """
 
+        env_var_id = f"TF_VAR_{env_var.get('name')}" if env_var.get("type") == "terraform" else env_var.get("name")
+
         variables = {
             "stackId": env_var.get("_relationships.stack.slug"),
             "input": {
-                "id": env_var.get("name"),
+                "id": env_var_id,
                 "type": "ENVIRONMENT_VARIABLE",
                 "value": env_var.get("value"),
                 "writeOnly": True,
