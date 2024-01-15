@@ -58,7 +58,7 @@ class Generator:
         else:
             logging.info("Formatted generated Terraform code")
 
-    def _generate_code(self, data: dict):
+    def _generate_code(self, data: dict, template_name: str):
         current_file_path = Path(__file__).parent.resolve()
 
         env = Environment(
@@ -77,7 +77,7 @@ class Generator:
         env.filters["totf"] = self._filter_totf
 
         try:
-            content = env.get_template(name="main.tf.jinja", parent="base.tf.jinja").render(**data)
+            content = env.get_template(name=template_name, parent="base.tf.jinja").render(**data)
         except TemplateNotFound as e:
             raise FileNotFoundError(f"Template not found '{e.message}'") from e
 
@@ -108,10 +108,10 @@ class Generator:
         else:
             logging.info("Generated Terraform code is valid")
 
-    def generate(self):
+    def generate(self, template_name: str = "main.tf.jinja"):
         """Generate source code for managing Spacelift entities"""
         self._check_requirements()
         data = load_normalized_data()
-        self._generate_code(data)
+        self._generate_code(data=data, template_name=template_name)
         self._format_code()
         self._validate_code()
