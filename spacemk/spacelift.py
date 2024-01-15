@@ -120,7 +120,7 @@ class Spacelift:
         if response.get("errors"):
             logging.warning(
                 "Error setting sensitive environment variable "
-                f"'{env_var.get('_relationships.stack.slug')}/{env_var.get('name')}': "
+                f"'{env_var.get('_relationships.stack.slug')}/{env_var_id}': "
                 f"{response.get('errors[0].message')}"
             )
 
