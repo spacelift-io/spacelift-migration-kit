@@ -24,14 +24,11 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "editorconfig.editorconfig",
-        "esbenp.prettier-vscode",
         "hashicorp.terraform",
         "ms-python.black-formatter",
         "ms-python.python",
         "njpwerner.autodocstring",
-        "samuelcolvin.jinjahtml",
-        "tamasfe.even-better-toml"
+        "samuelcolvin.jinjahtml"
       ]
     }
   }
