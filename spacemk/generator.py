@@ -83,6 +83,13 @@ class Generator:
 
         self._save_to_file("main.tf", content)
 
+    def _load_data(self) -> dict:
+        return load_normalized_data()
+
+    def _process_data(self, data: dict) -> dict:
+        logging.info("No custom data processing defined. Skipping.")
+        return data
+
     def _save_to_file(self, filename: str, content: str):
         path = Path(get_tmp_subfolder("code"), filename)
 
@@ -111,7 +118,8 @@ class Generator:
     def generate(self, template_name: str = "main.tf.jinja"):
         """Generate source code for managing Spacelift entities"""
         self._check_requirements()
-        data = load_normalized_data()
+        data = self._load_data()
+        data = self._process_data(data)
         self._generate_code(data=data, template_name=template_name)
         self._format_code()
         self._validate_code()
