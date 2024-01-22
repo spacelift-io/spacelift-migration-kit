@@ -194,7 +194,7 @@ class Spacelift:
             self._create_module_version(commit_sha=commit_sha, module=module, version=version)
             logging.debug(f"Created version '{version}' using commit '{commit_sha}' for module '{module}'")
 
-    def _set_mounted_file_content(self, content: str, filename: str, stack_id: str) -> None:
+    def _set_mounted_file_content(self, content: str, filename: str, stack_id: str, write_only: bool = False) -> None:
         operation = """
           mutation UpdateStackConfig($stackId: ID!, $input: ConfigInput!) {
             stackConfigAdd(stack: $stackId, config: $input) {
@@ -209,7 +209,7 @@ class Spacelift:
                 "id": filename,
                 "type": "FILE_MOUNT",
                 "value": b64encode(content.encode()).decode(),
-                "writeOnly": True,
+                "writeOnly": write_only,
             },
         }
 
@@ -234,17 +234,32 @@ class Spacelift:
 
     def set_terraform_vars_with_invalid_name(self) -> None:
         for stack in self._get_stacks_with_invalid_env_var_names():
-            mounted_file_content = ""
+            plain_mounted_file_content = ""
+            secret_mounted_file_content = ""
             for env_var in self._get_terraform_var_with_invalid_name_for_stack(stack_source_id=stack.get("_source_id")):
                 if env_var.get("hcl"):
-                    mounted_file_content += f"{env_var.get('name')} = {env_var.get('value')}\n"
+                    new_line = f"{env_var.get('name')} = {env_var.get('value')}\n"
                 else:
-                    mounted_file_content += f"{env_var.get('name')} = \"{env_var.get('value')}\"\n"
+                    new_line = f"{env_var.get('name')} = \"{env_var.get('value')}\"\n"
+
+                if env_var.get("write_only"):
+                    secret_mounted_file_content += new_line
+                else:
+                    plain_mounted_file_content += new_line
 
             self._set_mounted_file_content(
-                content=mounted_file_content,
+                content=plain_mounted_file_content,
                 filename=os.path.normpath(
                     f"source/{stack.get('vcs.project_root')}/tf_vars_with_invalid_name.auto.tfvars"
                 ),
                 stack_id=stack.get("slug"),
+            )
+
+            self._set_mounted_file_content(
+                content=secret_mounted_file_content,
+                filename=os.path.normpath(
+                    f"source/{stack.get('vcs.project_root')}/tf_secret_vars_with_invalid_name.auto.tfvars"
+                ),
+                stack_id=stack.get("slug"),
+                write_only=True,
             )

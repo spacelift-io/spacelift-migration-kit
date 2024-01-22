@@ -57,8 +57,23 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
 resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}_env_vars_with_invalid_name" {
   {# The content will be uploaded at a later time to avoid having it in the Terraform code#}
   {{ argument("content", 'base64encode("placeholder = \\"placeholder\\"")', serialize=False) }}
-  {{ argument("relative_path", "tf_vars_with_invalid_name.auto.tfvars") }}
+  {{ argument("relative_path", ("source/" ~ stack.vcs.project_root ~ "/tf_vars_with_invalid_name.auto.tfvars")|normalizepath) }}
   {{ argument("stack_id", "spacelift_stack." ~ stack._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", serialize=False) }}
+  {{ argument("write_only", false) }}
+
+  lifecycle {
+    {{ argument("ignore_changes", "[content]", serialize=False) }}
+  }
+}
+{% endif %}
+
+{% if stack.has_secret_variables_with_invalid_name %}
+resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}_secret_env_vars_with_invalid_name" {
+  {# The content will be uploaded at a later time to avoid having it in the Terraform code#}
+  {{ argument("content", 'base64encode("placeholder = \\"placeholder\\"")', serialize=False) }}
+  {{ argument("relative_path", ("source/" ~ stack.vcs.project_root ~ "/tf_secret_vars_with_invalid_name.auto.tfvars")|normalizepath) }}
+  {{ argument("stack_id", "spacelift_stack." ~ stack._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", serialize=False) }}
+  {{ argument("write_only", true) }}
 
   lifecycle {
     {{ argument("ignore_changes", "[content]", serialize=False) }}

@@ -37,6 +37,9 @@ class Generator:
 
         logging.info("Stop checking requirements")
 
+    def _filter_normalizepath(self, value: str) -> str:
+        return os.path.normpath(value)
+
     def _filter_randomsuffix(self, value: str) -> str:
         return f"{value}_{os.urandom(8).hex()}"
 
@@ -73,6 +76,7 @@ class Generator:
             lstrip_blocks=True,
             trim_blocks=True,
         )
+        env.filters["normalizepath"] = self._filter_normalizepath
         env.filters["randomsuffix"] = self._filter_randomsuffix
         env.filters["totf"] = self._filter_totf
 

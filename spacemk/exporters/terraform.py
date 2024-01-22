@@ -983,15 +983,6 @@ class TerraformExporter(BaseExporter):
             if re.search(prog, variable.get("attributes.key")) is None:
                 is_name_valid = False
 
-            # KLUDGE: This should be its own function but to save time we are hijacking this function
-            # and will refactor later
-            if (
-                variable.get("attributes.category") == "terraform"
-                and variable.get("attributes.value")
-                and "\n" in variable.get("attributes.value")
-            ):
-                is_name_valid = False
-
             data.append(
                 {
                     "_relationships": {
@@ -1014,24 +1005,19 @@ class TerraformExporter(BaseExporter):
         return data
 
     def _map_stacks_data(self, src_data: dict) -> dict:
-        def find_workspace_variable_with_invalid_name(data: dict, workspace_id: str) -> dict:
+        def find_workspace_variable_with_invalid_name(data: dict, workspace_id: str, type_: str = "plain") -> dict:
             prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
             variables = []
 
             for variable in data.get("workspace_variables"):
+                if (variable.get("attributes.sensitive") is True and type_ == "plain") or (
+                    variable.get("attributes.sensitive") is False and type_ == "secret"
+                ):
+                    continue
+
                 if (
                     variable.get("relationships.workspace.data.id") == workspace_id
                     and re.search(prog, variable.get("attributes.key")) is None
-                ):
-                    variables.append(variable)
-                    continue
-
-                # KLUDGE: This should be its own function but to save time we are hijacking this function
-                # and will refactor later
-                if (
-                    variable.get("attributes.category") == "terraform"
-                    and variable.get("attributes.value")
-                    and "\n" in variable.get("attributes.value")
                 ):
                     variables.append(variable)
                     continue
@@ -1042,7 +1028,12 @@ class TerraformExporter(BaseExporter):
 
         data = []
         for workspace in src_data.get("workspaces"):
-            variables_with_invalid_name = find_workspace_variable_with_invalid_name(src_data, workspace.get("id"))
+            variables_with_invalid_name = find_workspace_variable_with_invalid_name(
+                data=src_data, type_="plain", workspace_id=workspace.get("id")
+            )
+            secret_variables_with_invalid_name = find_workspace_variable_with_invalid_name(
+                data=src_data, type_="secret", workspace_id=workspace.get("id")
+            )
 
             provider = workspace.get("attributes.vcs-repo.service-provider")
             if provider is None:
@@ -1073,6 +1064,7 @@ class TerraformExporter(BaseExporter):
                     "autodeploy": workspace.get("attributes.auto-apply"),
                     "description": workspace.get("attributes.description"),
                     "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0,
+                    "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0,
                     "name": workspace.get("attributes.name"),
                     "slug": self._build_stack_slug(workspace),
                     "terraform": {"version": terraform_version},
