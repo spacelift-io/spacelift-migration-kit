@@ -7,8 +7,10 @@ import click
 from benedict import benedict
 from dotenv import load_dotenv
 from envyaml import EnvYAML
+from icecream import ic
 from rich.logging import RichHandler
 
+ic.configureOutput(includeContext=True, contextAbsPath=True)
 debug_enabled = False
 
 
