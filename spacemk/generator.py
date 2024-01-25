@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 import click
 from jinja2 import ChoiceLoader, Environment, FileSystemLoader, nodes
@@ -61,7 +62,10 @@ class Generator:
         else:
             logging.info("Formatted generated Terraform code")
 
-    def _generate_code(self, data: dict, template_name: str):
+    def _generate_code(self, data: dict, extra_vars: dict, template_name: str):
+        if extra_vars:
+            data["extra_vars"] = extra_vars
+
         current_file_path = Path(__file__).parent.resolve()
 
         env = Environment(
@@ -119,11 +123,15 @@ class Generator:
         else:
             logging.info("Generated Terraform code is valid")
 
-    def generate(self, template_name: str = "main.tf.jinja"):
+    def generate(self, extra_vars: Optional[dict] = None, template_name: str = "main.tf.jinja"):
         """Generate source code for managing Spacelift entities"""
+
+        if extra_vars is None:
+            extra_vars = {}
+
         self._check_requirements()
         data = self._load_data()
         data = self._process_data(data)
-        self._generate_code(data=data, template_name=template_name)
+        self._generate_code(data=data, extra_vars=extra_vars, template_name=template_name)
         self._format_code()
         self._validate_code()
