@@ -240,6 +240,9 @@ class Spacelift:
                 if env_var.get("hcl"):
                     new_line = f"{env_var.get('name')} = {env_var.get('value')}\n"
                 else:
+                    if "\n" in env_var.get("value"):
+                        env_var["value"] = env_var["value"].replace("\n", "\\n")
+
                     new_line = f"{env_var.get('name')} = \"{env_var.get('value')}\"\n"
 
                 if env_var.get("write_only"):
