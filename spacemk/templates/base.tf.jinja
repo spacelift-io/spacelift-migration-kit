@@ -102,7 +102,7 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
   {% if not variable.write_only %}
     {% if variable.hcl %}
     {{ argument("value", "jsonencode(" ~ variable.value ~ ")", serialize=False) }}
-    {% elif "\n" in variable.value %}
+    {% elif variable.value and "\n" in variable.value %}
     {{ argument("value", "jsonencode(\"" ~ variable.value|replace("\n", "\\n") ~ "\")", serialize=False) }}
     {% else %}
     {{ argument("value", variable.value) }}
