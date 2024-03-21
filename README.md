@@ -41,11 +41,11 @@ That file can be reviewed and modified before moving to the next step.
 
 The `spacemk generate` command uses the normalized JSON file from the export step and uses a [Jinja template](https://jinja.palletsprojects.com/) to generate Terraform code that uses the [Spacelift provider](https://registry.terraform.io/providers/spacelift-io/spacelift/latest/docs) to create Spacelift entities that mimic the behavior of the source provider entities.
 
-Feel free to review and edit the generated code as needed.
+The generated code can be found in the `tmp/code/main.tf` file. Feel free to review and edit it as needed.
 
 ### Publish
 
-Once the Terraform code has been generated, push it to a git repository of your choosing that is available to your Spacelift account.
+Once the Terraform code has been generated, push the `tmp/code/main.tf` file to a git repository of your choosing that is available to your Spacelift account.
 
 ### Deploy
 
