@@ -5,8 +5,9 @@
   },
   "features": {
     "ghcr.io/devcontainers-contrib/features/checkov:1": {},
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers-contrib/features/poetry:2": {},
     "ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
     "ghcr.io/devcontainers/features/terraform:1": {
       "installTFsec": true
     },
@@ -16,11 +17,7 @@
     "source=spacemk-command-history,target=/command-history,type=volume", // Persists Bash history
     "source=spacemk-pre-commit-cache,target=/pre-commit-cache,type=volume" // Persist pre-commit cache
   ],
-  "onCreateCommand": {
-    "Install Dependencies": "pip install --no-cache-dir --requirement requirements.txt --upgrade",
-    "Install Custom Dependencies": "pip install --no-cache-dir --requirement custom/requirements.txt --upgrade || true",
-    "Install Spacelift Migration Kit": "pip install --editable ."
-  },
+  "postCreateCommand": "bash ./.devcontainer/post-create.sh",
   "customizations": {
     "vscode": {
       "extensions": [
