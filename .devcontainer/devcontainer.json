@@ -1,10 +1,54 @@
 {
   "name": "Spacelift Migration Kit",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "Dockerfile",
+    "args": {
+      "VARIANT": "bookworm"
+    }
+  },
+  "containerEnv": {
+    "POETRY_VIRTUALENVS_IN_PROJECT": "true"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "aaron-bond.better-comments",
+        "esbenp.prettier-vscode",
+        "hashicorp.terraform",
+        "ms-python.black-formatter",
+        "ms-python.python",
+        "njpwerner.autodocstring",
+        "samuelcolvin.jinjahtml",
+        "stkb.rewrap",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "editor.rulers": [120],
+        "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.terminal.activateEnvInCurrentTerminal": true,
+        "rewrap.autoWrap.enabled": true,
+        "[json][jsonc][yaml]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnPaste": true,
+          "editor.formatOnSave": true
+        },
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnPaste": true,
+          "editor.formatOnSave": true
+        }
+      }
+    }
   },
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": "false",
+      "username": "vscode",
+      "userUid": "1000",
+      "userGid": "1000"
+    },
     "ghcr.io/devcontainers-contrib/features/checkov:1": {},
+    "ghcr.io/devcontainers-contrib/features/nox:2": {},
     "ghcr.io/devcontainers-contrib/features/poetry:2": {},
     "ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
@@ -15,18 +59,15 @@
   },
   "mounts": [
     "source=spacemk-command-history,target=/command-history,type=volume", // Persists Bash history
+    "source=spacemk-poetry-cache,target=/poetry-cache,type=volume", // Persist Poetry cache
     "source=spacemk-pre-commit-cache,target=/pre-commit-cache,type=volume" // Persist pre-commit cache
   ],
-  "postCreateCommand": "bash ./.devcontainer/post-create.sh",
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "hashicorp.terraform",
-        "ms-python.black-formatter",
-        "ms-python.python",
-        "njpwerner.autodocstring",
-        "samuelcolvin.jinjahtml"
-      ]
-    }
-  }
+  "postCreateCommand": {
+    "Install pre-commit script": "pre-commit install",
+    "Install dependencies": "poetry install",
+    // KLUDGE: pipx is installed uwing the root user and sudo does not find pipx so we need to share the PATH
+    "Install Poetry plugins": "sudo -E env \"PATH=$PATH\" pipx inject poetry poetry-plugin-export",
+    "Install Nox plugins": "sudo -E env \"PATH=$PATH\" pipx inject nox nox-poetry"
+  },
+  "remoteUser": "vscode"
 }

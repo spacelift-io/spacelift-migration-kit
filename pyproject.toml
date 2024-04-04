@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "spacemk"
-version = "2.0.0-dev"
-description = "Spacelift Migration Kit"
 authors = ["Spacelift <contact@spacelift.io>"]
+description = "Spacelift Migration Kit"
 license = "MIT"
+name = "spacemk"
 readme = "README.md"
+version = "2.0.0-dev"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -25,13 +25,23 @@ rich = "13.7.1"
 xlsxwriter = "3.2.0"
 
 [tool.poetry.group.dev.dependencies]
+coverage = { extras = ["toml"], version = "^7.4.4" }
+mypy = "^1.9.0"
+nox = "^2024.3.2"
+nox-poetry = "^1.0.3"
+pytest = "^8.1.1"
 pytest-cov = "5.0.0"
 pytest-dotenv = "0.5.2"
+pytest-mock = "^3.14.0"
 pytest-recording = "0.13.1"
+ruff = "^0.3.5"
 vcrpy = "6.0.1"
 
 [tool.poetry.scripts]
-spacemk = "spacemk.__main__:cli"
+spacemk = "spacemk.cli:app"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/spacelift-io/spacelift-migration-kit/issues"
 
 [build-system]
 requires = ["poetry-core"]
@@ -39,20 +49,34 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
-target-version = ["py311"]
+target-version = ["py310", "py311", "py312"]
 
 [tool.codespell]
 skip = "poetry.lock"
+
+[tool.coverage.paths]
+source = ["spacemk"]
+
+[tool.coverage.run]
+branch = true
+source = ["spacemk"]
+
+[tool.coverage.report]
+# KLUDGE: Disabling this until we get to 100% coverage
+# fail_under = 100
+show_missing = true
 
 [tool.pytest.ini_options]
 addopts = "--block-network --cov=spacemk --durations=10 --durations-min=1.0 --record-mode=none --strict-markers"
 
 [tool.ruff]
-fix = true
-ignore = [
-  "TRY003", # raise-vanilla-args
-]
 line-length = 120
+show-fixes = true
+
+[tool.ruff.lint]
+ignore = [
+  "TRY003", # KLUDGE: Ignored until we refactor the exceptions to use custom exceptions
+]
 select = [
   "A",    # flake8-builtins
   "ARG",  #flake8-unused-arguments
@@ -80,10 +104,13 @@ select = [
   "TID",  # flake8-tidy-imports
   "TRY",  # tryceratops
 ]
-show-fixes = true
-unfixable = [
-  "ERA001" # commented-out-code
-]
+task-tags = ["KLUDGE", "TODO"]
 
-[tool.ruff.pylint]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
 max-args = 7 # KLUDGE: We should refactor the code and remove this at some point

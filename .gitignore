@@ -1,13 +1,15 @@
+__pycache__
 .coverage
 .terraform/
 *.egg-info
-__pycache__
-terraform.tfstate*
 /.cache
 /.env
+/.mypy_cache
+/.nox
 /.pytest_cache
 /.ruff_cache
 /.venv
 /.vscode
 /config.yml
 /tmp
+terraform.tfstate*
