@@ -15,7 +15,7 @@ def mypy(session: Session) -> None:
     args = session.posargs or PYTHON_SOURCES
 
     session.install("mypy")
-    session.run("mypy", "--ignore-missing-imports", *args)
+    session.run("mypy", "--disable-error-code=import-untyped", "--ignore-missing-imports", *args)
 
 
 @session(python=PYTHON_VERSIONS)
