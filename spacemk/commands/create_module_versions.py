@@ -2,6 +2,7 @@ import logging
 
 import click
 import requests
+from click_help_colors import HelpColorsCommand
 from requests_toolbelt.utils import dump as request_dump
 
 from spacemk import load_normalized_data
@@ -31,7 +32,12 @@ def _get_repository_tags(endpoint: str, github_api_token: str, namespace: str, r
     return data
 
 
-@click.command(help="Create module versions.")
+@click.command(
+    cls=HelpColorsCommand,
+    help="Create module versions.",
+    help_headers_color="yellow",
+    help_options_color="green",
+)
 @click.decorators.pass_meta_key("config")
 def create_module_versions(config):
     data = load_normalized_data()
