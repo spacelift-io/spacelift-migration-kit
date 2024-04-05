@@ -62,13 +62,9 @@ if custom_commands_folder.exists() and custom_commands_folder.is_dir():
     ccl.register_commands(group=spacemk, source=custom_commands_folder)
 
 
-def cli():
+def app():
     try:
         spacemk()
     except Exception:
         logging.exception("The command failed")
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    cli()
