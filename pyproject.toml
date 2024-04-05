@@ -23,6 +23,7 @@ requests-toolbelt = "1.0.0"
 requests = "2.31.0"
 rich = "13.7.1"
 xlsxwriter = "3.2.0"
+click-help-colors = "^0.9.4"
 
 [tool.poetry.group.dev.dependencies]
 coverage = { extras = ["toml"], version = "^7.4.4" }

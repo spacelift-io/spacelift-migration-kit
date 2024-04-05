@@ -5,6 +5,7 @@ from pathlib import Path
 import ccl
 import click
 from benedict import benedict
+from click_help_colors import HelpColorsGroup
 from dotenv import load_dotenv
 from envyaml import EnvYAML
 from icecream import ic
@@ -14,7 +15,12 @@ ic.configureOutput(includeContext=True, contextAbsPath=True)
 debug_enabled = False
 
 
-@click.group(help="Helper to move from various tools to Spacelift.")
+@click.group(
+    cls=HelpColorsGroup,
+    help="Helper to move from various tools to Spacelift.",
+    help_headers_color="yellow",
+    help_options_color="green",
+)
 @click.option(
     "--config",
     default="config.yml",
