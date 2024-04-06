@@ -276,8 +276,7 @@ There should not be any conflicts if you keep your modifications in the `custom`
 
 ## Uninstallation
 
-- Uninstall the `spacemk` command: `pip uninstall --yes spacemk`.
-- Uninstall the Python dependencies: `pip uninstall --requirement requirements.txt --yes`.
+- Delete the Python virtual environment: `poetry env remove --all`.
 - Delete the `spacelift-migration-kit` folder.
 
 ## Support
