@@ -1,0 +1,32 @@
+name: CI
+run-name: "CI (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
+on: push
+jobs:
+  nox:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        nox_sessions: ["ruff", "tests"]
+        os: ["macos-latest", "ubuntu-latest", "windows-latest"]
+        python-version: ["3.10", "3.11", "3.12"]
+    name: ${{ matrix.nox_sessions }} (${{ matrix.python-version }}, ${{ matrix.os }})
+    steps:
+      - name: Check the repository out
+        uses: actions/checkout@v4
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          architecture: x64
+          python-version: ${{ matrix.python-version }}
+      - name: Install nox and poetry
+        run: |
+          pipx install nox poetry
+          pipx inject nox nox-poetry
+          pipx inject poetry poetry-plugin-export
+      - name: Restore nox cache
+        uses: actions/cache@v4
+        with:
+          key: nox-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.nox_sessions }}-${{ hashFiles('poetry.lock') }}-${{ hashFiles('noxfile.py') }}
+          path: .nox
+      - name: Run ${{ matrix.nox_sessions }} nox session
+        run: nox -rs ${{ matrix.nox_sessions }}-${{ matrix.python-version }}
