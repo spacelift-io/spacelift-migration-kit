@@ -8,10 +8,12 @@ repos:
       - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
+      - id: forbid-submodules
+      - id: name-tests-test
       - id: trailing-whitespace
 
   - repo: https://github.com/psf/black
-    rev: 23.11.0
+    rev: 24.3.0
     hooks:
       - id: black
 
@@ -27,7 +29,7 @@ repos:
       - id: codespell
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.37.0
+    rev: v0.39.0
     hooks:
       - id: markdownlint
 
@@ -42,13 +44,13 @@ repos:
       - id: hadolint
 
   - repo: https://github.com/bridgecrewio/checkov
-    rev: 3.0.38
+    rev: 3.2.53
     hooks:
       - id: checkov
         args: ["--skip-framework", "dockerfile", "--quiet"]
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.83.6
+    rev: v1.88.4
     hooks:
       - id: terraform_fmt
       - id: terraform_providers_lock
