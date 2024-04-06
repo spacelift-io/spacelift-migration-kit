@@ -142,7 +142,7 @@ class BaseExporter(ABC):
                 for key, value in sorted(pivoted_entity_type_data.items()):
                     worksheet.write(0, column, key)
                     worksheet.write_column(1, column, value)
-                    column += 1
+                    column += 1  # noqa: SIM113
 
         workbook.close()
 
