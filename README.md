@@ -1,13 +1,18 @@
 # Spacelift Migration Kit
 
+## Prerequisites
+
+- [Python](https://www.python.org/downloads/) 3.10 or newer
+- [Poetry](https://python-poetry.org/)
+
 ## Installation
 
 - Ensure that Python is installed.
 - Download the Migration Kit: `git clone git@github.com:spacelift-io/spacelift-migration-kit.git` (or other available
   methods in GitHub).
 - Go to the Migration Kit folder: `spacelift-migration-kit`.
-- Install the Python dependencies: `pip install --requirement requirements.txt`.
-- Install the `spacemk` command: `pip install --editable .`.
+- Install the Python dependencies and the `spacemk` command in a Python virtual environment: `poetry install`.
+- Activate the Python virtual environment: `poetry shell`.
 
 ## Usage
 
