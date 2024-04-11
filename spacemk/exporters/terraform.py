@@ -9,6 +9,7 @@ from pathlib import Path
 import click
 import pydash
 import requests
+import semver
 from benedict import benedict
 from python_on_whales import Container, docker
 from requests_toolbelt.utils import dump as request_dump
@@ -178,6 +179,9 @@ class TerraformExporter(BaseExporter):
 
             if item.get("attributes.vcs-repo.service-provider") is None:
                 warnings.append("No VCS configuration")
+
+            if semver.match(item.get("attributes.terraform-version"), ">=1.5.7"):
+                warnings.append("BSL Terraform version")
 
             data[key]["warnings"] = ", ".join(warnings)
 
