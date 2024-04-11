@@ -4,7 +4,7 @@ description = "Spacelift Migration Kit"
 license = "MIT"
 name = "spacemk"
 readme = "README.md"
-version = "2.0.0-dev"
+version = "2.0.0-alpha2"
 
 [tool.poetry.dependencies]
 python = "^3.10"
