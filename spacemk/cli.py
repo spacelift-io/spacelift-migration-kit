@@ -5,11 +5,13 @@ from pathlib import Path
 import ccl
 import click
 from benedict import benedict
-from click_help_colors import HelpColorsGroup
+from click_help_colors import HelpColorsGroup, version_option
 from dotenv import load_dotenv
 from envyaml import EnvYAML
 from icecream import ic
 from rich.logging import RichHandler
+
+from spacemk import __version__ as spacemk_version
 
 ic.configureOutput(includeContext=True, contextAbsPath=True)
 debug_enabled = False
@@ -21,6 +23,7 @@ debug_enabled = False
     help_headers_color="yellow",
     help_options_color="green",
 )
+@version_option(prog_name="spacemk", prog_name_color="yellow", version=spacemk_version, version_color="green")
 @click.option(
     "--config",
     default="config.yml",

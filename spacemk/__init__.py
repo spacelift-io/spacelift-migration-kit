@@ -1,10 +1,34 @@
 import json
 import logging
 import subprocess
+from importlib.metadata import version
 from pathlib import Path
 from shutil import which
 
+import gitinfo
 from benedict import benedict
+from packaging.version import Version as PyPIVersion
+from semver import Version as SemVerVersion
+
+
+def pypi_version_to_semver(version: str) -> str:
+    pypi_version = PyPIVersion(version)
+
+    if pypi_version.dev is not None:
+        build = gitinfo.get_git_info()["commit"][0:7]
+        pre = "dev"
+    elif pypi_version.pre is not None:
+        build = None
+        pre_mapping = {"a": "alpha", "b": "beta", "pre": "rc"}
+        pre = f"{pre_mapping[pypi_version.pre[0]]}{pypi_version.pre[1]}"
+    else:
+        pre = None
+        build = None
+
+    return str(SemVerVersion(*pypi_version.release, build=build, prerelease=pre))
+
+
+__version__ = pypi_version_to_semver(version("spacemk"))
 
 
 def ensure_folder_exists(path: Path | str) -> None:

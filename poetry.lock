@@ -1043,6 +1043,17 @@ files = [
 ]
 
 [[package]]
+name = "python-git-info"
+version = "0.8.3"
+description = "Get git information repository, directly from .git"
+optional = false
+python-versions = "*"
+files = [
+    {file = "python-git-info-0.8.3.tar.gz", hash = "sha256:c08a2764a16da029e4db909ab8436ae484f8846405f83b1bcfd415fe5e3ab30d"},
+    {file = "python_git_info-0.8.3-py3-none-any.whl", hash = "sha256:f8911aa590170434272c834d1967b74faea71ee573e50cbe0b88e938e3db406b"},
+]
+
+[[package]]
 name = "python-on-whales"
 version = "0.70.1"
 description = "A Docker client for Python, designed to be fun and intuitive!"
@@ -1584,4 +1595,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "cbf24d543092379e6c1cf60b194e2221961dab5eed5232784d009c915f475f9d"
+content-hash = "98f0522936a4e4678fc2e6e6acfbd717c4936ce071c451a1338b5f82b5cd1e92"
