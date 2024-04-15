@@ -30,7 +30,7 @@ xlsxwriter = "3.2.0"
 [tool.poetry.group.dev.dependencies]
 coverage = { extras = ["toml"], version = "^7.4.4" }
 mypy = "^1.9.0"
-nox = "^2024.3.2"
+nox = "^2024.4.15"
 nox-poetry = "^1.0.3"
 pytest = "^8.1.1"
 pytest-cov = "5.0.0"
