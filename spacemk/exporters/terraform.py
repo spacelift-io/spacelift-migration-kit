@@ -1159,6 +1159,8 @@ class TerraformExporter(BaseExporter):
                 logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
             elif provider in ["github", "github_app", "github_enterprise"]:
                 provider = "github_custom"
+            elif provider == "bitbucket_server":
+                provider = "bitbucket_datacenter"
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
