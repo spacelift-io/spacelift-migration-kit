@@ -140,9 +140,13 @@ class BaseExporter(ABC):
 
                 column = 0
                 for key, value in sorted(pivoted_entity_type_data.items()):
+                    # Skip data structures
+                    if type(value) in [dict, list, tuple, set]:
+                        continue
+
                     worksheet.write(0, column, key)
                     worksheet.write_column(1, column, value)
-                    column += 1  # noqa: SIM113
+                    column += 1
 
         workbook.close()
 

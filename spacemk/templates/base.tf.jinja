@@ -125,6 +125,66 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
 {% block stack_variables_extra %}{% endblock %}
 {% endblock %}
 
+{% block contexts %}
+{% for context in contexts %}
+resource "spacelift_context" "{{ context._relationships.space._migration_id }}_{{ context._migration_id }}" {
+  {{ argument("description", context.description) }}
+  {{ argument("name", context.name, required=True) }}
+  {% block context_arguments_extra scoped %}{% endblock %}
+}
+
+{% for stack in context._relationships.stacks %}
+resource "spacelift_context_attachment" "{{ context._relationships.space._migration_id }}_{{ context._migration_id }}_{{ stack._migration_id }}" {
+  {{ argument("context_id", "spacelift_context." ~ context._relationships.space._migration_id ~ "_" ~ context._migration_id ~ ".id", required=True, serialize=False) }}
+  {{ argument("stack_id", "spacelift_stack." ~ context._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", required=True, serialize=False) }}
+}
+{% endfor %}
+
+{% block context_extra scoped %}{% endblock %}
+
+{% endfor %}
+{% block contexts_extra %}{% endblock %}
+{% endblock %}
+
+{% block context_variables %}
+{% for variable in context_variables %}
+
+{# KLUDGE: write_only variables are not supported in contexts #}
+{% if not variable.write_only %}
+resource "spacelift_environment_variable" "{{ variable._relationships.space._migration_id }}_{{ variable._relationships.context._migration_id }}_{{ variable._migration_id }}" {
+  {% if variable.type == "terraform" %}
+    {{ argument("name", "TF_VAR_" ~ variable.name, required=True) }}
+  {% else %}
+    {{ argument("name", variable.name, required=True) }}
+  {% endif %}
+
+  {{ argument("context_id", "spacelift_context." ~ variable._relationships.space._migration_id ~ "_" ~ variable._relationships.context._migration_id ~ ".id", serialize=False) }}
+  {% if not variable.write_only %}
+    {% if variable.hcl %}
+    {{ argument("value", "jsonencode(" ~ variable.value ~ ")", serialize=False) }}
+    {% elif variable.value and "\n" in variable.value %}
+    {{ argument("value", "jsonencode(\"" ~ variable.value|replace("\n", "\\n") ~ "\")", serialize=False) }}
+    {% else %}
+    {{ argument("value", variable.value) }}
+    {% endif %}
+  {% endif %}
+  {{ argument("write_only", variable.write_only, default=True) }}
+
+  {% if variable.write_only %}
+  lifecycle {
+    {{ argument("ignore_changes", "[value]", serialize=False) }}
+  }
+  {% endif %}
+
+  {% block context_variable_arguments_extra scoped %}{% endblock %}
+}
+{% block context_variable_extra scoped %}{% endblock %}
+
+{% endif %}
+{% endfor %}
+{% block context_variables_extra %}{% endblock %}
+{% endblock %}
+
 {% block modules %}
 {% for module in modules %}
 {% if module.status == "setup_complete" and module.visibility == "private" %}

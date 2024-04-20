@@ -487,8 +487,11 @@ class TerraformExporter(BaseExporter):
 
     def _expand_relationships(self, data: dict) -> dict:
         def find_entity(data: dict, type_: str, id_: str) -> dict:
-            # Pluralize the type
-            type_ = f"{type_}s"
+            # KLUDGE: Pluralize the type if not already pluralized
+            # THis should be made more robust
+            if not type_.endswith("s"):
+                type_ = f"{type_}s"
+
             for src_datum in data.get(type_):
                 if src_datum.get("_source_id") == id_:
                     # Clone to avoid modifying the original dict when removing the relationships
@@ -502,18 +505,33 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        logging.info("Start expanding relationships")
-
-        for entity_data in data.values():
+        def expand_relationship(entity_data) -> None:
             for datum in entity_data:
                 relationships = {}
                 if datum.get("_relationships"):
-                    for type_, id_ in datum.get("_relationships").items():
-                        relationships[type_] = find_entity(data=data, id_=id_, type_=type_)
+                    for type_, ids in datum.get("_relationships").items():
+                        if isinstance(ids, list):
+                            relationships[type_] = [find_entity(data=data, type_=type_, id_=id_) for id_ in ids]
+                        else:
+                            relationships[type_] = find_entity(data=data, type_=type_, id_=ids)
 
                 datum.update(
                     {"_migration_id": self._generate_migration_id(datum.get("name")), "_relationships": relationships}
                 )
+
+        logging.info("Start expanding relationships")
+
+        for entity_type, entity_data in data.items():
+            if entity_type in ["contexts", "context_variables"]:
+                # KLUDGE: Context and context variable relationships get expanded below
+                continue
+
+            expand_relationship(entity_data)
+
+        # KLUDGE: Context and context variable relationships need to be expanded after stacks'
+        # so that the stack migration ID is present
+        expand_relationship(data.get("contexts"))
+        expand_relationship(data.get("context_variables"))
 
         logging.info("Stop expanding relationships")
 
@@ -533,6 +551,7 @@ class TerraformExporter(BaseExporter):
                 "tasks": [],
                 "teams": [],
                 "variable_sets": [],
+                "variable_set_variables": [],
                 "workspace_variables": [],
                 "workspaces": [],
             }
@@ -549,6 +568,9 @@ class TerraformExporter(BaseExporter):
             data["teams"].extend(self._extract_teams_data(organization))
             data["variable_sets"].extend(self._extract_variable_sets_data(organization))
             data["workspaces"].extend(self._extract_workspaces_data(organization))
+
+        for variable_set in data.variable_sets:
+            data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
 
         for workspace in data.workspaces:
             data["workspace_variables"].extend(self._extract_workspace_variables_data(workspace))
@@ -816,6 +838,8 @@ class TerraformExporter(BaseExporter):
             "attributes.workspace-count",
             "id",
             "relationships.organization.data.id",
+            "relationships.projects.data",
+            "relationships.workspaces.data",
         ]
         data = self._extract_data_from_api(
             include_pattern=self._config.get("include.variable_sets"),
@@ -824,6 +848,29 @@ class TerraformExporter(BaseExporter):
         )
 
         logging.info("Stop extracting variable sets data")
+
+        return data
+
+    def _extract_variable_set_variables_data(self, variable_set: dict) -> list[dict]:
+        logging.info("Start extracting variable set variables data")
+
+        properties = [
+            "attributes.category",
+            "attributes.description",
+            "attributes.hcl",
+            "attributes.key",
+            "attributes.sensitive",
+            "attributes.value",
+            "id",
+            "relationships.varset.data.id",
+        ]
+        data = self._extract_data_from_api(
+            include_pattern=self._config.get("include.variable_set_variables"),
+            path=f"/varsets/{variable_set.get('id')}/relationships/vars",
+            properties=properties,
+        )
+
+        logging.info("Stop extracting variable set variables data")
 
         return data
 
@@ -912,6 +959,72 @@ class TerraformExporter(BaseExporter):
             else:
                 logging.debug(f"Plan '{id_}' is not finished yet. Waiting 3 seconds before retrying.")
                 time.sleep(3)
+
+        return data
+
+    def _map_context_variables_data(self, src_data: dict) -> dict:
+        def find_variable_set(data: dict, variable_set_id: str) -> dict:
+            for variable_set in data.get("variable_sets"):
+                if variable_set.get("id") == variable_set_id:
+                    return variable_set
+
+            logging.warning(f"Could not find variable set '{variable_set_id}'")
+
+            return None
+
+        logging.info("Start mapping context variables data")
+
+        prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
+        data = []
+        for variable in src_data.get("variable_set_variables"):
+            variable_set = find_variable_set(
+                data=src_data, variable_set_id=variable.get("relationships.varset.data.id")
+            )
+
+            is_name_valid = True
+
+            if re.search(prog, variable.get("attributes.key")) is None:
+                is_name_valid = False
+
+            data.append(
+                {
+                    "_relationships": {
+                        "space": variable_set.get("relationships.organization.data.id"),
+                        "context": variable.get("relationships.varset.data.id"),
+                    },
+                    "_source_id": variable.get("id"),
+                    "description": variable.get("attributes.description"),
+                    "hcl": variable.get("attributes.hcl"),
+                    "name": variable.get("attributes.key"),
+                    "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
+                    "valid_name": is_name_valid,
+                    "value": variable.get("attributes.value"),
+                    "write_only": variable.get("attributes.sensitive"),
+                }
+            )
+
+        logging.info("Stop mapping context variables data")
+
+        return data
+
+    def _map_contexts_data(self, src_data: dict) -> dict:
+        logging.info("Start mapping contexts data")
+
+        data = []
+        for variable_set in src_data.get("variable_sets"):
+            data.append(
+                {
+                    "_relationships": {
+                        "space": variable_set.get("relationships.organization.data.id"),
+                        "stacks": [workspace.get("id") for workspace in src_data.get("workspaces")],
+                    },
+                    "_source_id": variable_set.get("id"),
+                    "description": variable_set.get("attributes.description"),
+                    "name": variable_set.get("attributes.name"),
+                }
+            )
+
+        logging.info("Stop mapping contexts data")
 
         return data
 
@@ -1091,7 +1204,11 @@ class TerraformExporter(BaseExporter):
 
         data = benedict(
             {
-                "spaces": self._map_spaces_data(src_data),  # KLUDGE: Must be first due to dependency
+                "spaces": self._map_spaces_data(src_data),  # Must be first due to dependency
+                "contexts": self._map_contexts_data(src_data),
+                "context_variables": self._map_context_variables_data(
+                    src_data
+                ),  # Must be after contexts due to dependency
                 "modules": self._map_modules_data(src_data),
                 "stacks": self._map_stacks_data(src_data),
                 "stack_variables": self._map_stack_variables_data(src_data),  # Must be after stacks due to dependency
