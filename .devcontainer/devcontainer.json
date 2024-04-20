@@ -52,9 +52,7 @@
     "ghcr.io/devcontainers-contrib/features/poetry:2": {},
     "ghcr.io/devcontainers-contrib/features/pre-commit:2": {},
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/devcontainers/features/terraform:1": {
-      "installTFsec": true
-    },
+    "ghcr.io/devcontainers/features/terraform:1": {},
     "ghcr.io/dhoeric/features/hadolint:1": {}
   },
   "mounts": [

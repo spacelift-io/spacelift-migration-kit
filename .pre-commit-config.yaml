@@ -13,12 +13,12 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/psf/black
-    rev: 24.3.0
+    rev: 24.4.0
     hooks:
       - id: black
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.5
+    rev: v0.4.1
     hooks:
       - id: ruff
         args: [--fix]
@@ -44,16 +44,16 @@ repos:
       - id: hadolint
 
   - repo: https://github.com/bridgecrewio/checkov
-    rev: 3.2.53
+    rev: 3.2.72
     hooks:
       - id: checkov
         args: ["--skip-framework", "dockerfile", "--quiet"]
 
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.88.4
+    rev: v1.89.0
     hooks:
       - id: terraform_fmt
       - id: terraform_providers_lock
       - id: terraform_tflint
-      - id: terraform_tfsec
+      - id: terraform_trivy
       - id: terraform_validate
