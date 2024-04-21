@@ -488,7 +488,7 @@ class TerraformExporter(BaseExporter):
     def _expand_relationships(self, data: dict) -> dict:
         def find_entity(data: dict, type_: str, id_: str) -> dict:
             # KLUDGE: Pluralize the type if not already pluralized
-            # THis should be made more robust
+            # This should be made more robust
             if not type_.endswith("s"):
                 type_ = f"{type_}s"
 
@@ -986,22 +986,51 @@ class TerraformExporter(BaseExporter):
             if re.search(prog, variable.get("attributes.key")) is None:
                 is_name_valid = False
 
-            data.append(
-                {
-                    "_relationships": {
-                        "space": variable_set.get("relationships.organization.data.id"),
-                        "context": variable.get("relationships.varset.data.id"),
-                    },
-                    "_source_id": variable.get("id"),
-                    "description": variable.get("attributes.description"),
-                    "hcl": variable.get("attributes.hcl"),
-                    "name": variable.get("attributes.key"),
-                    "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
-                    "valid_name": is_name_valid,
-                    "value": variable.get("attributes.value"),
-                    "write_only": variable.get("attributes.sensitive"),
-                }
-            )
+            # Terraform variable sets can be attached to multiple projects
+            # while Spacelift contexts are attached to a single space.
+            # To work around this quirk, we duplicate the context for each space.
+            if (
+                "relationships.projects.data" in variable_set
+                and variable_set.get("relationships.projects.data") is not None
+            ):
+                for project in variable_set.get("relationships.projects.data"):
+                    logging.info(
+                        "Append context variable copy "
+                        f"'{project.get('id')}' / '{variable_set.get('id')}' / '{variable.get('id')}'"
+                    )
+                    data.append(
+                        {
+                            "_relationships": {
+                                "space": project.get("id"),
+                                "context": f"{project.get('id')}_{variable_set.get('id')}",
+                            },
+                            "_source_id": f"{project.get('id')}_{variable.get('id')}",
+                            "description": variable.get("attributes.description"),
+                            "hcl": variable.get("attributes.hcl"),
+                            "name": variable.get("attributes.key"),
+                            "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
+                            "valid_name": is_name_valid,
+                            "value": variable.get("attributes.value"),
+                            "write_only": variable.get("attributes.sensitive"),
+                        }
+                    )
+            else:
+                data.append(
+                    {
+                        "_relationships": {
+                            "space": variable_set.get("relationships.organization.data.id"),
+                            "context": variable.get("relationships.varset.data.id"),
+                        },
+                        "_source_id": variable.get("id"),
+                        "description": variable.get("attributes.description"),
+                        "hcl": variable.get("attributes.hcl"),
+                        "name": variable.get("attributes.key"),
+                        "type": "terraform" if variable.get("attributes.category") == "terraform" else "env_var",
+                        "valid_name": is_name_valid,
+                        "value": variable.get("attributes.value"),
+                        "write_only": variable.get("attributes.sensitive"),
+                    }
+                )
 
         logging.info("Stop mapping context variables data")
 
@@ -1012,17 +1041,61 @@ class TerraformExporter(BaseExporter):
 
         data = []
         for variable_set in src_data.get("variable_sets"):
-            data.append(
-                {
-                    "_relationships": {
-                        "space": variable_set.get("relationships.organization.data.id"),
-                        "stacks": [workspace.get("id") for workspace in src_data.get("workspaces")],
-                    },
-                    "_source_id": variable_set.get("id"),
-                    "description": variable_set.get("attributes.description"),
-                    "name": variable_set.get("attributes.name"),
-                }
-            )
+            if variable_set.get("attributes.global"):
+                data.append(
+                    {
+                        "_relationships": {
+                            "space": variable_set.get("relationships.organization.data.id"),
+                            "stacks": [],  # The list is empty because it will be auto-attached to all stacks
+                        },
+                        "_source_id": variable_set.get("id"),
+                        "description": variable_set.get("attributes.description"),
+                        "labels": ["autoattach:*"],
+                        "name": variable_set.get("attributes.name"),
+                    }
+                )
+            else:
+                # Terraform variable sets can be attached to multiple projects
+                # while Spacelift contexts are attached to a single space.
+                # To work around this quirk, we duplicate the context for each space.
+                if (
+                    "relationships.projects.data" in variable_set
+                    and variable_set.get("relationships.projects.data") is not None
+                ):
+                    for project in variable_set.get("relationships.projects.data"):
+                        logging.info(f"Append context copy '{project.get('id')}' / '{variable_set.get('id')}'")
+                        data.append(
+                            {
+                                "_relationships": {
+                                    "space": project.get("id"),
+                                    "stacks": [],  # The list is empty because it will be auto-attached to all stacks
+                                },
+                                "_source_id": f"{project.get('id')}_{variable_set.get('id')}",
+                                "description": variable_set.get("attributes.description"),
+                                "labels": ["autoattach:*"],
+                                "name": variable_set.get("attributes.name"),
+                            }
+                        )
+
+                if (
+                    "relationships.workspaces.data" in variable_set
+                    and variable_set.get("relationships.workspaces.data") is not None
+                ):
+                    data.append(
+                        {
+                            "_relationships": {
+                                "space": variable_set.get("relationships.organization.data.id"),
+                                "stacks": [
+                                    workspace.get("id")
+                                    for workspace in variable_set.get("relationships.workspaces.data")
+                                ],
+                            },
+                            "_source_id": variable_set.get("id"),
+                            "description": variable_set.get("attributes.description"),
+                            "labels": [],
+                            "name": variable_set.get("attributes.name"),
+                        }
+                    )
 
         logging.info("Stop mapping contexts data")
 
@@ -1041,9 +1114,14 @@ class TerraformExporter(BaseExporter):
                 vcs_namespace = None
                 vcs_repository = None
 
+            if "relationships.project.data.id" in module:
+                space_id = module.get("relationships.project.data.id")
+            else:
+                space_id = module.get("relationships.organization.data.id")
+
             data.append(
                 {
-                    "_relationships": {"space": module.get("relationships.organization.data.id")},
+                    "_relationships": {"space": space_id},
                     "_source_id": module.get("id"),
                     "name": module.get("attributes.name"),
                     "status": module.get("attributes.status"),
@@ -1076,6 +1154,16 @@ class TerraformExporter(BaseExporter):
                 }
             )
 
+        for project in src_data.get("projects"):
+            data.append(
+                {
+                    "_source_id": project.get("id"),
+                    "name": project.get("attributes.name"),
+                    # Will be set to True in _mark_spaces_for_terraform_custom_workflow(), if needed
+                    "requires_terraform_workflow_tool": False,
+                }
+            )
+
         logging.info("Stop mapping spaces data")
 
         return data
@@ -1102,10 +1190,15 @@ class TerraformExporter(BaseExporter):
             if re.search(prog, variable.get("attributes.key")) is None:
                 is_name_valid = False
 
+            if "relationships.project.data.id" in workspace:
+                space_id = workspace.get("relationships.project.data.id")
+            else:
+                space_id = workspace.get("relationships.organization.data.id")
+
             data.append(
                 {
                     "_relationships": {
-                        "space": workspace.get("relationships.organization.data.id"),
+                        "space": space_id,
                         "stack": variable.get("relationships.workspace.data.id"),
                     },
                     "_source_id": variable.get("id"),
@@ -1184,9 +1277,14 @@ class TerraformExporter(BaseExporter):
             else:
                 terraform_workflow_tool = "TERRAFORM_FOSS"
 
+            if "relationships.project.data.id" in workspace:
+                space_id = workspace.get("relationships.project.data.id")
+            else:
+                space_id = workspace.get("relationships.organization.data.id")
+
             data.append(
                 {
-                    "_relationships": {"space": workspace.get("relationships.organization.data.id")},
+                    "_relationships": {"space": space_id},
                     "_source_id": workspace.get("id"),
                     "autodeploy": workspace.get("attributes.auto-apply"),
                     "description": workspace.get("attributes.description"),
