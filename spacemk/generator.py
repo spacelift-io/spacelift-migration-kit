@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 import click
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader, nodes
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, StrictUndefined, nodes
 from jinja2.exceptions import TemplateNotFound, TemplateRuntimeError
 from jinja2.ext import Extension
 
@@ -63,8 +63,7 @@ class Generator:
             logging.info("Formatted generated Terraform code")
 
     def _generate_code(self, data: dict, extra_vars: dict, template_name: str):
-        if extra_vars:
-            data["extra_vars"] = extra_vars
+        data["extra_vars"] = extra_vars
 
         current_file_path = Path(__file__).parent.resolve()
 
@@ -79,6 +78,7 @@ class Generator:
             ),
             lstrip_blocks=True,
             trim_blocks=True,
+            undefined=StrictUndefined,
         )
         env.filters["normalizepath"] = self._filter_normalizepath
         env.filters["randomsuffix"] = self._filter_randomsuffix

@@ -1,4 +1,5 @@
 import click
+from click.decorators import pass_meta_key
 from click_help_colors import HelpColorsCommand
 
 from spacemk.generator import Generator
@@ -10,6 +11,7 @@ from spacemk.generator import Generator
     help_headers_color="yellow",
     help_options_color="green",
 )
-def generate():
+@pass_meta_key("config")
+def generate(config):
     generator = Generator()
-    generator.generate()
+    generator.generate(extra_vars=config.get("generator.extra_vars"))
