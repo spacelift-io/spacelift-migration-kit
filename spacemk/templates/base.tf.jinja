@@ -23,6 +23,53 @@ resource "spacelift_space" "{{ space._migration_id }}" {
   {{ argument("parent_space_id", "root", required=True) }}
   {% block space_arguments_extra scoped %}{% endblock %}
 }
+
+{% if space.requires_terraform_workflow_tool %}
+resource "spacelift_context" "{{ space._migration_id }}_terraform_workflow_tool" {
+  {{ argument("description", "Allows to use custom versions of Terraform. Make sure to provide the Terraform binary in the custom runner image for the stack.") }}
+  {{ argument("name", "Terraform Workflow Tool", required=True) }}
+}
+
+resource "spacelift_mounted_file" "workflow" {
+  {{ argument("context_id", "spacelift_context." ~ space._migration_id ~ "_terraform_workflow_tool.id", required=True, serialize=False) }}
+  {{ argument("relative_path", ".spacelift/workflow.yml", required=True) }}
+  {% raw %}
+  content = base64encode(
+<<EOT
+# Used to initialize your root module.
+init: terraform init -input=false
+
+# Used to select the correct workspace. Only used for Stacks that are using a custom state
+# backend, and which have the Workspace setting configured.
+workspaceSelect: terraform workspace select "{{ .WorkspaceName }}"
+
+# Used to create a new workspace if none with the required name exists. Only used for Stacks
+# that are using a custom state backend, and which have the Workspace setting configured.
+workspaceNew: terraform workspace new "{{ .WorkspaceName }}"
+
+# Used to generate a plan of the infrastructure changes that will be applied.
+plan: terraform plan -input=false -lock={{ .Lock }} {{ if not .Refresh }}-refresh=false {{ end }}-out={{ .PlanFileName }} {{ range .Targets }}-target='{{ . }}' {{ end }}
+
+# Outputs the current state information as JSON.
+showState: terraform show -json
+
+# Used to convert a plan file to its JSON representation.
+showPlan: terraform show -json "{{ .PlanFileName }}"
+
+# Used to get the current outputs from the state.
+getOutputs: terraform output -json
+
+# Used to apply any changes contained in the specified plan.
+apply: terraform apply -auto-approve -input=false "{{ .PlanFileName }}"
+
+# Used to tear down any resources as part of deleting a stack.
+destroy: terraform destroy -auto-approve -input=false
+EOT
+)
+{% endraw %}
+}
+{% endif %}
+
 {% block space_extra scoped %}{% endblock %}
 {% endfor %}
 {% block spaces_extra %}{% endblock %}
@@ -42,9 +89,14 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   {{ argument("project_root", stack.vcs.project_root) }}
   {{ argument("repository", stack.vcs.repository, required=True) }}
   {{ argument("slug", stack.slug, default=stack.name) }}
-  {{ argument("terraform_version", stack.terraform.version, serialize=True) }}
   {{ argument("space_id", "spacelift_space." ~ stack._relationships.space._migration_id ~ ".id", serialize=False) }}
+  {{ argument("terraform_version", stack.terraform.version, serialize=True) }}
+  {{ argument("terraform_workflow_tool", stack.terraform.workflow_tool, default="TERRAFORM_FOSS") }}
   {% block stack_arguments_extra scoped %}{% endblock %}
+
+  {% if stack.terraform.workflow_tool == "CUSTOM" %}
+  {{ argument("runner_image ", extra_vars.terraform_bsl_runner_image ~ ":" ~ stack.terraform.version, required=True) }}
+  {% endif %}
 
   {% if stack.vcs.provider == "github_custom" %}
   github_enterprise {
@@ -56,6 +108,13 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   }
   {% endif %}
 }
+
+{% if stack.terraform.workflow_tool == "CUSTOM" %}
+resource "spacelift_context_attachment" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}_terraform_workflow_tool" {
+  {{ argument("context_id", "spacelift_context." ~ stack._relationships.space._migration_id ~ "_terraform_workflow_tool.id", serialize=False) }}
+  {{ argument("stack_id", "spacelift_stack." ~ stack._relationships.space._migration_id ~ "_" ~ stack._migration_id ~ ".id", serialize=False) }}
+}
+{% endif %}
 
 {% if stack.has_variables_with_invalid_name %}
 resource "spacelift_mounted_file" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}_env_vars_with_invalid_name" {

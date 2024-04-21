@@ -1071,6 +1071,8 @@ class TerraformExporter(BaseExporter):
                 {
                     "_source_id": organization.get("id"),
                     "name": organization.get("attributes.name"),
+                    # Will be set to True in _mark_spaces_for_terraform_custom_workflow(), if needed
+                    "requires_terraform_workflow_tool": False,
                 }
             )
 
@@ -1174,7 +1176,13 @@ class TerraformExporter(BaseExporter):
 
             terraform_version = workspace.get("attributes.terraform-version")
             if terraform_version == "latest":
+                # KLUDGE: Stick to the latest MPL-licensed Terraform version for now
                 terraform_version = "1.5.7"
+
+            if semver.match(workspace.get("attributes.terraform-version"), ">=1.5.7"):
+                terraform_workflow_tool = "CUSTOM"
+            else:
+                terraform_workflow_tool = "TERRAFORM_FOSS"
 
             data.append(
                 {
@@ -1186,7 +1194,10 @@ class TerraformExporter(BaseExporter):
                     "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0,
                     "name": workspace.get("attributes.name"),
                     "slug": self._build_stack_slug(workspace),
-                    "terraform": {"version": terraform_version},
+                    "terraform": {
+                        "version": terraform_version,
+                        "workflow_tool": terraform_workflow_tool,
+                    },
                     "vcs": {
                         "branch": workspace.get("attributes.vcs-repo.branch"),
                         "namespace": vcs_namespace,
@@ -1217,9 +1228,31 @@ class TerraformExporter(BaseExporter):
             }
         )
 
+        data = self._mark_spaces_for_terraform_custom_workflow(data)
         data = self._expand_relationships(data)
 
         logging.info("Stop mapping data")
+
+        return data
+
+    def _mark_spaces_for_terraform_custom_workflow(self, data: dict) -> dict:
+        def find_space(data: dict, id_: str) -> dict:
+            for space in data.get("spaces"):
+                if space.get("_source_id") == id_:
+                    return space
+
+            logging.warning(f"Could not find space '{id_}'")
+
+            return None
+
+        logging.info("Start marking spaces for Terraform custom workflow")
+
+        for stack in data.get("stacks"):
+            if stack.get("terraform.workflow_tool") == "CUSTOM":
+                space = find_space(data, stack.get("_relationships.space"))
+                space["requires_terraform_workflow_tool"] = True
+
+        logging.info("Stop marking spaces for Terraform custom workflow")
 
         return data
 
