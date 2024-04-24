@@ -192,6 +192,7 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
 {% for context in contexts %}
 resource "spacelift_context" "{{ context._relationships.space._migration_id }}_{{ context._migration_id }}" {
   {{ argument("description", context.description) }}
+  {{ argument("labels", context.labels, default=[]) }}
   {{ argument("name", context.name, required=True) }}
   {% block context_arguments_extra scoped %}{% endblock %}
 }

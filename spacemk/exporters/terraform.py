@@ -530,8 +530,8 @@ class TerraformExporter(BaseExporter):
 
         # KLUDGE: Context and context variable relationships need to be expanded after stacks'
         # so that the stack migration ID is present
-        expand_relationship(data.get("contexts"))
-        expand_relationship(data.get("context_variables"))
+        # expand_relationship(data.get("contexts"))
+        # expand_relationship(data.get("context_variables"))
 
         logging.info("Stop expanding relationships")
 
@@ -566,11 +566,11 @@ class TerraformExporter(BaseExporter):
             data["providers"].extend(self._extract_providers_data(organization))
             data["tasks"].extend(self._extract_tasks_data(organization))
             data["teams"].extend(self._extract_teams_data(organization))
-            data["variable_sets"].extend(self._extract_variable_sets_data(organization))
+            # data["variable_sets"].extend(self._extract_variable_sets_data(organization))
             data["workspaces"].extend(self._extract_workspaces_data(organization))
 
-        for variable_set in data.variable_sets:
-            data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
+        # for variable_set in data.variable_sets:
+        #     data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
 
         for workspace in data.workspaces:
             data["workspace_variables"].extend(self._extract_workspace_variables_data(workspace))
@@ -1316,10 +1316,12 @@ class TerraformExporter(BaseExporter):
         data = benedict(
             {
                 "spaces": self._map_spaces_data(src_data),  # Must be first due to dependency
-                "contexts": self._map_contexts_data(src_data),
-                "context_variables": self._map_context_variables_data(
-                    src_data
-                ),  # Must be after contexts due to dependency
+                "contexts": [],
+                "context_variables": [],
+                # "contexts": self._map_contexts_data(src_data),
+                # "context_variables": self._map_context_variables_data(
+                #     src_data
+                # ),  # Must be after contexts due to dependency
                 "modules": self._map_modules_data(src_data),
                 "stacks": self._map_stacks_data(src_data),
                 "stack_variables": self._map_stack_variables_data(src_data),  # Must be after stacks due to dependency

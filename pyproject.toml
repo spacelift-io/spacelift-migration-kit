@@ -110,6 +110,9 @@ select = [
 task-tags = ["KLUDGE", "TODO"]
 
 [tool.ruff.lint.per-file-ignores]
+"spacemk/exporters/terraform.py" = [
+  "ERA001",
+] # KLUDGE: Ignored until we re-enable support for Variable Sets
 "tests/*" = ["S101"]
 
 [tool.ruff.lint.pydocstyle]
