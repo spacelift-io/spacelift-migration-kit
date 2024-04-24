@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from base64 import b64encode
 
 import requests
@@ -20,7 +21,7 @@ class Spacelift:
         self._config = config
         self._api_jwt_token = None
 
-    def _call_api(self, operation: str, variables: dict | None = None) -> dict:
+    def call_api(self, operation: str, variables: dict | None = None) -> dict:
         try:
             response = requests.post(
                 headers={"Authorization": f"Bearer {self._get_api_jwt_token()}"},
@@ -116,7 +117,7 @@ class Spacelift:
             },
         }
 
-        response = self._call_api(operation=operation, variables=variables)
+        response = self.call_api(operation=operation, variables=variables)
 
         if response.get("errors"):
             logging.warning(
@@ -140,7 +141,7 @@ class Spacelift:
             "version": version,
         }
 
-        self._call_api(operation=operation, variables=variables)
+        self.call_api(operation=operation, variables=variables)
 
     def _get_module_versions(self, module: str) -> list:
         versions = {}
@@ -164,7 +165,7 @@ class Spacelift:
             "moduleId": module,
         }
 
-        response = self._call_api(operation=operation, variables=variables)
+        response = self.call_api(operation=operation, variables=variables)
         for version in response.get("data.module.versions"):
             versions[version["number"]] = version["commit"]["hash"]
 
@@ -214,7 +215,7 @@ class Spacelift:
             },
         }
 
-        response = self._call_api(operation=operation, variables=variables)
+        response = self.call_api(operation=operation, variables=variables)
 
         if response.get("errors"):
             logging.warning(
@@ -264,3 +265,47 @@ class Spacelift:
                 stack_id=stack.get("slug"),
                 write_only=True,
             )
+
+    def trigger_task(self, stack_id: str, command: str, skip_initialization: bool = False, wait: bool = True) -> str:
+        trigger_mutation = """
+mutation CreateTask($stackId: ID!, $command: String!, $skipInitialization: Boolean!) {
+  taskCreate(
+    stack: $stackId
+    command: $command
+    skipInitialization: $skipInitialization
+  ) {
+    id
+  }
+}
+"""
+        trigger_variables = {
+            "stackId": stack_id,
+            "command": command,
+            "skipInitialization": skip_initialization,
+        }
+
+        trigger_response = self.call_api(operation=trigger_mutation, variables=trigger_variables)
+        run_id = trigger_response.get("data.taskCreate.id")
+
+        if wait:
+            run_state_query = """
+query GetRun($stackId: ID!, $runId: ID!) {
+  stack(id: $stackId) {
+    run(id: $runId) {
+      finished
+    }
+  }
+}
+"""
+            run_state_variables = {
+                "stackId": stack_id,
+                "runId": run_id,
+            }
+
+            while True:
+                run_state_response = self.call_api(operation=run_state_query, variables=run_state_variables)
+                time.sleep(2)
+                if run_state_response.get("data.stack.run.finished"):
+                    break
+
+        return run_id
