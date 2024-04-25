@@ -24,6 +24,27 @@ resource "spacelift_space" "{{ space._migration_id }}" {
   {% block space_arguments_extra scoped %}{% endblock %}
 }
 
+resource "spacelift_context" "{{ space._migration_id }}_terraform_credentials" {
+  {{ argument("before_init", ["cat ~/.terraformrc | sed 's/spacelift.lucidutil.com/" ~ extra_vars.spacelift_domain_name ~ "/' >> ~/.terraformrc"]) }}
+  {{ argument("description", "Update the domain name in the Terraform credentials.") }}
+  {{ argument("labels", ["autoattach:*"], default=[]) }}
+  {{ argument("name", "Terraform Credentials - " ~ space._migration_id, required=True) }}
+  {{ argument("space_id", "spacelift_space." ~ space._migration_id ~ ".id", required=True, serialize=False) }}
+}
+
+resource "spacelift_context" "{{ space._migration_id }}_tfe_token" {
+  {{ argument("description", "Holds TFE token.") }}
+  {{ argument("labels", ["autoattach:*"], default=[]) }}
+  {{ argument("name", "TFE Token - " ~ space._migration_id, required=True) }}
+  {{ argument("space_id", "spacelift_space." ~ space._migration_id ~ ".id", required=True, serialize=False) }}
+}
+
+resource "spacelift_environment_variable" "{{ space._migration_id }}_tfe_token" {
+  {{ argument("context_id", "spacelift_context." ~ space._migration_id ~ "_tfe_token.id", required=True, serialize=False) }}
+  {{ argument("name", "TFE_TOKEN", required=True) }}
+  {{ argument("value", extra_vars.tfe_token) }}
+}
+
 {% if space.requires_terraform_workflow_tool %}
 resource "spacelift_context" "{{ space._migration_id }}_terraform_workflow_tool" {
   {{ argument("description", "Allows to use custom versions of Terraform. Make sure to provide the Terraform binary in the custom runner image for the stack.") }}
