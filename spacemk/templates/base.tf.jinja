@@ -90,6 +90,7 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   {{ argument("repository", stack.vcs.repository, required=True) }}
   {{ argument("slug", stack.slug, default=stack.name) }}
   {{ argument("space_id", "spacelift_space." ~ stack._relationships.space._migration_id ~ ".id", serialize=False) }}
+  {{ argument("terraform_external_state_access", True, default=False) }}
   {{ argument("terraform_workflow_tool", stack.terraform.workflow_tool, default="TERRAFORM_FOSS") }}
   {{ argument("worker_pool_id", extra_vars.worker_pool_id) }}
   {% block stack_arguments_extra scoped %}{% endblock %}
