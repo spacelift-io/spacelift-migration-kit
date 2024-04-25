@@ -81,7 +81,7 @@ EOT
 {% if stack.vcs.repository %}
 resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ stack._migration_id }}" {
   {{ argument("auto_deploy", stack.auto_deploy, default=False) }}
-  {{ argument("branch", stack.vcs.branch, required=True) }}
+  {{ argument("branch", "master", required=True) }}
   {{ argument("description", stack.description) }}
   {{ argument("local_preview", stack.local_preview) }}
   {{ argument("labels", stack.labels) }}
