@@ -28,14 +28,14 @@ fi
 
 TF_WORKSPACE_ID=$1
 
-echo 'Downloading Terraform state file'
+echo "Downloading Terraform state file for workspace ${TF_WORKSPACE_ID}"
 STATE_DOWNLOAD_URL=$(curl --fail \
   --header "Authorization: Bearer $TF_TOKEN" \
   --header "Content-Type: application/vnd.api+json" \
   --location \
   --show-error \
   --silent \
-  "https://app.terraform.io/api/v2/workspaces/${TF_WORKSPACE_ID}/current-state-version" \
+  "https://tfe.lucidutil.com/api/v2/workspaces/${TF_WORKSPACE_ID}/current-state-version" \
   | jq -r '.data.attributes."hosted-state-download-url"' )
 
 echo 'Pushing Terraform state file'
