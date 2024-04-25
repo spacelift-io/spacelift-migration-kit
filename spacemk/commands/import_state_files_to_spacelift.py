@@ -28,6 +28,7 @@ fi
 
 TF_WORKSPACE_ID=$1
 
+echo 'Downloading Terraform state file'
 STATE_DOWNLOAD_URL=$(curl --fail \
   --header "Authorization: Bearer $TF_TOKEN" \
   --header "Content-Type: application/vnd.api+json" \
@@ -37,6 +38,7 @@ STATE_DOWNLOAD_URL=$(curl --fail \
   "https://app.terraform.io/api/v2/workspaces/${TF_WORKSPACE_ID}/current-state-version" \
   | jq -r '.data.attributes."hosted-state-download-url"' )
 
+echo 'Pushing Terraform state file'
 curl --fail \
     --header "Authorization: Bearer $TF_TOKEN" \
     --location \
