@@ -5,7 +5,7 @@ terraform {
   required_providers {
     spacelift = {
       source  = "spacelift-io/spacelift"
-      version = "{% block spacelift_provider_version %}~> 1.0{% endblock %}"
+      version = "~> 1.10"
     }
     {% block required_providers_extra %}{% endblock %}
   }
@@ -27,12 +27,13 @@ resource "spacelift_space" "{{ space._migration_id }}" {
 {% if space.requires_terraform_workflow_tool %}
 resource "spacelift_context" "{{ space._migration_id }}_terraform_workflow_tool" {
   {{ argument("description", "Allows to use custom versions of Terraform. Make sure to provide the Terraform binary in the custom runner image for the stack.") }}
-  {{ argument("name", "Terraform Workflow Tool", required=True) }}
+  {{ argument("name", "Terraform Workflow Tool - " ~ space._migration_id, required=True) }}
+  {{ argument("space_id", "spacelift_space." ~ space._migration_id ~ ".id", required=True, serialize=False) }}
 }
 
-resource "spacelift_mounted_file" "workflow" {
+resource "spacelift_mounted_file" "{{ space._migration_id }}_workflow" {
   {{ argument("context_id", "spacelift_context." ~ space._migration_id ~ "_terraform_workflow_tool.id", required=True, serialize=False) }}
-  {{ argument("relative_path", ".spacelift/workflow.yml", required=True) }}
+  {{ argument("relative_path", "source/.spacelift/workflow.yml", required=True) }}
   {% raw %}
   content = base64encode(
 <<EOT
@@ -84,14 +85,13 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   {{ argument("description", stack.description) }}
   {{ argument("local_preview", stack.local_preview) }}
   {{ argument("labels", stack.labels) }}
-  {{ argument("manage_state", False) }}
   {{ argument("name", stack.name, required=True) }}
   {{ argument("project_root", stack.vcs.project_root) }}
   {{ argument("repository", stack.vcs.repository, required=True) }}
   {{ argument("slug", stack.slug, default=stack.name) }}
   {{ argument("space_id", "spacelift_space." ~ stack._relationships.space._migration_id ~ ".id", serialize=False) }}
-  {{ argument("terraform_version", stack.terraform.version, serialize=True) }}
   {{ argument("terraform_workflow_tool", stack.terraform.workflow_tool, default="TERRAFORM_FOSS") }}
+  {{ argument("worker_pool_id", extra_vars.worker_pool_id) }}
   {% block stack_arguments_extra scoped %}{% endblock %}
 
   {% if stack.terraform.workflow_tool == "CUSTOM" %}
