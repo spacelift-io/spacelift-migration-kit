@@ -943,6 +943,10 @@ class TerraformExporter(BaseExporter):
         return slugify("_".join(args)).replace("-", "_")
 
     def _get_plan(self, id_: str) -> dict:
+        pause_duration = 3  # seconds
+        max_retries = 40
+        retries = 0
+
         while True:
             data = self._extract_data_from_api(
                 path=f"/plans/{id_}", properties=["attributes.log-read-url", "attributes.status"]
@@ -957,8 +961,14 @@ class TerraformExporter(BaseExporter):
                 data = {}
                 break
             else:
-                logging.debug(f"Plan '{id_}' is not finished yet. Waiting 3 seconds before retrying.")
-                time.sleep(3)
+                logging.info(f"Plan '{id_}' is not finished yet. Waiting {pause_duration} seconds before retrying.")
+                time.sleep(pause_duration)
+
+            retries += 1
+            if retries >= max_retries:
+                logging.warning(f"Plan '{id_}' has not finished after {max_retries} retries. Giving up.")
+                data = {}
+                break
 
         return data
 
