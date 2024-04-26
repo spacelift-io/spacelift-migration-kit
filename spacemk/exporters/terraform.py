@@ -479,7 +479,7 @@ class TerraformExporter(BaseExporter):
         logging.info("Start enriching data")
 
         self._download_state_files(data)
-        data = self._enrich_workspace_variable_data(data)
+        # data = self._enrich_workspace_variable_data(data)
 
         logging.info("Stop enriching data")
 
