@@ -95,7 +95,7 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   {% block stack_arguments_extra scoped %}{% endblock %}
 
   {% if stack.terraform.workflow_tool == "CUSTOM" %}
-  {{ argument("runner_image ", extra_vars.terraform_bsl_runner_image ~ ":" ~ stack.terraform.version, required=True) }}
+  {{ argument("runner_image ", extra_vars.custom_terraform_runner_image ~ ":" ~ stack.terraform.version, required=True) }}
   {% endif %}
 
   {% if stack.vcs.provider == "github_custom" %}
