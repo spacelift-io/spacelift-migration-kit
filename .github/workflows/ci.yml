@@ -22,10 +22,5 @@ jobs:
           pipx install nox poetry
           pipx inject nox nox-poetry
           pipx inject poetry poetry-plugin-export
-      - name: Restore nox cache
-        uses: actions/cache@v4
-        with:
-          key: nox-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.nox_sessions }}-${{ hashFiles('poetry.lock') }}-${{ hashFiles('noxfile.py') }}
-          path: .nox
       - name: Run ${{ matrix.nox_sessions }} nox session
         run: nox -rs ${{ matrix.nox_sessions }}-${{ matrix.python-version }}
