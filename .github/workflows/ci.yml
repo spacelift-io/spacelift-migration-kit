@@ -16,7 +16,6 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          architecture: x64
           python-version: ${{ matrix.python-version }}
       - name: Install nox and poetry
         run: |
