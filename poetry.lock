@@ -870,13 +870,13 @@ typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydash"
-version = "8.0.0"
+version = "8.0.1"
 description = "The kitchen sink of Python utility libraries for doing \"stuff\" in a functional way. Based on the Lo-Dash Javascript library."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "pydash-8.0.0-py3-none-any.whl", hash = "sha256:be2c35df332473a5a939d485422c71a03b19b1a98d6559efb832eadb4a2cfc36"},
-    {file = "pydash-8.0.0.tar.gz", hash = "sha256:5a90d98b5f370bb9620f786221579df8f83d54f1f58de6a66f52b1bdba7175d1"},
+    {file = "pydash-8.0.1-py3-none-any.whl", hash = "sha256:60265bab97fd00d5afd27dfbff9b6abfa22d0a965e166476b9066d84cd44c940"},
+    {file = "pydash-8.0.1.tar.gz", hash = "sha256:a24619643d3c054bfd56a9ae1cb7bd00e9774eaf369d7bb8d62b3daa2462bdbd"},
 ]
 
 [package.dependencies]
@@ -1596,4 +1596,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d9f58410138a2af58fcb09cb88d4647f08f70edd151c1e70524708d53d920b3c"
+content-hash = "12a30567f18816d45339b7c471967167db94e12d4184922b1a73cbf6500a9e10"
