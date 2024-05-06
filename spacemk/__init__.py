@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import subprocess
 from importlib.metadata import version
 from pathlib import Path
@@ -29,6 +30,16 @@ def pypi_version_to_semver(version: str) -> str:
 
 
 __version__ = pypi_version_to_semver(version("spacemk"))
+
+
+def terraform_version_to_semver(version: str | None) -> str:
+    try:
+        version_number = re.sub(r"[^\d\.]", "", version)
+        semver_version = SemVerVersion.parse(version_number)
+        return str(semver_version)
+    except Exception:
+        # KLUDGE: Stick to the latest MPL-licensed Terraform version for now
+        return "1.5.7"
 
 
 def ensure_folder_exists(path: Path | str) -> None:

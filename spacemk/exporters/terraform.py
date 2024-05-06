@@ -15,7 +15,7 @@ from python_on_whales import Container, docker
 from requests_toolbelt.utils import dump as request_dump
 from slugify import slugify
 
-from spacemk import get_tmp_subfolder, is_command_available
+from spacemk import get_tmp_subfolder, is_command_available, terraform_version_to_semver
 from spacemk.exporters import BaseExporter
 
 
@@ -180,9 +180,9 @@ class TerraformExporter(BaseExporter):
             if item.get("attributes.vcs-repo.service-provider") is None:
                 warnings.append("No VCS configuration")
 
-            if semver.match(item.get("attributes.terraform-version"), ">=1.5.7"):
+            terraform_version = terraform_version_to_semver(item.get("attributes.terraform-version"))
+            if semver.match(terraform_version, ">=1.5.7"):
                 warnings.append("BSL Terraform version")
-
             data[key]["warnings"] = ", ".join(warnings)
 
         logging.info("Stop checking workspaces data")
@@ -1266,13 +1266,8 @@ class TerraformExporter(BaseExporter):
             else:
                 vcs_namespace = None
                 vcs_repository = None
-
-            terraform_version = workspace.get("attributes.terraform-version")
-            if terraform_version == "latest":
-                # KLUDGE: Stick to the latest MPL-licensed Terraform version for now
-                terraform_version = "1.5.7"
-
-            if semver.match(workspace.get("attributes.terraform-version"), ">=1.5.7"):
+            terraform_version = terraform_version_to_semver(workspace.get("attributes.terraform-version"))
+            if semver.match(terraform_version, ">=1.5.7"):
                 terraform_workflow_tool = "CUSTOM"
             else:
                 terraform_workflow_tool = "TERRAFORM_FOSS"
