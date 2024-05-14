@@ -1,6 +1,7 @@
 __pycache__
 .coverage
 .terraform/
+*.csv
 *.egg-info
 /.cache
 /.env

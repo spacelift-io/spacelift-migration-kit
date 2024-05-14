@@ -4,6 +4,7 @@ import subprocess
 from importlib.metadata import version
 from pathlib import Path
 from shutil import which
+from typing import Optional
 
 import gitinfo
 from benedict import benedict
@@ -75,7 +76,13 @@ def load_normalized_data() -> dict:
         return benedict(json.load(fp))
 
 
-def save_normalized_data(data: dict) -> None:
-    path = Path(get_tmp_folder(), "data.json")
+def save_normalized_data(data: dict, path: Optional[str | Path] = None) -> None:
+    if not path:
+        path = Path(get_tmp_folder(), "data.json")
+    elif isinstance(path, str):
+        path = Path(path)
+    elif not isinstance(path, Path):
+        raise ValueError("The path argument must be a string or a Path object.")
+
     with path.open("w", encoding="utf-8") as fp:
         json.dump(data, fp, indent=2, sort_keys=True)
