@@ -1350,7 +1350,10 @@ class TerraformExporter(BaseExporter):
         for stack in data.get("stacks"):
             if stack.get("terraform.workflow_tool") == "CUSTOM":
                 space = find_space(data, stack.get("_relationships.space"))
-                space["requires_terraform_workflow_tool"] = True
+                if space:
+                    space["requires_terraform_workflow_tool"] = True
+                else:
+                    logging.warning(f"Could not find space '{stack.get('_relationships.space')}'")
 
         logging.info("Stop marking spaces for Terraform custom workflow")
 
