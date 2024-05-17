@@ -1,6 +1,9 @@
+import functools
 import logging
+import re
 from abc import ABC, abstractmethod
 from functools import reduce
+from itertools import filterfalse
 from pathlib import Path
 
 import click
@@ -88,7 +91,26 @@ class BaseExporter(ABC):
         Returns:
             dict: Filtered source provider data
         """
+
+        def drop_item(attribute_name: str, regex: re.Pattern, item: dict) -> bool:
+            if f"attributes.{attribute_name}" not in item:
+                logging.warning(f"Could not find attribute '{attribute_name}' in item {item}")
+                return True
+
+            return regex.match(item.get(f"attributes.{attribute_name}"))
+
         logging.info("No custom data filtering implemented. Using default implementation.")
+
+        if "drop_by_name" in self._config and self._config.get("drop_by_name") is not None:
+            for resource_type, patterns in self._config.get("drop_by_name").items():
+                if patterns:
+                    for pattern in patterns:
+                        regex = re.compile(pattern)
+                        attribute_name = "key" if resource_type == "workspace_variables" else "name"
+
+                        data[resource_type][:] = filterfalse(
+                            functools.partial(drop_item, attribute_name, regex), data.get(resource_type)
+                        )
 
         return data
 
