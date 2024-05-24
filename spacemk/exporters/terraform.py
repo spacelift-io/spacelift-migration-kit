@@ -318,7 +318,7 @@ class TerraformExporter(BaseExporter):
             if variable.get("attributes.sensitive") is False:
                 continue
 
-            workspace_id = variable.get("relationships.workspace.data.id")
+            workspace_id = variable.get("relationships.configurable.data.id")
             organization_id = find_workspace(data, workspace_id).get("relationships.organization.data.id")
 
             if organization_id not in organizations:
