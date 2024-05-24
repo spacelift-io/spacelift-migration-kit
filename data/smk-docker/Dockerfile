@@ -15,6 +15,13 @@ RUN wget -qO /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TERRA
     && unzip /tmp/terraform.zip -d /usr/local/bin \
     && rm /tmp/terraform.zip
 
+# Cache Spacelift Terraform provider
+COPY data/smk-docker/.terraformrc /root/.terraformrc
+ENV SPACELIFT_TERRAFORM_PROVIDER_VERSION=1.10.0
+RUN mkdir -p /usr/share/terraform/providers/registry.terraform.io/spacelift-io/spacelift/ \
+    && wget -qO /usr/share/terraform/providers/registry.terraform.io/spacelift-io/spacelift/terraform-provider-spacelift_${SPACELIFT_TERRAFORM_PROVIDER_VERSION}_linux_amd64.zip \
+    https://github.com/spacelift-io/terraform-provider-spacelift/releases/download/v${SPACELIFT_TERRAFORM_PROVIDER_VERSION}/terraform-provider-spacelift_${SPACELIFT_TERRAFORM_PROVIDER_VERSION}_linux_amd64.zip
+
 # Install Poetry
 ENV POETRY_VERSION=1.8.3
 RUN pip install --no-cache-dir poetry==$POETRY_VERSION
