@@ -885,7 +885,7 @@ class TerraformExporter(BaseExporter):
             "attributes.sensitive",
             "attributes.value",
             "id",
-            "relationships.workspace.data.id",
+            "relationships.configurable.data.id",
         ]
         data = self._extract_data_from_api(
             include_pattern=self._config.get("include.workspace_variables"),
@@ -1182,8 +1182,20 @@ class TerraformExporter(BaseExporter):
 
         prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
         data = []
+
         for variable in src_data.get("workspace_variables"):
-            workspace = find_workspace(data=src_data, workspace_id=variable.get("relationships.workspace.data.id"))
+            if variable.get("relationships.configurable.data.id"):
+                workspace_id = variable.get("relationships.configurable.data.id")
+            else:
+                logging.warning(f"Could not find workspace for variable '{variable.get('id')}'. Skipping.")
+                continue
+
+            workspace = find_workspace(data=src_data, workspace_id=workspace_id)
+            if workspace is None:
+                logging.warning(
+                    f"Could not find workspace '{workspace_id}' for variable '{variable.get('id')}'. Skipping."
+                )
+                continue
 
             is_name_valid = True
 
@@ -1199,7 +1211,7 @@ class TerraformExporter(BaseExporter):
                 {
                     "_relationships": {
                         "space": space_id,
-                        "stack": variable.get("relationships.workspace.data.id"),
+                        "stack": workspace.get("id"),
                     },
                     "_source_id": variable.get("id"),
                     "description": variable.get("attributes.description"),
@@ -1252,10 +1264,10 @@ class TerraformExporter(BaseExporter):
                 organization_name = workspace.get("relationships.organization.data.id")
                 workspace_name = workspace.get("attributes.name")
                 logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
-            elif provider in ["github", "github_app", "github_enterprise"]:
-                provider = "github_custom"
             elif provider == "bitbucket_server":
                 provider = "bitbucket_datacenter"
+            elif provider in ["github", "github_app", "github_enterprise"]:
+                provider = "github_custom"
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
