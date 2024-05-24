@@ -16,6 +16,7 @@
         "esbenp.prettier-vscode",
         "hashicorp.terraform",
         "ms-python.black-formatter",
+        "ms-python.debugpy",
         "ms-python.python",
         "njpwerner.autodocstring",
         "samuelcolvin.jinjahtml",
