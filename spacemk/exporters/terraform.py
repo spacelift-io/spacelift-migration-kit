@@ -1228,7 +1228,7 @@ class TerraformExporter(BaseExporter):
 
         return data
 
-    def _map_stacks_data(self, src_data: dict) -> dict:
+    def _map_stacks_data(self, src_data: dict) -> dict:  # noqa: PLR0912
         def find_workspace_variable_with_invalid_name(data: dict, workspace_id: str, type_: str = "plain") -> dict:
             prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
             variables = []
@@ -1268,6 +1268,8 @@ class TerraformExporter(BaseExporter):
                 provider = "bitbucket_datacenter"
             elif provider in ["github", "github_app", "github_enterprise"]:
                 provider = "github_custom"
+            elif provider == "gitlab_community_edition":
+                provider = "gitlab"
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
