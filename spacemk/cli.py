@@ -77,3 +77,7 @@ def app():
     except Exception:
         logging.exception("The command failed")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    app()
