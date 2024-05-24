@@ -16,7 +16,8 @@ def pypi_version_to_semver(version: str) -> str:
     pypi_version = PyPIVersion(version)
 
     if pypi_version.dev is not None:
-        build = gitinfo.get_git_info()["commit"][0:7]
+        info = gitinfo.get_git_info()
+        build = info["commit"][0:7] if info is not None else "unknown"
         pre = "dev"
     elif pypi_version.pre is not None:
         build = None
