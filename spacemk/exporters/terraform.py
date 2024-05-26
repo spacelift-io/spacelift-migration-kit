@@ -566,7 +566,7 @@ class TerraformExporter(BaseExporter):
             data["providers"].extend(self._extract_providers_data(organization))
             data["tasks"].extend(self._extract_tasks_data(organization))
             data["teams"].extend(self._extract_teams_data(organization))
-            # data["variable_sets"].extend(self._extract_variable_sets_data(organization))
+            data["variable_sets"].extend(self._extract_variable_sets_data(organization))
             data["workspaces"].extend(self._extract_workspaces_data(organization))
 
         # for variable_set in data.variable_sets:
@@ -619,6 +619,10 @@ class TerraformExporter(BaseExporter):
         data = []
         for raw_datum in raw_data:
             if raw_datum.get("attributes.name") and include_regex.match(raw_datum.get("attributes.name")) is None:
+                continue
+
+            # KLUDGE: Workspace variables do not have a 'name' attribute but use 'key' instead
+            if raw_datum.get("attributes.key") and include_regex.match(raw_datum.get("attributes.key")) is None:
                 continue
 
             if properties:
@@ -1191,6 +1195,7 @@ class TerraformExporter(BaseExporter):
                 continue
 
             workspace = find_workspace(data=src_data, workspace_id=workspace_id)
+
             if workspace is None:
                 logging.warning(
                     f"Could not find workspace '{workspace_id}' for variable '{variable.get('id')}'. Skipping."
@@ -1291,10 +1296,15 @@ class TerraformExporter(BaseExporter):
             else:
                 terraform_workflow_tool = "TERRAFORM_FOSS"
 
-            if "relationships.project.data.id" in workspace:
+            if workspace.get("relationships.project.data.id") is not None:
                 space_id = workspace.get("relationships.project.data.id")
-            else:
+                logging.info(f"Workspace '{workspace.get('attributes.name')}' is attached to a project")
+            elif workspace.get("relationships.organization.data.id") is not None:
                 space_id = workspace.get("relationships.organization.data.id")
+                logging.info(f"Workspace '{workspace.get('attributes.name')}' is attached to an organization")
+            else:
+                space_id = None
+                logging.warning(f"Workspace '{workspace.get('attributes.name')}' has no space")
 
             data.append(
                 {
