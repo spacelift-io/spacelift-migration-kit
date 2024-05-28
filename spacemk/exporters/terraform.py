@@ -19,6 +19,12 @@ from spacemk import get_tmp_subfolder, is_command_available
 from spacemk.exporters import BaseExporter
 
 
+class TerraformExporterPlanError(Exception):
+    def __init__(self, organization_id: str, workspace_id: str):
+        message = f"Could not trigger a plan for the '{organization_id}/{workspace_id}' workspace"
+        super().__init__(message)
+
+
 class TerraformExporter(BaseExporter):
     def __init__(self, config: dict):
         super().__init__(config)
@@ -333,11 +339,18 @@ class TerraformExporter(BaseExporter):
             return data
 
         for organization_id, workspaces in organizations.items():
-            logging.info(f"Start local TFC/TFE agent for organization '{organization_id}'")
-
-            agent_pool_id = self._create_agent_pool(organization_id=organization_id)
+            # Bring the variable scope up, so we can use these in the `finally` block
+            agent_pool_id = None
+            agent_container = None
+            current_workspace_id = None
+            workspace_data_backup = None
+            restored_agent = True
 
             try:
+                logging.info(f"Start local TFC/TFE agent for organization '{organization_id}'")
+
+                agent_pool_id = self._create_agent_pool(organization_id=organization_id)
+
                 agent_container_name = f"smk-tfc-agent-{organization_id}"
                 agent_container = self._start_agent_container(
                     agent_pool_id=agent_pool_id, container_name=agent_container_name
@@ -347,6 +360,7 @@ class TerraformExporter(BaseExporter):
                 agent_container_id = agent_container.id
 
                 for workspace_id, workspace_variables in workspaces.items():
+                    current_workspace_id = workspace_id
                     current_configuration_version_id = find_workspace(data, workspace_id).get(
                         "relationships.current-configuration-version.data.id"
                     )
@@ -383,6 +397,7 @@ class TerraformExporter(BaseExporter):
                             }
                         },
                     )
+                    restored_agent = False
 
                     logging.info(f"Trigger a plan for the '{organization_id}/{workspace_id}' workspace")
                     run_data = self._extract_data_from_api(
@@ -402,9 +417,13 @@ class TerraformExporter(BaseExporter):
                                 "type": "runs",
                             }
                         },
-                    )[
-                        0
-                    ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+                    )
+
+                    if len(run_data) == 0:
+                        raise TerraformExporterPlanError(organization_id, workspace_id)
+
+                    # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+                    run_data = run_data[0]
 
                     logging.info("Retrieve the output for the plan")
                     plan_id = run_data.get("relationships.plan.data.id")
@@ -439,23 +458,8 @@ class TerraformExporter(BaseExporter):
                                     if workspace and not workspace.get("attributes.vcs-repo.branch"):
                                         workspace["attributes.vcs-repo.branch"] = branch_name
 
-                    logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
-                    self._extract_data_from_api(
-                        method="PATCH",
-                        path=f"/workspaces/{workspace_id}",
-                        request_data={
-                            "data": {
-                                "attributes": {
-                                    "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
-                                    "setting-overwrites": workspace_data_backup.get("attributes.setting-overwrites"),
-                                },
-                                "relationships": {
-                                    "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
-                                },
-                                "type": "workspaces",
-                            }
-                        },
-                    )
+                    self._restore_workspace_exec_mode(organization_id, workspace_id, workspace_data_backup)
+                    restored_agent = True
 
                 if agent_container.exists() and agent_container.state.running:
                     logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
@@ -467,9 +471,15 @@ class TerraformExporter(BaseExporter):
                     )
             finally:
                 logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
-                self._stop_agent_container(agent_container)
 
-                self._delete_agent_pool(id_=agent_pool_id)
+                if not restored_agent:
+                    self._restore_workspace_exec_mode(organization_id, current_workspace_id, workspace_data_backup)
+
+                if agent_container:
+                    self._stop_agent_container(agent_container)
+
+                if agent_pool_id:
+                    self._delete_agent_pool(id_=agent_pool_id)
 
         logging.info("Stop enriching workspace variables data")
 
@@ -1377,6 +1387,26 @@ class TerraformExporter(BaseExporter):
         logging.debug(f"Using TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
 
         return container
+
+    def _restore_workspace_exec_mode(self, organization_id: str, workspace_id: str,
+                                     workspace_data_backup: dict) -> None:
+        logging.info(f"Restoring the '{organization_id}/{workspace_id}' workspace execution mode")
+        self._extract_data_from_api(
+            method="PATCH",
+            path=f"/workspaces/{workspace_id}",
+            request_data={
+                "data": {
+                    "attributes": {
+                        "execution-mode": workspace_data_backup.get("attributes.execution-mode"),
+                        "setting-overwrites": workspace_data_backup.get("attributes.setting-overwrites"),
+                    },
+                    "relationships": {
+                        "agent-pool": workspace_data_backup.get("relationships.agent-pool"),
+                    },
+                    "type": "workspaces",
+                }
+            },
+        )
 
     def _stop_agent_container(self, container: Container):
         if not container.exists() or not container.state.running:
