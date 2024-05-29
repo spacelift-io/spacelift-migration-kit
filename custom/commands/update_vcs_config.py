@@ -47,11 +47,17 @@ def update_vcs_config(vcs_config_file_path: str):
             logging.warning(f"No VCS configuration found for the '{stack.get('name')}' stack. Skipping.")
             continue
 
+        if stack_vcs_config.get("BackendPath"):
+            project_root = Path(stack_vcs_config.get("BackendPath")).parent.as_posix() + "/"
+        else:
+            project_root = None
+
         stack.vcs.update(
             {
                 "branch": stack_vcs_config.get("Branch"),
-                "namespace": urlparse(stack_vcs_config.get("RepoURL")).path.split("/")[1],
-                "project_root": Path(stack_vcs_config.get("BackendPath")).parent.as_posix() + "/",
+                "integration_id": urlparse(stack_vcs_config.get("RepoURL")).path.split("/")[1],
+                "namespace": urlparse(stack_vcs_config.get("RepoURL")).path.split("/")[2],
+                "project_root": project_root,
                 "provider": "azure_devops",
                 "repository": stack_vcs_config.get("RepoName"),
             }

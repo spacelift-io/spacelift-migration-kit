@@ -14,5 +14,6 @@ __pycache__
 /.venv
 /.vscode
 /tmp
+/vcs_config.csv
 config.yml
 terraform.tfstate*
