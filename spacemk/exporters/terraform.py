@@ -3,6 +3,7 @@ import json
 import logging
 import re
 import time
+import os
 from http import HTTPStatus
 from pathlib import Path
 
@@ -294,6 +295,268 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Stop downloading state files")
 
+    def _enrich_variable_set_data(self, data: dict) -> dict:
+        def reset_variable_set_relationships(var_set_id: str, variable_set_relationship_backup: dict) -> None:
+
+            request = {}
+            if variable_set_relationship_backup.get("relationships.workspaces.data") is not None:
+                request["workspaces"] = {"data": variable_set_relationship_backup.get("relationships.workspaces.data")}
+            if variable_set_relationship_backup.get("relationships.projects.data") is not None:
+                request["projects"] = {"data": variable_set_relationship_backup.get("relationships.projects.data")}
+
+            self._extract_data_from_api(
+                method="PATCH",
+                path=f"/varsets/{var_set_id}",
+                request_data={
+                    "data": {
+                        "attributes": {
+                            "priority": variable_set_relationship_backup.get("attributes.priority"),
+                            "global": variable_set_relationship_backup.get("attributes.global"),
+                        },
+                        "relationships": request
+                    }
+                }
+            )
+
+        if not is_command_available(["docker", "ps"], execute=True):
+            logging.warning("Docker is not available. Skipping enriching workspace variables data.")
+            return data
+
+        logging.info("Start enriching variable_set data")
+
+        new_workspace = None
+        variable_set_relationship_backup = None
+        var_set_reset = True
+        var_set_id = None
+        agent_container = None
+        agent_pool_id = None
+
+        try:
+            for organization in data.get("organizations"):
+                # Get Default Project
+                projects = self._extract_data_from_api(
+                    path=f"/organizations/{organization.get('id')}/projects",
+                    properties=[
+                        "id",
+                        "attributes.name"
+                    ],
+                )
+
+                default_project_id = None
+                for project in projects:
+                    if project.get("attributes.name") == "Default Project":
+                        default_project_id = project.get("id")
+
+                logging.info(f"Start local TFC/TFE agent for organization '{organization.get('id')}'")
+                agent_pool_id = self._create_agent_pool(organization_id=organization.get("id"))
+                agent_container_name = f"smk-tfc-agent-{organization.get('id')}"
+                agent_container = self._start_agent_container(
+                    agent_pool_id=agent_pool_id, container_name=agent_container_name
+                )
+                # Store the container ID in case it gets stopped and we need it for the error message
+                agent_container_id = agent_container.id
+
+                # Create a workspace
+                new_workspace = self._extract_data_from_api(
+                    method="POST",
+                    path=f"/organizations/{organization.get('id')}/workspaces",
+                    properties=["id"],
+                    request_data={
+                        "data": {
+                            "relationships": {
+                                "project": {
+                                    "data": {
+                                        "id": default_project_id,
+                                        "type": "projects"
+                                    }
+                                }
+                            },
+                            "attributes": {
+                                "name": "SMK",
+                                "execution-mode": "remote",
+                            },
+                            "type": "workspaces",
+                        }
+                    },
+                )[0]
+
+                # Push arbitrary data to the workspace
+                push = docker.run(
+                    detach=False,
+                    envs={
+                        "ORG": organization.get("attributes.name"),
+                    },
+                    image=self._config.get("push_image", "apollorion/terraform-push:1.0.0"),
+                    pull="always",
+                    remove=True,
+                    volumes={
+                        (f"{os.environ['HOME']}/.terraform.d/", "/root/.terraform.d/"),
+                    }
+                )
+                logging.info(push)
+
+                #Update workspace to use the TFC agent
+                self._extract_data_from_api(
+                    method="PATCH",
+                    path=f"/workspaces/{new_workspace.get('id')}",
+                    request_data={
+                        "data": {
+                            "attributes": {
+                                "agent-pool-id": agent_pool_id,
+                                "execution-mode": "agent",
+                                "setting-overwrites": {"execution-mode": True, "agent-pool": True},
+                            },
+                            "type": "workspaces",
+                        }
+                    },
+                )
+
+                # Find variable sets in the current org
+                variable_sets_in_organization = []
+                for variable_set in data.get("variable_sets"):
+                    if variable_set.get("relationships.organization.data.id") == organization.get("id"):
+                        variable_sets_in_organization.append(variable_set)
+
+                for var_set in variable_sets_in_organization:
+                    var_set_id = var_set.get("id")
+
+                    # Backup variable attachment info
+                    variable_set_relationship_backup = self._extract_data_from_api(
+                        path=f"/varsets/{var_set_id}",
+                        properties=[
+                            "attributes.name",
+                            "attributes.global",
+                            "attributes.priority",
+                            "relationships.workspaces.data",
+                            "relationships.projects.data",
+                            "relationships.organizations.data"
+                        ],
+                    )[0]
+
+                    logging.info(f"Updating {var_set_id} to attach to the workspace {new_workspace.get('id')}")
+
+                    var_set_reset = False
+                    # remove Var Set from Workspaces
+                    if variable_set_relationship_backup.get("relationships.workspaces.data") is not None:
+                        self._extract_data_from_api(
+                            method="DELETE",
+                            path=f"/varsets/{var_set_id}/relationships/workspaces",
+                            request_data={
+                                "data": variable_set_relationship_backup.get("relationships.workspaces.data")
+                            }
+                        )
+
+                    # Add Var Set to only the new workspace and set it as priority
+                    self._extract_data_from_api(
+                        method="PATCH",
+                        path=f"/varsets/{var_set_id}",
+                        request_data={
+                            "data": {
+                                "attributes": {
+                                    "global": False,
+                                    "priority": True,
+                                },
+                                "relationships": {
+                                    "workspaces": {
+                                        "data": [
+                                            {
+                                                "id": new_workspace.get("id"),
+                                                "type": "workspaces"
+                                            }
+                                        ]
+                                    },
+                                    "projects": {
+                                        "data": []
+                                    }
+                                }
+                            }
+                        }
+                    )
+
+                    logging.info(f"Trigger a plan for the '{organization.get('id')}/{new_workspace.get('id')}' workspace")
+                    run_data = self._extract_data_from_api(
+                        method="POST",
+                        path="/runs",
+                        properties=["relationships.plan.data.id"],
+                        request_data={
+                            "data": {
+                                "attributes": {
+                                    "allow-empty-apply": False,
+                                    "plan-only": True,
+                                    "refresh": False,  # No need to waste time refreshing the state
+                                },
+                                "relationships": {
+                                    "workspace": {"data": {"id": new_workspace.get('id'), "type": "workspaces"}},
+                                },
+                                "type": "runs",
+                            }
+                        },
+                    )
+
+                    if len(run_data) == 0:
+                        raise TerraformExporterPlanError(organization.get('id'), new_workspace.get('id'))
+
+                    # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+                    run_data = run_data[0]
+
+                    logging.info("Retrieve the output for the plan")
+                    plan_id = run_data.get("relationships.plan.data.id")
+                    plan_data = self._get_plan(id_=plan_id)
+
+                    if plan_data.get("attributes.log-read-url"):
+                        logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
+
+                        logging.debug("Plan output:")
+                        logging.debug(logs_data)
+
+                        logging.info("Extract the env var values from the plan output")
+                        for line in logs_data.split("\n"):
+                            for var in data.get("variable_set_variables"):
+                                if var.get("relationships.varset.data.id") == var_set_id:
+                                    key = var.get("attributes.key")
+                                    if line.startswith(f"{key}="):
+                                        value = line.removeprefix(f"{key}=")
+                                        masked_value = "*" * len(value)
+
+                                        logging.debug(f"Found sensitive env var: '{key}={masked_value}'")
+
+                                        var["attributes.value"] = value
+
+                    reset_variable_set_relationships(var_set_id, variable_set_relationship_backup)
+                    var_set_reset = True
+
+                if agent_container.exists() and agent_container.state.running:
+                    logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
+                    logging.debug(agent_container.logs())
+                else:
+                    logging.warning(
+                        f"Local TFC/TFE agent Docker container '{agent_container_id}' "
+                        "was already stopped when we tried to pull the logs. Skipping."
+                    )
+
+        finally:
+            logging.info("Stop enriching variable_set data")
+
+            if new_workspace is not None:
+                logging.info(f"Deleting workspace {new_workspace.get('id')}")
+                self._extract_data_from_api(
+                    method="DELETE",
+                    path=f"/workspaces/{new_workspace.get('id')}",
+                )
+
+            if not var_set_reset:
+                reset_variable_set_relationships(var_set_id, variable_set_relationship_backup)
+
+            if agent_container:
+                self._stop_agent_container(agent_container)
+
+            if agent_pool_id:
+                self._delete_agent_pool(id_=agent_pool_id)
+
+
+        return data
+
+
     # KLUDGE: We should break this function down in smaller functions
     def _enrich_workspace_variable_data(self, data: dict) -> dict:  # noqa: PLR0912, PLR0915
         def find_workspace(data: dict, workspace_id: str) -> dict:
@@ -492,6 +755,7 @@ class TerraformExporter(BaseExporter):
 
         self._download_state_files(data)
         data = self._enrich_workspace_variable_data(data)
+        data = self._enrich_variable_set_data(data)
 
         logging.info("Stop enriching data")
 
@@ -578,11 +842,11 @@ class TerraformExporter(BaseExporter):
             data["providers"].extend(self._extract_providers_data(organization))
             data["tasks"].extend(self._extract_tasks_data(organization))
             data["teams"].extend(self._extract_teams_data(organization))
-            # data["variable_sets"].extend(self._extract_variable_sets_data(organization))
+            data["variable_sets"].extend(self._extract_variable_sets_data(organization))
             data["workspaces"].extend(self._extract_workspaces_data(organization))
 
-        # for variable_set in data.variable_sets:
-        #     data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
+        for variable_set in data.variable_sets:
+            data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
 
         for workspace in data.workspaces:
             data["workspace_variables"].extend(self._extract_workspace_variables_data(workspace))
@@ -1346,12 +1610,10 @@ class TerraformExporter(BaseExporter):
         data = benedict(
             {
                 "spaces": self._map_spaces_data(src_data),  # Must be first due to dependency
-                "contexts": [],
-                "context_variables": [],
-                # "contexts": self._map_contexts_data(src_data),
-                # "context_variables": self._map_context_variables_data(
-                #     src_data
-                # ),  # Must be after contexts due to dependency
+                "contexts": self._map_contexts_data(src_data),
+                "context_variables": self._map_context_variables_data(
+                    src_data
+                ),  # Must be after contexts due to dependency
 
                 # Stacks must be before modules so we can determine is_gitlab so we set VCS properly
                 "stacks": self._map_stacks_data(src_data),
