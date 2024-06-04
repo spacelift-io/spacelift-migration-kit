@@ -1342,61 +1342,57 @@ class TerraformExporter(BaseExporter):
                         "name": variable_set.get("attributes.name")
                     }
                 )
-            else:
-                # Terraform variable sets can be attached to multiple projects
-                # while Spacelift contexts are attached to a single space.
-                # To work around this quirk, we duplicate the context for each space.
-                if (
-                    "relationships.projects.data" in variable_set
-                    and variable_set.get("relationships.projects.data") is not None
-                    and len(variable_set.get("relationships.projects.data")) > 0
-                ):
-                    for project in variable_set.get("relationships.projects.data"):
-                        logging.info(f"Append context copy '{project.get('id')}' / '{variable_set.get('id')}'")
-                        data.append(
-                            {
-                                "_migration_id": self._generate_migration_id(variable_set.get("id")),
-                                "_relationships": {
-                                    "space": {
-                                        "_migration_id": self._generate_migration_id(project.get("id"))
-                                    },
-                                    "stacks": [],  # The list is empty because it will be auto-attached to all stacks
-                                },
-                                "_source_id": f"{project.get('id')}_{variable_set.get('id')}",
-                                "description": variable_set.get("attributes.description"),
-                                "labels": ["autoattach:*"],
-                                "name": variable_set.get("attributes.name"),
-                            }
-                        )
-
-                # If the variable set is attached to the project, we dont need to also attach it to the workspace
-                # as it will already be attached to the workspace via the project relationship.
-                elif (
-                    "relationships.workspaces.data" in variable_set
-                    and variable_set.get("relationships.workspaces.data") is not None
-                    and len(variable_set.get("relationships.workspaces.data")) > 0
-                ):
-                    stacks = []
-                    for workspace in variable_set.get("relationships.workspaces.data"):
-                        stacks.append({"_migration_id": self._generate_migration_id(workspace.get("id"))})
-
+            elif (
+                "relationships.projects.data" in variable_set
+                and variable_set.get("relationships.projects.data") is not None
+                and len(variable_set.get("relationships.projects.data")) > 0
+            ):
+                for project in variable_set.get("relationships.projects.data"):
+                    logging.info(f"Append context copy '{project.get('id')}' / '{variable_set.get('id')}'")
                     data.append(
                         {
                             "_migration_id": self._generate_migration_id(variable_set.get("id")),
                             "_relationships": {
                                 "space": {
-                                    "_migration_id": self._generate_migration_id(
-                                            variable_set.get("relationships.organization.data.id")
-                                        )
+                                    "_migration_id": self._generate_migration_id(project.get("id"))
                                 },
-                                "stacks": stacks,
+                                "stacks": [],  # The list is empty because it will be auto-attached to all stacks
                             },
-                            "_source_id": variable_set.get("id"),
+                            "_source_id": f"{project.get('id')}_{variable_set.get('id')}",
                             "description": variable_set.get("attributes.description"),
-                            "labels": [],
+                            "labels": ["autoattach:*"],
                             "name": variable_set.get("attributes.name"),
                         }
                     )
+
+            # If the variable set is attached to the project, we dont need to also attach it to the workspace
+            # as it will already be attached to the workspace via the project relationship.
+            elif (
+                "relationships.workspaces.data" in variable_set
+                and variable_set.get("relationships.workspaces.data") is not None
+                and len(variable_set.get("relationships.workspaces.data")) > 0
+            ):
+                stacks = []
+                for workspace in variable_set.get("relationships.workspaces.data"):
+                    stacks.append({"_migration_id": self._generate_migration_id(workspace.get("id"))})
+
+                data.append(
+                    {
+                        "_migration_id": self._generate_migration_id(variable_set.get("id")),
+                        "_relationships": {
+                            "space": {
+                                "_migration_id": self._generate_migration_id(
+                                        variable_set.get("relationships.organization.data.id")
+                                    )
+                            },
+                            "stacks": stacks,
+                        },
+                        "_source_id": variable_set.get("id"),
+                        "description": variable_set.get("attributes.description"),
+                        "labels": [],
+                        "name": variable_set.get("attributes.name"),
+                    }
+                )
 
         logging.info("Stop mapping contexts data")
 
