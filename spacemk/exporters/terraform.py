@@ -1,9 +1,9 @@
 # ruff: noqa: PERF401
 import json
 import logging
+import os
 import re
 import time
-import os
 from http import HTTPStatus
 from pathlib import Path
 
@@ -295,7 +295,7 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Stop downloading state files")
 
-    def _enrich_variable_set_data(self, data: dict) -> dict:
+    def _enrich_variable_set_data(self, data: dict) -> dict: # noqa: PLR0912, PLR0915
         def reset_variable_set_relationships(var_set_id: str, variable_set_relationship_backup: dict) -> None:
 
             request = {}
@@ -462,7 +462,8 @@ class TerraformExporter(BaseExporter):
                         }
                     )
 
-                    logging.info(f"Trigger a plan for the '{organization.get('id')}/{new_workspace.get('id')}' workspace")
+                    logging.info(f"Trigger a plan for the '{organization.get('id')}/{new_workspace.get('id')}' "
+                                 f"workspace")
                     run_data = self._extract_data_from_api(
                         method="POST",
                         path="/runs",
@@ -1272,7 +1273,9 @@ class TerraformExporter(BaseExporter):
                                     "_migration_id": self._generate_migration_id(project.get("id"))
                                 },
                                 "context": {
-                                    "_migration_id": self._generate_migration_id(f"{project.get('id')}_{variable_set.get('id')}"),
+                                    "_migration_id": self._generate_migration_id(
+                                        f"{project.get('id')}_{variable_set.get('id')}"
+                                    ),
                                 },
                             },
                             "_source_id": f"{project.get('id')}_{variable.get('id')}",
@@ -1291,10 +1294,14 @@ class TerraformExporter(BaseExporter):
                         "_migration_id": self._generate_migration_id(variable.get("id")),
                         "_relationships": {
                             "space": {
-                                "_migration_id": self._generate_migration_id(variable_set.get("relationships.organization.data.id"))
+                                "_migration_id": self._generate_migration_id(
+                                    variable_set.get("relationships.organization.data.id")
+                                )
                             },
                             "context": {
-                                "_migration_id": self._generate_migration_id(variable.get("relationships.varset.data.id"))
+                                "_migration_id": self._generate_migration_id(
+                                    variable.get("relationships.varset.data.id")
+                                )
                             },
                         },
                         "_source_id": variable.get("id"),
@@ -1323,7 +1330,9 @@ class TerraformExporter(BaseExporter):
                         "_migration_id": self._generate_migration_id(variable_set.get("id")),
                         "_relationships": {
                             "space": {
-                                "_migration_id": self._generate_migration_id(variable_set.get("relationships.organization.data.id"))
+                                "_migration_id": self._generate_migration_id(
+                                    variable_set.get("relationships.organization.data.id")
+                                )
                             },
                             "stacks": [],  # The list is empty because it will be auto-attached to all stacks
                         },
@@ -1376,7 +1385,9 @@ class TerraformExporter(BaseExporter):
                             "_migration_id": self._generate_migration_id(variable_set.get("id")),
                             "_relationships": {
                                 "space": {
-                                    "_migration_id": self._generate_migration_id(variable_set.get("relationships.organization.data.id"))
+                                    "_migration_id": self._generate_migration_id(
+                                            variable_set.get("relationships.organization.data.id")
+                                        )
                                 },
                                 "stacks": stacks,
                             },
