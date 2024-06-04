@@ -434,18 +434,7 @@ class TerraformExporter(BaseExporter):
                     )[0]
 
                     logging.info(f"Updating {var_set_id} to attach to the workspace {new_workspace.get('id')}")
-
                     var_set_reset = False
-                    # remove Var Set from Workspaces
-                    if variable_set_relationship_backup.get("relationships.workspaces.data") is not None:
-                        self._extract_data_from_api(
-                            method="DELETE",
-                            path=f"/varsets/{var_set_id}/relationships/workspaces",
-                            request_data={
-                                "data": variable_set_relationship_backup.get("relationships.workspaces.data")
-                            }
-                        )
-
                     # Add Var Set to only the new workspace and set it as priority
                     self._extract_data_from_api(
                         method="PATCH",
@@ -1268,6 +1257,7 @@ class TerraformExporter(BaseExporter):
             if (
                 "relationships.projects.data" in variable_set
                 and variable_set.get("relationships.projects.data") is not None
+                and len(variable_set.get("relationships.projects.data")) > 0
             ):
                 for project in variable_set.get("relationships.projects.data"):
                     logging.info(
@@ -1276,9 +1266,14 @@ class TerraformExporter(BaseExporter):
                     )
                     data.append(
                         {
+                            "_migration_id": self._generate_migration_id(variable.get("id")),
                             "_relationships": {
-                                "space": project.get("id"),
-                                "context": f"{project.get('id')}_{variable_set.get('id')}",
+                                "space": {
+                                    "_migration_id": self._generate_migration_id(project.get("id"))
+                                },
+                                "context": {
+                                    "_migration_id": self._generate_migration_id(f"{project.get('id')}_{variable_set.get('id')}"),
+                                },
                             },
                             "_source_id": f"{project.get('id')}_{variable.get('id')}",
                             "description": variable.get("attributes.description"),
@@ -1293,9 +1288,14 @@ class TerraformExporter(BaseExporter):
             else:
                 data.append(
                     {
+                        "_migration_id": self._generate_migration_id(variable.get("id")),
                         "_relationships": {
-                            "space": variable_set.get("relationships.organization.data.id"),
-                            "context": variable.get("relationships.varset.data.id"),
+                            "space": {
+                                "_migration_id": self._generate_migration_id(variable_set.get("relationships.organization.data.id"))
+                            },
+                            "context": {
+                                "_migration_id": self._generate_migration_id(variable.get("relationships.varset.data.id"))
+                            },
                         },
                         "_source_id": variable.get("id"),
                         "description": variable.get("attributes.description"),
@@ -1320,14 +1320,17 @@ class TerraformExporter(BaseExporter):
             if variable_set.get("attributes.global"):
                 data.append(
                     {
+                        "_migration_id": self._generate_migration_id(variable_set.get("id")),
                         "_relationships": {
-                            "space": variable_set.get("relationships.organization.data.id"),
+                            "space": {
+                                "_migration_id": self._generate_migration_id(variable_set.get("relationships.organization.data.id"))
+                            },
                             "stacks": [],  # The list is empty because it will be auto-attached to all stacks
                         },
                         "_source_id": variable_set.get("id"),
                         "description": variable_set.get("attributes.description"),
                         "labels": ["autoattach:*"],
-                        "name": variable_set.get("attributes.name"),
+                        "name": variable_set.get("attributes.name")
                     }
                 )
             else:
@@ -1337,13 +1340,17 @@ class TerraformExporter(BaseExporter):
                 if (
                     "relationships.projects.data" in variable_set
                     and variable_set.get("relationships.projects.data") is not None
+                    and len(variable_set.get("relationships.projects.data")) > 0
                 ):
                     for project in variable_set.get("relationships.projects.data"):
                         logging.info(f"Append context copy '{project.get('id')}' / '{variable_set.get('id')}'")
                         data.append(
                             {
+                                "_migration_id": self._generate_migration_id(variable_set.get("id")),
                                 "_relationships": {
-                                    "space": project.get("id"),
+                                    "space": {
+                                        "_migration_id": self._generate_migration_id(project.get("id"))
+                                    },
                                     "stacks": [],  # The list is empty because it will be auto-attached to all stacks
                                 },
                                 "_source_id": f"{project.get('id')}_{variable_set.get('id')}",
@@ -1353,18 +1360,25 @@ class TerraformExporter(BaseExporter):
                             }
                         )
 
-                if (
+                # If the variable set is attached to the project, we dont need to also attach it to the workspace
+                # as it will already be attached to the workspace via the project relationship.
+                elif (
                     "relationships.workspaces.data" in variable_set
                     and variable_set.get("relationships.workspaces.data") is not None
+                    and len(variable_set.get("relationships.workspaces.data")) > 0
                 ):
+                    stacks = []
+                    for workspace in variable_set.get("relationships.workspaces.data"):
+                        stacks.append({"_migration_id": self._generate_migration_id(workspace.get("id"))})
+
                     data.append(
                         {
+                            "_migration_id": self._generate_migration_id(variable_set.get("id")),
                             "_relationships": {
-                                "space": variable_set.get("relationships.organization.data.id"),
-                                "stacks": [
-                                    workspace.get("id")
-                                    for workspace in variable_set.get("relationships.workspaces.data")
-                                ],
+                                "space": {
+                                    "_migration_id": self._generate_migration_id(variable_set.get("relationships.organization.data.id"))
+                                },
+                                "stacks": stacks,
                             },
                             "_source_id": variable_set.get("id"),
                             "description": variable_set.get("attributes.description"),
