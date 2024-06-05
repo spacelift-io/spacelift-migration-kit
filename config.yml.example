@@ -13,6 +13,12 @@ generator:
   extra_vars:
     foo: bar # "{{ extra_vars.foo }}" in a template will be replaced by "bar"
 
+    # If you use a custom app in github with spacelift, set this to `true`.
+    # If you use the marketplace github app with spacelift, set this to `false`.
+    # Default: false
+    github:
+      customApp: false
+
 github:
   api_token:
   endpoint: https://api.github.com
