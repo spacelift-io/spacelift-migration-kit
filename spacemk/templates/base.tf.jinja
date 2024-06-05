@@ -99,9 +99,14 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
   {% endif %}
 
   {% if stack.vcs.provider == "github_custom" %}
+  {% if extra_vars is defined
+    and extra_vars.github is defined
+    and extra_vars.github.customApp is defined
+    and extra_vars.github.customApp %}
   github_enterprise {
     {{ argument("namespace", stack.vcs.namespace) }}
   }
+  {% endif %}
   {% elif stack.vcs.provider %}
   {{ stack.vcs.provider }} {
     {{ argument("namespace", stack.vcs.namespace) }}
@@ -261,9 +266,14 @@ resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ 
   {% block module_arguments_extra scoped %}{% endblock %}
 
   {% if module.vcs.provider == "github_custom" %}
+  {% if extra_vars is defined
+    and extra_vars.github is defined
+    and extra_vars.github.customApp is defined
+    and extra_vars.github.customApp %}
   github_enterprise {
     {{ argument("namespace", module.vcs.namespace) }}
   }
+  {% endif %}
   {% endif %}
 }
 {% block module_extra scoped %}{% endblock %}
