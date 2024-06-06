@@ -13,8 +13,8 @@ from spacemk.generator import Generator
 )
 @pass_meta_key("config")
 def generate(config):
-    def default(value, default):
-        return value if value is not None else default
+    def default(value, _default):
+        return value if value is not None else _default
 
     generation_config = {
         "spacelift": {
