@@ -16,9 +16,13 @@ def generate(config):
     def default(value, default):
         return value if value is not None else default
 
-    spacelift = default(config.get("generator.spacelift"), {"manage_state": True})
-    github = default(config.get("generator.github"), {"custom_app": False})
-    generation_config = {"spacelift": spacelift, "github": github}
+    generation_config = {
+        "spacelift": {
+            "manage_state": default(config.get("generator.spacelift.manage_state"), True)
+        }, "github": {
+            "custom_app": default(config.get("generator.github.custom_app"), False)
+        }
+    }
 
     generator = Generator()
     generator.generate(extra_vars=config.get("generator.extra_vars"), generation_config=generation_config)
