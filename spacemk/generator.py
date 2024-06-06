@@ -139,7 +139,7 @@ class Generator:
         data = self._load_data()
         data = self._process_data(data)
         self._generate_code(
-            data=data, 
+            data=data,
             extra_vars=extra_vars,
             template_name=template_name,
             generation_config=generation_config
