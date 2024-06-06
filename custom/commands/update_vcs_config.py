@@ -48,7 +48,7 @@ def update_vcs_config(vcs_config_file_path: str):
             continue
 
         if stack_vcs_config.get("BackendPath"):
-            project_root = Path(stack_vcs_config.get("BackendPath")).parent.as_posix() + "/"
+            project_root = "/" + stack_vcs_config.get("BackendPath").strip("/") + "/"
         else:
             project_root = None
 
