@@ -45,18 +45,17 @@ curl --fail \
     --silent \
     "${STATE_DOWNLOAD_URL}"
 
-set +e
 binary="terraform"
-if ! command $binary; then
-    echo "Terraform is not installed"
+if ! command -v $binary &> /dev/null; then
+    echo "Terraform not found, using OpenTofu"
     binary="tofu"
-    if ! command $binary; then
-        echo "OpenTofu is not installed"
+    if ! command -v $binary &> /dev/null; then
+        echo "OpenTofu not found, Failing run..."
         exit 1
     fi
 fi
-set -euo pipefail
 
+echo "Using Binary: $binary"
 $binary state push -force state.tfstate
 """
 
