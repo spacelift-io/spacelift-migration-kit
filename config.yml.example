@@ -16,7 +16,7 @@ generator:
 #  # Default: false
 #  github:
 #    custom_app: false
-#
+
 #  # If you want spacelift to manage your state set to `true`.
 #  # If you want to use a third-party backend, like s3, set to `false`.
 #  # Default: true
