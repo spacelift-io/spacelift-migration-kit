@@ -10,6 +10,19 @@ exporter:
       workspaces: ^example-.*$
 
 generator:
+
+#  # If you use a custom app in github with spacelift, set this to `true`.
+#  # If you use the marketplace github app with spacelift, set this to `false`.
+#  # Default: false
+#  github:
+#    customApp: false
+#
+#  # If you want spacelift to manage your state set to `true`.
+#  # If you want to use a third-party backend, like s3, set to `false`.
+#  # Default: true
+#  spacelift:
+#    manage_state: true
+
   extra_vars:
     foo: bar # "{{ extra_vars.foo }}" in a template will be replaced by "bar"
 

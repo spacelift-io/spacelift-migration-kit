@@ -62,8 +62,9 @@ class Generator:
         else:
             logging.info("Formatted generated Terraform code")
 
-    def _generate_code(self, data: dict, extra_vars: dict, template_name: str):
+    def _generate_code(self, data: dict, extra_vars: dict, template_name: str, generation_config: dict):
         data["extra_vars"] = extra_vars
+        data["generation_config"] = generation_config
 
         current_file_path = Path(__file__).parent.resolve()
 
@@ -123,15 +124,17 @@ class Generator:
         else:
             logging.info("Generated Terraform code is valid")
 
-    def generate(self, extra_vars: Optional[dict] = None, template_name: str = "main.tf.jinja"):
+    def generate(self, extra_vars: Optional[dict] = None, template_name: str = "main.tf.jinja", generation_config: dict = None):
         """Generate source code for managing Spacelift entities"""
 
+        if generation_config is None:
+            generation_config = {}
         if extra_vars is None:
             extra_vars = {}
 
         self._check_requirements()
         data = self._load_data()
         data = self._process_data(data)
-        self._generate_code(data=data, extra_vars=extra_vars, template_name=template_name)
+        self._generate_code(data=data, extra_vars=extra_vars, template_name=template_name, generation_config=generation_config)
         self._format_code()
         self._validate_code()
