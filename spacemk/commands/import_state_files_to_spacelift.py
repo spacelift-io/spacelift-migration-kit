@@ -37,14 +37,20 @@ STATE_DOWNLOAD_URL=$(curl --fail \
   "https://app.terraform.io/api/v2/workspaces/${TF_WORKSPACE_ID}/current-state-version" \
   | jq -r '.data.attributes."hosted-state-download-url"' )
 
+echo "Downloading state file from $STATE_DOWNLOAD_URL"
+
 curl --fail \
     --header "Authorization: Bearer $TF_TOKEN" \
     --location \
     --output state.tfstate \
     --show-error \
-    --silent \
     "${STATE_DOWNLOAD_URL}"
+
+echo "Uploading state file to Spacelift"
+
 terraform state push -force state.tfstate
+
+echo "State pushed successfully"
 """
 
     variables = {
