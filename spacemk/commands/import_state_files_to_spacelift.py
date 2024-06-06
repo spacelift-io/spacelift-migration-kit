@@ -77,7 +77,9 @@ echo "State pushed successfully"
                 },
             ],
             "hooks": {
-                "beforeInit": [],
+                "beforeInit": [
+                    "echo \"\" > terraform.tfstate"
+                ],
                 "afterInit": [],
                 "beforePlan": [],
                 "afterPlan": [],
