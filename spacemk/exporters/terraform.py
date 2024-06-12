@@ -187,7 +187,7 @@ class TerraformExporter(BaseExporter):
 
             try:
                 tf_version = item.get("attributes.terraform-version")
-                if tf_version.startsWith("~>"):
+                if tf_version.startswith("~>"):
                     tf_version = tf_version.removeprefix("~>")
                 if semver.match(tf_version, ">=1.5.7"):
                     warnings.append("BSL Terraform version")
