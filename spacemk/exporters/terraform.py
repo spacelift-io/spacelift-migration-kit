@@ -18,7 +18,6 @@ from slugify import slugify
 from spacemk import get_tmp_subfolder, is_command_available
 from spacemk.exporters import BaseExporter
 
-
 class TerraformExporterPlanError(Exception):
     def __init__(self, organization_id: str, workspace_id: str):
         message = f"Could not trigger a plan for the '{organization_id}/{workspace_id}' workspace"
@@ -187,7 +186,10 @@ class TerraformExporter(BaseExporter):
                 warnings.append("No VCS configuration")
 
             try:
-                if semver.match(item.get("attributes.terraform-version"), ">=1.5.7"):
+                tf_version = item.get("attributes.terraform-version")
+                if tf_version.startsWith("~>"):
+                    tf_version = tf_version.removeprefix("~>")
+                if semver.match(tf_version, ">=1.5.7"):
                     warnings.append("BSL Terraform version")
             except BaseException:
                 warnings.append("Invalid Terraform version")
