@@ -186,8 +186,11 @@ class TerraformExporter(BaseExporter):
             if item.get("attributes.vcs-repo.service-provider") is None:
                 warnings.append("No VCS configuration")
 
-            if semver.match(item.get("attributes.terraform-version"), ">=1.5.7"):
-                warnings.append("BSL Terraform version")
+            try:
+                if semver.match(item.get("attributes.terraform-version"), ">=1.5.7"):
+                    warnings.append("BSL Terraform version")
+            except BaseException:
+                warnings.append("Invalid Terraform version")
 
             data[key]["warnings"] = ", ".join(warnings)
 
