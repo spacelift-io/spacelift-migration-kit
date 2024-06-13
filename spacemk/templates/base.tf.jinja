@@ -245,12 +245,6 @@ resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ 
   {{ argument("space_id", "spacelift_space." ~ module._relationships.space._migration_id ~ ".id", serialize=False) }}
   {{ argument("terraform_provider", module.terraform_provider) }}
   {% block module_arguments_extra scoped %}{% endblock %}
-
-  {% if module.vcs.provider == "github_custom" %}
-  github_enterprise {
-    {{ argument("namespace", module.vcs.namespace) }}
-  }
-  {% endif %}
 }
 {% block module_extra scoped %}{% endblock %}
 {% endif %}
