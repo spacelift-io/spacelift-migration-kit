@@ -1258,16 +1258,21 @@ class TerraformExporter(BaseExporter):
             )
 
             provider = workspace.get("attributes.vcs-repo.service-provider")
+
+            supported_providers = {
+                "github": "github_custom",
+                "github_app": "github_custom",
+                "github_enterprise": "github_custom",
+                "bitbucket_server": "bitbucket_datacenter",
+                "gitlab_hosted": "gitlab",
+            }
+
             if provider is None:
                 organization_name = workspace.get("relationships.organization.data.id")
                 workspace_name = workspace.get("attributes.name")
                 logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
-            elif provider in ["github", "github_app", "github_enterprise"]:
-                provider = "github_custom"
-            elif provider == "bitbucket_server":
-                provider = "bitbucket_datacenter"
-            elif provider == "gitlab_hosted":
-                provider = "gitlab"
+            elif provider in supported_providers.keys():
+                provider = supported_providers[provider]
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
