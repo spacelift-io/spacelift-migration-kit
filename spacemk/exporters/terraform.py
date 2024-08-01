@@ -1266,6 +1266,8 @@ class TerraformExporter(BaseExporter):
                 provider = "github_custom"
             elif provider == "bitbucket_server":
                 provider = "bitbucket_datacenter"
+            elif provider == "gitlab_hosted":
+                provider = "gitlab"
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
