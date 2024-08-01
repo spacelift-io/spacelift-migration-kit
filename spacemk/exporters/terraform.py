@@ -1271,7 +1271,7 @@ class TerraformExporter(BaseExporter):
                 organization_name = workspace.get("relationships.organization.data.id")
                 workspace_name = workspace.get("attributes.name")
                 logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
-            elif provider in supported_providers.keys():
+            elif provider in supported_providers:
                 provider = supported_providers[provider]
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
