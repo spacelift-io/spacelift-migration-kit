@@ -1276,7 +1276,11 @@ class TerraformExporter(BaseExporter):
             else:
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
-            if workspace.get("attributes.vcs-repo.identifier"):
+            if provider == "gitlab" and workspace.get("attributes.vcs-repo.identifier"):
+                segments = workspace.get("attributes.vcs-repo.identifier").split("/")
+                vcs_namespace = "/".join(segments[:-1])
+                vcs_repository = segments[-1]
+            elif workspace.get("attributes.vcs-repo.identifier"):
                 segments = workspace.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = segments[0]
                 vcs_repository = segments[1]
