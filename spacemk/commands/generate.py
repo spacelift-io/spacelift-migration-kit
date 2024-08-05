@@ -21,7 +21,9 @@ def generate(config):
             "manage_state": default(config.get("generator.spacelift.manage_state"), True)
         }, "github": {
             "custom_app": default(config.get("generator.github.custom_app"), False)
-        }
+        },
+        "custom_runner_image": default(config.get("generator.custom_runner_image"),
+                                       "SPACELIFT_DEFAULT_INVALID"),
     }
 
     generator = Generator()
