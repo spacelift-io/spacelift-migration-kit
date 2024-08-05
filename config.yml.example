@@ -23,6 +23,11 @@ generator:
 #  spacelift:
 #    manage_state: true
 
+#  # Custom runner to use for stacks with custom runner images configured
+#  # See customizing the runner image: https://docs.spacelift.io/integrations/docker#customizing-the-runner-image
+#  # Default: N/A, must be provided (however, not always used. If it is used and not provided an exception will be raised during code generation)
+#  custom_runner_image: public.ecr.aws/spacelift/runner-terraform
+
   extra_vars:
     foo: bar # "{{ extra_vars.foo }}" in a template will be replaced by "bar"
 
