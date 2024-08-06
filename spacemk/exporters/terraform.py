@@ -1124,7 +1124,7 @@ class TerraformExporter(BaseExporter):
                 segments = module.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = "/".join(segments[:-1])
                 vcs_repository = segments[-1]
-            elif module.get("attributes.vcs-repo.identifier"):
+            elif not self.is_gitlab and module.get("attributes.vcs-repo.identifier"):
                 segments = module.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = segments[0]
                 vcs_repository = segments[1]
@@ -1289,7 +1289,7 @@ class TerraformExporter(BaseExporter):
                 segments = workspace.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = "/".join(segments[:-1])
                 vcs_repository = segments[-1]
-            elif workspace.get("attributes.vcs-repo.identifier"):
+            elif provider != "gitlab" and workspace.get("attributes.vcs-repo.identifier"):
                 segments = workspace.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = segments[0]
                 vcs_repository = segments[1]
