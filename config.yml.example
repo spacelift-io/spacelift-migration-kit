@@ -28,6 +28,11 @@ generator:
 #  # Default: N/A, must be provided (however, not always used. If it is used and not provided an exception will be raised during code generation)
 #  custom_runner_image: public.ecr.aws/spacelift/runner-terraform
 
+#  # The default branch for all modules. Only used if the module does not have a branch specified.
+#  # Default: empty string
+#  modules:
+#    default_branch: main
+
   extra_vars:
     foo: bar # "{{ extra_vars.foo }}" in a template will be replaced by "bar"
 
