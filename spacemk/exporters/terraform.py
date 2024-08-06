@@ -39,6 +39,9 @@ class TerraformExporter(BaseExporter):
         }
 
         self.is_gitlab = False
+        self.experimental_support_variable_sets = self._config.get("experimental_support_variable_sets", False)
+        if self.experimental_support_variable_sets:
+            logging.warning("Experimental support for variable sets is enabled")
 
     def _build_stack_slug(self, workspace: dict) -> str:
         return slugify(workspace.get("attributes.name"))
@@ -745,7 +748,8 @@ class TerraformExporter(BaseExporter):
 
         self._download_state_files(data)
         data = self._enrich_workspace_variable_data(data)
-        data = self._enrich_variable_set_data(data)
+        if self.experimental_support_variable_sets:
+            data = self._enrich_variable_set_data(data)
 
         logging.info("Stop enriching data")
 
@@ -832,11 +836,14 @@ class TerraformExporter(BaseExporter):
             data["providers"].extend(self._extract_providers_data(organization))
             data["tasks"].extend(self._extract_tasks_data(organization))
             data["teams"].extend(self._extract_teams_data(organization))
-            data["variable_sets"].extend(self._extract_variable_sets_data(organization))
             data["workspaces"].extend(self._extract_workspaces_data(organization))
 
-        for variable_set in data.variable_sets:
-            data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
+            if self.experimental_support_variable_sets:
+                data["variable_sets"].extend(self._extract_variable_sets_data(organization))
+
+        if self.experimental_support_variable_sets:
+            for variable_set in data.variable_sets:
+                data["variable_set_variables"].extend(self._extract_variable_set_variables_data(variable_set))
 
         for workspace in data.workspaces:
             data["workspace_variables"].extend(self._extract_workspace_variables_data(workspace))
@@ -1631,17 +1638,18 @@ class TerraformExporter(BaseExporter):
         data = benedict(
             {
                 "spaces": self._map_spaces_data(src_data),  # Must be first due to dependency
-                "contexts": self._map_contexts_data(src_data),
-                "context_variables": self._map_context_variables_data(
-                    src_data
-                ),  # Must be after contexts due to dependency
-
+                "contexts": [],
+                "context_variables": [],  # Must be after contexts due to dependency
                 # Stacks must be before modules so we can determine is_gitlab so we set VCS properly
                 "stacks": self._map_stacks_data(src_data),
                 "modules": self._map_modules_data(src_data),
                 "stack_variables": self._map_stack_variables_data(src_data),  # Must be after stacks due to dependency
             }
         )
+
+        if self.experimental_support_variable_sets:
+            data["contexts"] = self._map_contexts_data(src_data)
+            data["context_variables"] = self._map_context_variables_data(src_data)
 
         data = self._mark_spaces_for_terraform_custom_workflow(data)
         data = self._expand_relationships(data)
