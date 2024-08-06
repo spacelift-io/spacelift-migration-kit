@@ -258,7 +258,12 @@ resource "spacelift_environment_variable" "{{ variable._relationships.space._mig
 {% for module in modules %}
 {% if module.status == "setup_complete" and module.visibility == "private" %}
 resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ module._migration_id }}" {
+
+  {%  if  module.vcs.branch == ""%}
+  {{ argument("branch", generation_config.modules.default_branch, required=True) }}
+  {% else %}
   {{ argument("branch", module.vcs.branch, required=True) }}
+  {% endif %}
   {{ argument("name", module.name) }}
   {{ argument("repository", module.vcs.repository, required=True) }}
   {{ argument("space_id", "spacelift_space." ~ module._relationships.space._migration_id ~ ".id", serialize=False) }}
@@ -271,6 +276,10 @@ resource "spacelift_module" "{{ module._relationships.space._migration_id }}_{{ 
     {{ argument("namespace", module.vcs.namespace) }}
   }
   {% endif %}
+  {% elif module.vcs.provider %}
+  {{ module.vcs.provider }} {
+  {{ argument("namespace", module.vcs.namespace) }}
+  }
   {% endif %}
 }
 {% block module_extra scoped %}{% endblock %}

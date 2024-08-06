@@ -37,6 +37,8 @@ class TerraformExporter(BaseExporter):
             }
         }
 
+        self.is_gitlab = False
+
     def _build_stack_slug(self, workspace: dict) -> str:
         return slugify(workspace.get("attributes.name"))
 
@@ -1114,9 +1116,15 @@ class TerraformExporter(BaseExporter):
     def _map_modules_data(self, src_data: dict) -> dict:
         logging.info("Start mapping modules data")
 
+        vcs_provider = "gitlab" if self.is_gitlab else "github_custom"
+
         data = []
         for module in src_data.get("modules"):
-            if module.get("attributes.vcs-repo.identifier"):
+            if self.is_gitlab and module.get("attributes.vcs-repo.identifier"):
+                segments = module.get("attributes.vcs-repo.identifier").split("/")
+                vcs_namespace = "/".join(segments[:-1])
+                vcs_repository = segments[-1]
+            elif module.get("attributes.vcs-repo.identifier"):
                 segments = module.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = segments[0]
                 vcs_repository = segments[1]
@@ -1140,7 +1148,7 @@ class TerraformExporter(BaseExporter):
                     "vcs": {
                         "branch": module.get("attributes.vcs-repo.branch"),
                         "namespace": vcs_namespace,
-                        "provider": "github_custom",  # KLUDGE: TFC/TFE does not provide that information
+                        "provider": vcs_provider,
                         "repository": vcs_repository,
                     },
                 }
@@ -1277,6 +1285,7 @@ class TerraformExporter(BaseExporter):
                 raise ValueError(f"Unknown VCS provider name ({provider})")
 
             if provider == "gitlab" and workspace.get("attributes.vcs-repo.identifier"):
+                self.is_gitlab = True
                 segments = workspace.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = "/".join(segments[:-1])
                 vcs_repository = segments[-1]
@@ -1343,8 +1352,10 @@ class TerraformExporter(BaseExporter):
                 # "context_variables": self._map_context_variables_data(
                 #     src_data
                 # ),  # Must be after contexts due to dependency
-                "modules": self._map_modules_data(src_data),
+
+                # Stacks must be before modules so we can determine is_gitlab so we set VCS properly
                 "stacks": self._map_stacks_data(src_data),
+                "modules": self._map_modules_data(src_data),
                 "stack_variables": self._map_stack_variables_data(src_data),  # Must be after stacks due to dependency
             }
         )

@@ -24,6 +24,9 @@ def generate(config):
         },
         "custom_runner_image": default(config.get("generator.custom_runner_image"),
                                        "SPACELIFT_DEFAULT_INVALID"),
+        "modules": {
+            "default_branch": default(config.get("generator.modules.default_branch"), ""),
+        }
     }
 
     generator = Generator()
