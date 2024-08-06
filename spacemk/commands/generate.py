@@ -13,19 +13,19 @@ from spacemk.generator import Generator
 )
 @pass_meta_key("config")
 def generate(config):
-    def default(value, _default):
+    def set_default(value, _default):
         return value if value is not None else _default
 
     generation_config = {
         "spacelift": {
-            "manage_state": default(config.get("generator.spacelift.manage_state"), True)
+            "manage_state": set_default(config.get("generator.spacelift.manage_state"), True)
         }, "github": {
-            "custom_app": default(config.get("generator.github.custom_app"), False)
+            "custom_app": set_default(config.get("generator.github.custom_app"), False)
         },
-        "custom_runner_image": default(config.get("generator.custom_runner_image"),
+        "custom_runner_image": set_default(config.get("generator.custom_runner_image"),
                                        "SPACELIFT_DEFAULT_INVALID"),
         "modules": {
-            "default_branch": default(config.get("generator.modules.default_branch"), ""),
+            "default_branch": set_default(config.get("generator.modules.default_branch"), ""),
         }
     }
 

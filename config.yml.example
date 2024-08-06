@@ -9,6 +9,10 @@ exporter:
     include:
       workspaces: ^example-.*$
 
+#    # If you want to support variable sets, set this to `true`. This feature is experimental.
+#    # Default: false
+#    experimental_support_variable_sets: false
+
 generator:
 
 #  # If you use a custom app in github with spacelift, set this to `true`.
