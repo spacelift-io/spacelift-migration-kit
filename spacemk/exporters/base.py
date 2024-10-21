@@ -199,6 +199,7 @@ class BaseExporter(ABC):
         data = self._filter_data(data)
         data = self._enrich_data(data)
         data = self._map_data(data)
+        data["class"] = type(self).__name__
         save_normalized_data(data)
 
         logging.info("Stop exporting data")
