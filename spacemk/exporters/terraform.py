@@ -39,6 +39,7 @@ class TerraformExporter(BaseExporter):
         }
 
         self.is_gitlab = False
+        self.is_ado = False
         self.experimental_support_variable_sets = self._config.get("experimental_support_variable_sets", False)
         if self.experimental_support_variable_sets:
             logging.warning("Experimental support for variable sets is enabled")
@@ -1408,7 +1409,11 @@ class TerraformExporter(BaseExporter):
     def _map_modules_data(self, src_data: dict) -> dict:
         logging.info("Start mapping modules data")
 
-        vcs_provider = "gitlab" if self.is_gitlab else "github_custom"
+        vcs_provider = "github_custom"
+        if self.is_gitlab:
+            vcs_provider = "gitlab"
+        if self.is_ado:
+            vcs_provider = "azure_devops"
 
         data = []
         for module in src_data.get("modules"):
@@ -1416,7 +1421,11 @@ class TerraformExporter(BaseExporter):
                 segments = module.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = "/".join(segments[:-1])
                 vcs_repository = segments[-1]
-            elif not self.is_gitlab and module.get("attributes.vcs-repo.identifier"):
+            elif self.is_ado and module.get("attributes.vcs-repo.identifier"):
+                segments = module.get("attributes.vcs-repo.identifier").split("/")
+                vcs_namespace = segments[1]
+                vcs_repository = segments[3]
+            elif not self.is_gitlab and not self.is_ado and module.get("attributes.vcs-repo.identifier"):
                 segments = module.get("attributes.vcs-repo.identifier").split("/")
                 vcs_namespace = segments[0]
                 vcs_repository = segments[1]
@@ -1526,6 +1535,46 @@ class TerraformExporter(BaseExporter):
 
         return data
 
+    def _determine_provider(self, info: dict) -> dict:
+        provider = info.get("attributes.vcs-repo.service-provider")
+        supported_providers = {
+            "github": "github_custom",
+            "github_app": "github_custom",
+            "github_enterprise": "github_custom",
+            "bitbucket_server": "bitbucket_datacenter",
+            "gitlab_hosted": "gitlab",
+            "ado_services": "azure_devops",
+        }
+
+        if provider is None:
+            organization_name = info.get("relationships.organization.data.id")
+            workspace_name = info.get("attributes.name")
+            logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
+        elif provider in supported_providers:
+            provider = supported_providers[provider]
+        else:
+            raise ValueError(f"Unknown VCS provider name ({provider})")
+
+        if provider == "gitlab" and info.get("attributes.vcs-repo.identifier"):
+            self.is_gitlab = True
+            segments = info.get("attributes.vcs-repo.identifier").split("/")
+            vcs_namespace = "/".join(segments[:-1])
+            vcs_repository = segments[-1]
+        elif provider == "azure_devops" and info.get("attributes.vcs-repo.identifier"):
+            self.is_ado = True
+            segments = info.get("attributes.vcs-repo.identifier").split("/")
+            vcs_namespace = segments[1]
+            vcs_repository = segments[3]
+        elif provider != "gitlab" and provider != "azure_devops" and info.get("attributes.vcs-repo.identifier"):
+            segments = info.get("attributes.vcs-repo.identifier").split("/")
+            vcs_namespace = segments[0]
+            vcs_repository = segments[1]
+        else:
+            vcs_namespace = None
+            vcs_repository = None
+
+        return {"vcs_namespace": vcs_namespace, "vcs_repository": vcs_repository, "provider": provider}
+
     def _map_stacks_data(self, src_data: dict) -> dict:
         def find_workspace_variable_with_invalid_name(data: dict, workspace_id: str, type_: str = "plain") -> dict:
             prog = re.compile("^[a-zA-Z_]+[a-zA-Z0-9_]*$")
@@ -1557,37 +1606,10 @@ class TerraformExporter(BaseExporter):
                 data=src_data, type_="secret", workspace_id=workspace.get("id")
             )
 
-            provider = workspace.get("attributes.vcs-repo.service-provider")
-
-            supported_providers = {
-                "github": "github_custom",
-                "github_app": "github_custom",
-                "github_enterprise": "github_custom",
-                "bitbucket_server": "bitbucket_datacenter",
-                "gitlab_hosted": "gitlab",
-            }
-
-            if provider is None:
-                organization_name = workspace.get("relationships.organization.data.id")
-                workspace_name = workspace.get("attributes.name")
-                logging.warning(f"Workspace '{organization_name}/{workspace_name}' has no VCS configuration")
-            elif provider in supported_providers:
-                provider = supported_providers[provider]
-            else:
-                raise ValueError(f"Unknown VCS provider name ({provider})")
-
-            if provider == "gitlab" and workspace.get("attributes.vcs-repo.identifier"):
-                self.is_gitlab = True
-                segments = workspace.get("attributes.vcs-repo.identifier").split("/")
-                vcs_namespace = "/".join(segments[:-1])
-                vcs_repository = segments[-1]
-            elif provider != "gitlab" and workspace.get("attributes.vcs-repo.identifier"):
-                segments = workspace.get("attributes.vcs-repo.identifier").split("/")
-                vcs_namespace = segments[0]
-                vcs_repository = segments[1]
-            else:
-                vcs_namespace = None
-                vcs_repository = None
+            vcs_info = self._determine_provider(workspace)
+            vcs_namespace = vcs_info.get("vcs_namespace")
+            vcs_repository = vcs_info.get("vcs_repository")
+            provider = vcs_info.get("provider")
 
             terraform_version = workspace.get("attributes.terraform-version")
             if terraform_version == "latest":
