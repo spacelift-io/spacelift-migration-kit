@@ -1411,8 +1411,12 @@ class TerraformExporter(BaseExporter):
 
         vcs_provider = "github_custom"
         if self.is_gitlab:
+            logging.warning("GitLab VCS provider detected while exporting workspaces."
+                            "Modules will be mapped as GitLab.")
             vcs_provider = "gitlab"
         if self.is_ado:
+            logging.warning("Azure DevOps VCS provider detected while exporting workspaces."
+                            "Modules will be mapped as Azure DevOps.")
             vcs_provider = "azure_devops"
 
         data = []
