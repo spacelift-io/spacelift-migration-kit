@@ -37,6 +37,11 @@ generator:
 #  modules:
 #    default_branch: main
 
+#  # The default branch for all stacks. Only used if the stack does not have a branch specified.
+#  # Default: empty string
+#  stacks:
+#    default_branch: main
+
   extra_vars:
     foo: bar # "{{ extra_vars.foo }}" in a template will be replaced by "bar"
 
