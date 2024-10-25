@@ -26,6 +26,9 @@ def generate(config):
                                        "SPACELIFT_DEFAULT_INVALID"),
         "modules": {
             "default_branch": set_default(config.get("generator.modules.default_branch"), ""),
+        },
+        "stacks": {
+            "default_branch": set_default(config.get("generator.stacks.default_branch"), ""),
         }
     }
 
