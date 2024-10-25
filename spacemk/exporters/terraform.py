@@ -184,6 +184,11 @@ class TerraformExporter(BaseExporter):
     def _check_workspaces_data(self, data: list[dict]) -> list[dict]:
         logging.info("Start checking workspaces data")
 
+        def check_for_bsl_terraform(version):
+            if version == "latest" or semver.match(version, ">=1.5.7"):
+                return True
+            return False
+
         for key, item in enumerate(data):
             warnings = []
 
@@ -193,7 +198,7 @@ class TerraformExporter(BaseExporter):
             if item.get("attributes.vcs-repo.service-provider") is None:
                 warnings.append("No VCS configuration")
 
-            if semver.match(item.get("attributes.terraform-version"), ">=1.5.7"):
+            if check_for_bsl_terraform(item.get("attributes.terraform-version")):
                 warnings.append("BSL Terraform version")
 
             data[key]["warnings"] = ", ".join(warnings)
