@@ -1201,6 +1201,20 @@ class TerraformExporter(BaseExporter):
             properties=properties,
         )
 
+        # Get tag names for every stack and update the benedict with those tag names.
+        for i in data:
+            additional_properties = [
+                "attributes.tag-names"
+            ]
+
+            additional_data = self._extract_data_from_api(
+                include_pattern=self._config.get("include.workspaces"),
+                path=f"/workspaces/{i.get('id')}",
+                properties=additional_properties,
+            )
+
+            i["attributes.tag-names"] = additional_data[0].get("attributes.tag-names")
+
         logging.info("Stop extracting workspaces data")
 
         return data
@@ -1644,6 +1658,7 @@ class TerraformExporter(BaseExporter):
                     "has_variables_with_invalid_name": len(variables_with_invalid_name) > 0,
                     "has_secret_variables_with_invalid_name": len(secret_variables_with_invalid_name) > 0,
                     "name": workspace.get("attributes.name"),
+                    "labels": workspace.get("attributes.tag-names"),
                     "slug": self._build_stack_slug(workspace),
                     "terraform": {
                         "version": terraform_version,
