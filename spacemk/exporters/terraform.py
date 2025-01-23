@@ -54,7 +54,7 @@ class TerraformExporter(BaseExporter):
         method: str = "GET",
         request_data: dict | None = None,
     ) -> dict:
-        logging.info("Start calling API")
+        logging.info(f"Start calling API: {url}")
 
         headers = {
             "Authorization": f"Bearer {self._config.get('api_token')}",
