@@ -25,6 +25,10 @@ class TerraformExporterPlanError(Exception):
         message = f"Could not trigger a plan for the '{organization_id}/{workspace_id}' workspace"
         super().__init__(message)
 
+class AgentStartError(Exception):
+    def __init__(self):
+        super().__init__("Failed to verify container has started")
+
 
 class TerraformExporter(BaseExporter):
     def __init__(self, config: dict):
@@ -1742,6 +1746,20 @@ class TerraformExporter(BaseExporter):
             pull="always",
             remove=True,
         )
+
+        found = False
+        attempts = 0
+        while not found:
+            ps = docker.ps()
+            for container in ps:
+                if container.name == container_name and container.state.running:
+                    logging.info(f"Container Verified Started: {container}")
+                    found = True
+                    break
+            attempts += 1
+            max_attempts = 10
+            if attempts > max_attempts:
+                raise AgentStartError
 
         logging.debug(f"Using TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
 
