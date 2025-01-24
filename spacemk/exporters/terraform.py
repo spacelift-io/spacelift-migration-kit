@@ -1736,6 +1736,7 @@ class TerraformExporter(BaseExporter):
             envs={
                 "TFC_AGENT_NAME": "SMK-Agent",
                 "TFC_AGENT_TOKEN": token,
+                "TFC_ADDRESS": self._config.get("api_endpoint", "https://app.terraform.io"),
             },
             image=self._config.get("agent_image", "jmfontaine/tfc-agent:smk-latest"),
             name=container_name,
