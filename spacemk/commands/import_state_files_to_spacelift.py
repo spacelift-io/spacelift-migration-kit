@@ -7,7 +7,7 @@ from spacemk import load_normalized_data
 from spacemk.spacelift import Spacelift
 
 
-def _create_context(spacelift: Spacelift, space_id: str, token: str):
+def _create_context(spacelift: Spacelift, space_id: str, token: str, tfc_address: str):
     mutation = """
 mutation CreateContextV2($input: ContextInput!) {
     contextCreateV2(input: $input) {
@@ -34,7 +34,7 @@ STATE_DOWNLOAD_URL=$(curl --fail \
   --location \
   --show-error \
   --silent \
-  "https://app.terraform.io/api/v2/workspaces/${TF_WORKSPACE_ID}/current-state-version" \
+  "${TFC_ADDRESS}/api/v2/workspaces/${TF_WORKSPACE_ID}/current-state-version" \
   | jq -r '.data.attributes."hosted-state-download-url"' )
 
 curl --fail \
@@ -73,6 +73,13 @@ $binary state push -force state.tfstate
                     "type": "ENVIRONMENT_VARIABLE",
                     "value": token,
                     "writeOnly": True,
+                },
+                {
+                    "description": "",
+                    "id": "TF_ADDRESS",
+                    "type": "ENVIRONMENT_VARIABLE",
+                    "value": tfc_address,
+                    "writeOnly": False,
                 },
                 {
                     "description": "",
@@ -167,9 +174,14 @@ def import_state_files_to_spacelift(config):
     spacelift = Spacelift(config.get("spacelift"))
     space_ids = _get_space_ids(spacelift=spacelift)
 
+    api_endpoint = config.exporter.settings.api_endpoint
+    if api_endpoint is None:
+        api_endpoint = "https://app.terraform.io"
+
     for space_id in space_ids:
         # Create a Context with the TFC/TFE token that auto-attaches to all stacks
-        _create_context(spacelift=spacelift, space_id=space_id, token=config.exporter.settings.api_token)
+        _create_context(spacelift=spacelift, space_id=space_id, token=config.exporter.settings.api_token,
+                        tfc_address=api_endpoint)
 
     for stack in data.get("stacks"):
         stack_id = stack.slug
