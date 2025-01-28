@@ -152,6 +152,7 @@ class BaseExporter(ABC):
             flatten_entity_type_data = []
             for entity_data in data.get(entity_type_name):
                 entity_data.keypath_separator = None
+                entity_data[["attributes", "tag-names"]] = None
                 flatten_entity_type_data.append(entity_data.flatten(separator="."))
 
             if len(flatten_entity_type_data) > 0:
