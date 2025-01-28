@@ -1651,6 +1651,8 @@ class TerraformExporter(BaseExporter):
                 # KLUDGE: Stick to the latest MPL-licensed Terraform version for now
                 terraform_version = "1.5.7"
                 terraform_workflow_tool = "TERRAFORM_FOSS"
+            elif terraform_version.startswith("~") or terraform_version.startswith("^"):
+                terraform_workflow_tool = "CUSTOM"
             elif semver.match(terraform_version, ">1.5.7"):
                 terraform_workflow_tool = "CUSTOM"
             else:
