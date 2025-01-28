@@ -75,7 +75,7 @@ def load_normalized_data() -> dict:
         return benedict(json.load(fp))
 
 
-def save_normalized_data(data: dict) -> None:
-    path = Path(get_tmp_folder(), "data.json")
+def save_normalized_data(data: dict, path: str = "data.json") -> None:
+    path = Path(get_tmp_folder(), path)
     with path.open("w", encoding="utf-8") as fp:
         json.dump(data, fp, indent=2, sort_keys=True)
