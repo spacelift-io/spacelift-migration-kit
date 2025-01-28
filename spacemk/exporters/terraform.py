@@ -191,7 +191,8 @@ class TerraformExporter(BaseExporter):
         def check_for_bsl_terraform(version):
             # Ensure version is not pessimistic
             if version.startswith("~") or version.startswith("^"):
-                # lets just default to true so we catch this during a migration. This can almost certainly be overridden.
+                # lets just default to true so we catch this during a migration.
+                # This can almost certainly be overridden.
                 return True, "Pessimistic version, unable to determine if it's BSL Terraform"
 
             if version == "latest" or semver.match(version, ">=1.5.7"):
@@ -1651,9 +1652,9 @@ class TerraformExporter(BaseExporter):
                 # KLUDGE: Stick to the latest MPL-licensed Terraform version for now
                 terraform_version = "1.5.7"
                 terraform_workflow_tool = "TERRAFORM_FOSS"
-            elif terraform_version.startswith("~") or terraform_version.startswith("^"):
-                terraform_workflow_tool = "CUSTOM"
-            elif semver.match(terraform_version, ">1.5.7"):
+            elif (terraform_version.startswith("~")
+                  or terraform_version.startswith("^")
+                  or semver.match(terraform_version, ">1.5.7")):
                 terraform_workflow_tool = "CUSTOM"
             else:
                 terraform_workflow_tool = "TERRAFORM_FOSS"
