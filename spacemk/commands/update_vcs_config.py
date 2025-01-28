@@ -59,7 +59,7 @@ def update_vcs_config(vcs_config_file_path: str):
                 "branch": stack_vcs_config.get("Branch"),
                 "namespace": stack_vcs_config.get("Namespace"),
                 "project_root": project_root,
-                "provider": "azure_devops",
+                "provider": stack_vcs_config.get("VCSProvider"),
                 "repository": stack_vcs_config.get("RepoName"),
             }
         )
