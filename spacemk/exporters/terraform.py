@@ -189,9 +189,14 @@ class TerraformExporter(BaseExporter):
         logging.info("Start checking workspaces data")
 
         def check_for_bsl_terraform(version):
+            # Ensure version is not pessimistic
+            if version.startswith("~") or version.startswith("^"):
+                # lets just default to true so we catch this during a migration. This can almost certainly be overridden.
+                return True, "Pessimistic version, unable to determine if it's BSL Terraform"
+
             if version == "latest" or semver.match(version, ">=1.5.7"):
-                return True
-            return False
+                return True, None
+            return False, None
 
         for key, item in enumerate(data):
             warnings = []
@@ -202,8 +207,11 @@ class TerraformExporter(BaseExporter):
             if item.get("attributes.vcs-repo.service-provider") is None:
                 warnings.append("No VCS configuration")
 
-            if check_for_bsl_terraform(item.get("attributes.terraform-version")):
+            bsl, warning = check_for_bsl_terraform(item.get("attributes.terraform-version"))
+            if bsl:
                 warnings.append("BSL Terraform version")
+            if warning is not None:
+                warnings.append(warning)
 
             data[key]["warnings"] = ", ".join(warnings)
 
