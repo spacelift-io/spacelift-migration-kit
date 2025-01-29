@@ -54,14 +54,16 @@ def update_vcs_config(vcs_config_file_path: str):
         else:
             project_root = None
 
-        stack.vcs.update(
-            {
-                "branch": stack_vcs_config.get("Branch"),
-                "namespace": stack_vcs_config.get("Namespace"),
-                "project_root": project_root,
-                "provider": stack_vcs_config.get("VCSProvider"),
-                "repository": stack_vcs_config.get("RepoName"),
-            }
-        )
+        new_vcs_config = {
+            "branch": stack_vcs_config.get("Branch"),
+            "namespace": stack_vcs_config.get("Namespace"),
+            "project_root": project_root,
+            "repository": stack_vcs_config.get("RepoName"),
+        }
+
+        if stack_vcs_config.get("VCSProvider") != "":
+            new_vcs_config["provider"] = stack_vcs_config.get("VCSProvider")
+
+        stack.vcs.update(new_vcs_config)
 
     save_normalized_data(data)
