@@ -14,7 +14,7 @@ If you are unable to use the default Docker image, you can build and use a custo
 
 ```shell
 cd data/terraform-agent
-docker build --build-arg TFC_AGENT_VERSION=<VERSION> --platform linux/amd64 --tag <TAG> .
+docker build --build-arg TFC_AGENT_VERSION=<VERSION> --platform linux/amd64 --tag ghcr.io/spacelift-io/spacelift-migration-kit:latest .
 ```
 
 ### Publish the image
@@ -22,7 +22,7 @@ docker build --build-arg TFC_AGENT_VERSION=<VERSION> --platform linux/amd64 --ta
 This step is optional. If Spacelift Migration Kit is run on a single machine, this step can be skipped.
 
 ```shell
-docker push <TAG>
+docker push ghcr.io/spacelift-io/spacelift-migration-kit:latest
 ```
 
 ### Update the configuration file
