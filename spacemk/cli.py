@@ -30,7 +30,7 @@ debug_enabled = False
     help="Path to the configuration file.",
     type=click.Path(),
 )
-@click.option("-v", "--verbose", "verbosity", count=True, default=0, help="Level of verbosity for the output.")
+@click.option("-v", "--verbose", "verbosity", count=True, default=1, help="Level of verbosity for the output.")
 @click.pass_context
 def spacemk(ctx, config, verbosity):
     load_dotenv()

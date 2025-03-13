@@ -58,7 +58,7 @@ class TerraformExporter(BaseExporter):
         method: str = "GET",
         request_data: dict | None = None,
     ) -> dict:
-        logging.info(f"Start calling API: {url}")
+        logging.debug(f"Start calling API: {url}")
 
         headers = {
             "Authorization": f"Bearer {self._config.get('api_token')}",
@@ -95,7 +95,7 @@ class TerraformExporter(BaseExporter):
         else:
             data = benedict(response.json())
 
-        logging.info("Stop calling API")
+        logging.debug("Stop calling API")
 
         return data
 
@@ -270,6 +270,12 @@ class TerraformExporter(BaseExporter):
             path=f"/agent-pools/{id_}",
         )
 
+    def _get_log_data_from_disk(self, id_: str):
+        log_path_on_disk = f"/tmp/spacelift-migration-kit/{id_}.txt"
+        logging.info(f"Reading log data from '{log_path_on_disk}'")
+        with Path(log_path_on_disk).open(mode="r") as f:
+            return f.read()
+
     def _download_text_file(self, url: str) -> str:
         logging.info("Start downloading text file")
 
@@ -344,6 +350,12 @@ class TerraformExporter(BaseExporter):
             logging.warning("Docker is not available. Skipping enriching workspace variables data.")
             return data
 
+        if not click.confirm("Spacelift will temporarily change your workspaces to use a local agent in order "
+                             "to capture sensitive variable sets. \nWe will change the workspace back when complete."
+                             "\nIf you choose not to do this, the process will continue we just wont capture"
+                             " sensitive variable set values. \n\nDo you wish to continue?"):
+            return data
+
         logging.info("Start enriching variable_set data")
 
         new_workspace = None
@@ -408,7 +420,7 @@ class TerraformExporter(BaseExporter):
                     envs={
                         "ORG": organization.get("attributes.name"),
                     },
-                    image=self._config.get("push_image", "apollorion/terraform-push:1.0.0"),
+                    image=self._config.get("push_image", "ghcr.io/spacelift-io/terraform-push:latest"),
                     pull="always",
                     remove=True,
                     volumes={
@@ -489,7 +501,7 @@ class TerraformExporter(BaseExporter):
                     run_data = self._extract_data_from_api(
                         method="POST",
                         path="/runs",
-                        properties=["relationships.plan.data.id"],
+                        properties=["relationships.plan.data.id", "id"],
                         request_data={
                             "data": {
                                 "attributes": {
@@ -511,12 +523,13 @@ class TerraformExporter(BaseExporter):
                     # KLUDGE: There should be a way to pull single item from the API instead of a list of items
                     run_data = run_data[0]
 
-                    logging.info("Retrieve the output for the plan")
+                    logging.info("Waiting for plan to finish")
                     plan_id = run_data.get("relationships.plan.data.id")
                     plan_data = self._get_plan(id_=plan_id)
+                    run_id = run_data.get("id")
 
                     if plan_data.get("attributes.log-read-url"):
-                        logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
+                        logs_data = self._get_log_data_from_disk(run_id)
 
                         logging.debug("Plan output:")
                         logging.debug(logs_data)
@@ -591,6 +604,12 @@ class TerraformExporter(BaseExporter):
 
         if not is_command_available(["docker", "ps"], execute=True):
             logging.warning("Docker is not available. Skipping enriching workspace variables data.")
+            return data
+
+        if not click.confirm("Spacelift will temporarily change your workspaces to use a local agent in order "
+                             "to capture sensitive variables. \nWe will change the workspace back when complete."
+                             "\nIf you choose not to do this, the process will continue we just wont capture"
+                             " sensitive variable values. \n\nDo you wish to continue?"):
             return data
 
         logging.info("Start enriching workspace variables data")
@@ -680,7 +699,7 @@ class TerraformExporter(BaseExporter):
                     run_data = self._extract_data_from_api(
                         method="POST",
                         path="/runs",
-                        properties=["relationships.plan.data.id"],
+                        properties=["relationships.plan.data.id", "id"],
                         request_data={
                             "data": {
                                 "attributes": {
@@ -705,9 +724,10 @@ class TerraformExporter(BaseExporter):
                     logging.info("Retrieve the output for the plan")
                     plan_id = run_data.get("relationships.plan.data.id")
                     plan_data = self._get_plan(id_=plan_id)
+                    run_id = run_data.get("id")
 
                     if plan_data.get("attributes.log-read-url"):
-                        logs_data = self._download_text_file(url=plan_data.get("attributes.log-read-url"))
+                        logs_data = self._get_log_data_from_disk(run_id)
 
                         logging.debug("Plan output:")
                         logging.debug(logs_data)
@@ -880,7 +900,7 @@ class TerraformExporter(BaseExporter):
         properties: list | None = None,
         request_data: dict | None = None,
     ) -> list[dict]:
-        logging.info("Start extracting data from API")
+        logging.debug("Start extracting data from API")
 
         if include_pattern is None:
             include_pattern = ".*"
@@ -920,7 +940,7 @@ class TerraformExporter(BaseExporter):
                     datum[property_] = raw_datum.get(property_)
                 data.append(datum)
 
-        logging.info("Stop extracting data from API")
+        logging.debug("Stop extracting data from API")
 
         return data
 
@@ -1753,10 +1773,11 @@ class TerraformExporter(BaseExporter):
                 "TFC_AGENT_TOKEN": token,
                 "TFC_ADDRESS": self._config.get("api_endpoint", "https://app.terraform.io"),
             },
-            image=self._config.get("agent_image", "jmfontaine/tfc-agent:smk-latest"),
+            image=self._config.get("agent_image", "ghcr.io/spacelift-io/spacelift-migration-kit:latest"),
             name=container_name,
             pull="always",
             remove=True,
+            volumes=[("/tmp/spacelift-migration-kit", "/mnt/spacelift-migration-kit")]
         )
 
         found = False

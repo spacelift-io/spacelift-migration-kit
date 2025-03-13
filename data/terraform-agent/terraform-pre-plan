@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Display environment variables so that they can be extracted from the plan logs
-echo '<==================== SMK EXPORT ===================='
-env
-echo '===================== SMK EXPORT ===================>'
+echo '<==================== SMK EXPORT ====================' >> /mnt/spacelift-migration-kit/$TFC_RUN_ID.txt
+env >> /mnt/spacelift-migration-kit/$TFC_RUN_ID.txt
+echo '===================== SMK EXPORT ===================>' >> /mnt/spacelift-migration-kit/$TFC_RUN_ID.txt
 
 # Replace the 'terraform' binary with the 'true' command so that all commands return a 0 exit code
 # and plans succeed even if the workspace is in a bad state
