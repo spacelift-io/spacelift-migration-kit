@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import time
 from http import HTTPStatus
 from pathlib import Path
@@ -271,10 +272,14 @@ class TerraformExporter(BaseExporter):
         )
 
     def _get_log_data_from_disk(self, id_: str):
-        log_path_on_disk = f"/tmp/spacelift-migration-kit/{id_}.txt"
+        log_path_on_disk = f"{self.tempdir}/{id_}.txt"
         logging.info(f"Reading log data from '{log_path_on_disk}'")
-        with Path(log_path_on_disk).open(mode="r") as f:
-            return f.read()
+        p = Path(log_path_on_disk)
+        with p.open(mode="r") as f:
+            contents = f.read()
+        logging.info(f"Removing log file '{log_path_on_disk}'")
+        p.unlink()
+        return contents
 
     def _download_text_file(self, url: str) -> str:
         logging.info("Start downloading text file")
@@ -1766,6 +1771,8 @@ class TerraformExporter(BaseExporter):
     def _start_agent_container(self, agent_pool_id: str, container_name: str) -> Container:
         token = self._create_agent_token(agent_pool_id=agent_pool_id)
 
+        self.tempdir = tempfile.mkdtemp()
+
         container = docker.run(
             detach=True,
             envs={
@@ -1777,7 +1784,7 @@ class TerraformExporter(BaseExporter):
             name=container_name,
             pull="always",
             remove=True,
-            volumes=[("/tmp/spacelift-migration-kit", "/mnt/spacelift-migration-kit")]
+            volumes=[(self.tempdir, "/mnt/spacelift-migration-kit")]
         )
 
         found = False
