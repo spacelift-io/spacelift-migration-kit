@@ -819,7 +819,7 @@ class TerraformExporter(BaseExporter):
 
             return None
 
-        def expand_relationship(entity_data) -> None:
+        def expand_relationship(entity_type, entity_data) -> None:
             for datum in entity_data:
                 relationships = {}
                 if datum.get("_relationships"):
@@ -829,9 +829,14 @@ class TerraformExporter(BaseExporter):
                         else:
                             relationships[type_] = find_entity(data=data, type_=type_, id_=ids)
 
-                datum.update(
-                    {"_migration_id": self._generate_migration_id(datum.get("name")), "_relationships": relationships}
-                )
+                if entity_type == "spaces":
+                    datum.update(
+                        {"_migration_id": self._generate_migration_id(datum.get("name") + "_" + datum.get("_source_id")), "_relationships": relationships}
+                    )
+                else:
+                    datum.update(
+                        {"_migration_id": self._generate_migration_id(datum.get("name")), "_relationships": relationships}
+                    )
 
         logging.info("Start expanding relationships")
 
@@ -840,7 +845,7 @@ class TerraformExporter(BaseExporter):
                 # KLUDGE: Context and context variable relationships get expanded below
                 continue
 
-            expand_relationship(entity_data)
+            expand_relationship(entity_type, entity_data)
 
         # KLUDGE: Context and context variable relationships need to be expanded after stacks'
         # so that the stack migration ID is present
