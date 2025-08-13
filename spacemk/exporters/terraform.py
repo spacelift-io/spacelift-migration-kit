@@ -196,7 +196,7 @@ class TerraformExporter(BaseExporter):
                 # This can almost certainly be overridden.
                 return True, "Pessimistic version, unable to determine if it's BSL Terraform"
 
-            if version == "latest" or semver.match(version, ">=1.5.7"):
+            if version == "latest" or semver.match(version, ">1.5.7"):
                 return True, None
             return False, None
 
