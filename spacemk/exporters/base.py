@@ -167,6 +167,15 @@ class BaseExporter(ABC):
                     if type(value) in [dict, tuple, set]:
                         continue
 
+                    # filter potentially bad values
+                    new_value = []
+                    for i in value:
+                        if i is None:
+                            continue
+                        if isinstance(i, list):
+                            continue
+                        new_value.append(i)
+
                     worksheet.write(0, column, key)
                     worksheet.write_column(1, column, value if isinstance(value, list) else [value])
                     column += 1
