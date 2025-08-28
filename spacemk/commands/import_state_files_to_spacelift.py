@@ -171,7 +171,6 @@ def _trigger_task(spacelift: Spacelift, stack_id: str, workspace_id: str, wait: 
 @click.option("--no-wait", default=True, is_flag=True, help="Dont wait for the task to complete.")
 @click.decorators.pass_meta_key("config")
 def import_state_files_to_spacelift(config, no_wait):
-    wait = not no_wait
     data = load_normalized_data()
     spacelift = Spacelift(config.get("spacelift"))
     space_ids = _get_space_ids(spacelift=spacelift)
@@ -190,7 +189,7 @@ def import_state_files_to_spacelift(config, no_wait):
         workspace_id = stack._source_id  # noqa: SLF001
 
         # Trigger a run that pulls the state file from TFC/TFE and pushes it to Spacelift
-        _trigger_task(spacelift=spacelift, stack_id=stack_id, workspace_id=workspace_id, wait=wait)
+        _trigger_task(spacelift=spacelift, stack_id=stack_id, workspace_id=workspace_id, wait=no_wait)
 
     for space_id in space_ids:
         # Delete the Context with the TFC/TFE token that auto-attaches to all stacks
