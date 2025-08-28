@@ -160,16 +160,18 @@ query GetSpaces {
     return [space.id for space in response.get("data.spaces")]
 
 
-def _trigger_task(spacelift: Spacelift, stack_id: str, workspace_id: str) -> None:
+def _trigger_task(spacelift: Spacelift, stack_id: str, workspace_id: str, wait: bool) -> None:
     logging.info(f"Triggering task for stack '{stack_id}'")
 
     command = f"/mnt/workspace/import-state-from-tf.sh '{workspace_id}'"
-    spacelift.trigger_task(stack_id=stack_id, command=command, wait=True)
+    spacelift.trigger_task(stack_id=stack_id, command=command, wait=wait)
 
 
 @click.command(help="Upload Terraform state files to Spacelift.")
+@click.option("--no-wait", default=True, is_flag=True, help="Dont wait for the task to complete.")
 @click.decorators.pass_meta_key("config")
-def import_state_files_to_spacelift(config):
+def import_state_files_to_spacelift(config, no_wait):
+    wait = not no_wait
     data = load_normalized_data()
     spacelift = Spacelift(config.get("spacelift"))
     space_ids = _get_space_ids(spacelift=spacelift)
@@ -188,7 +190,7 @@ def import_state_files_to_spacelift(config):
         workspace_id = stack._source_id  # noqa: SLF001
 
         # Trigger a run that pulls the state file from TFC/TFE and pushes it to Spacelift
-        _trigger_task(spacelift=spacelift, stack_id=stack_id, workspace_id=workspace_id)
+        _trigger_task(spacelift=spacelift, stack_id=stack_id, workspace_id=workspace_id, wait=wait)
 
     for space_id in space_ids:
         # Delete the Context with the TFC/TFE token that auto-attaches to all stacks
