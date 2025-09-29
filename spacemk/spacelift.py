@@ -70,6 +70,63 @@ class Spacelift:
 
         return self._api_jwt_token
 
+    def _get_env_vars(self) -> list[dict]:
+        env_vars = []
+
+        data = load_normalized_data()
+        for env_var in data.get("stack_variables"):
+            # We only consider sensitive variables here
+            if env_var.get("write_only"):
+                continue
+
+            if "-" in env_var.get("name"):
+                logging.warning(
+                    f"Environment variable '{env_var.get('name')}' has a dash in its name. Skipping."
+                )
+                continue
+
+            if env_var.get("value") and "\n" in env_var.get("value"):
+                logging.warning(
+                    f"Environment variable '{env_var.get('name')}' has a '\\n' character in its value. "
+                    "Skipping."
+                )
+                continue
+
+            env_vars.append(env_var)
+
+        return env_vars
+
+    def _set_env_var(self, env_var: dict) -> None:
+        operation = """
+          mutation UpdateStackConfig($stackId: ID!, $input: ConfigInput!) {
+            stackConfigAdd(stack: $stackId, config: $input) {
+              id
+            }
+          }
+        """
+
+        env_var_id = f"TF_VAR_{env_var.get('name')}" if env_var.get(
+            "type") == "terraform" else env_var.get("name")
+
+        variables = {
+            "stackId": env_var.get("_relationships.stack.slug"),
+            "input": {
+                "id": env_var_id,
+                "type": "ENVIRONMENT_VARIABLE",
+                "value": env_var.get("value"),
+                "writeOnly": False,
+            },
+        }
+
+        response = self.call_api(operation=operation, variables=variables)
+
+        if response.get("errors"):
+            logging.warning(
+                "Error setting environment variable "
+                f"'{env_var.get('_relationships.stack.slug')}/{env_var_id}': "
+                f"{response.get('errors[0].message')}"
+            )
+
     def _get_sensitive_env_vars(self) -> list[dict]:
         env_vars = []
 
@@ -222,6 +279,17 @@ class Spacelift:
                 f"Error setting mounted file '{filename}' for stack '{stack_id}': "
                 f"{response.get('errors[0].message')}"
             )
+
+    def set_env_vars(self) -> None:
+        env_vars = self._get_env_vars()
+        for env_var in env_vars:
+            if env_var.get("value"):
+                self._set_env_var(env_var)
+            else:
+                logging.debug(
+                    f"No value for '{env_var.get('_relationships.stack.slug')}/{env_var.get('name')}' "
+                    "environment variable. Skipping."
+                )
 
     def set_sensitive_env_vars(self) -> None:
         env_vars = self._get_sensitive_env_vars()
