@@ -50,7 +50,15 @@ class TerraformExporter(BaseExporter):
             logging.warning("Experimental support for variable sets is enabled")
 
     def _build_stack_slug(self, workspace: dict) -> str:
-        return slugify(workspace.get("attributes.name"))
+        name = workspace.get("attributes.name")
+        if not name:
+            return ""
+            # Manually sanitize while preserving underscores
+            # Split by underscores to preserve them, slugify each part, then rejoin
+        parts = name.split("_")
+        slugified_parts = [slugify(part) for part in parts]
+        # Rejoin with underscores preserved
+        return "_".join(slugified_parts)
 
     def _call_api(
         self,
