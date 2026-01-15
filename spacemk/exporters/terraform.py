@@ -199,7 +199,7 @@ class TerraformExporter(BaseExporter):
 
         def check_for_bsl_terraform(version):
             # Ensure version is not pessimistic
-            if version.startswith("~") or version.startswith("^"):
+            if version.startswith("~") or version.startswith("^") or version.startswith(">") or version.startswith("<") or version.startswith("="):
                 # lets just default to true so we catch this during a migration.
                 # This can almost certainly be overridden.
                 return True, "Pessimistic version, unable to determine if it's BSL Terraform"
