@@ -209,6 +209,8 @@ class TerraformExporter(BaseExporter):
             return False, None
 
         for key, item in enumerate(data):
+            logging.info(f"Checking workspace '{item.get('attributes.name')}'")
+
             warnings = []
 
             if item.get("attributes.resource-count") == 0:
