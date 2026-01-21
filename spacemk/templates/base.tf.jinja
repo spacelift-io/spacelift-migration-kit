@@ -104,7 +104,8 @@ resource "spacelift_stack" "{{ stack._relationships.space._migration_id }}_{{ st
 
   {% if stack.terraform.workflow_tool == "CUSTOM" %}
   {% if generation_config.custom_runner_image == "SPACELIFT_DEFAULT_INVALID" %}
-  {% raise "generator.custom_runner_image is required for stacks with custom Terraform workflow tool." %}
+  // Add the stack name into the issue so we know what stack caused the issue
+  {% raise "generator.custom_runner_image is required for stacks with custom Terraform workflow tool. Stack Causing Issue: " + stack.name %}
   {% endif %}
   {{ argument("runner_image ", generation_config.custom_runner_image ~ ":" ~ stack.terraform.version, required=True) }}
   {% endif %}

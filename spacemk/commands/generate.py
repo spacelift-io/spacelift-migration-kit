@@ -32,5 +32,11 @@ def generate(config):
         }
     }
 
+    include_config = config.get("generator.include", {})
+
     generator = Generator()
-    generator.generate(extra_vars=config.get("generator.extra_vars"), generation_config=generation_config)
+    generator.generate(
+        extra_vars=config.get("generator.extra_vars"),
+        generation_config=generation_config,
+        include_config=include_config
+    )

@@ -6,14 +6,49 @@ exporter:
     # Specific to the Terraform exporter (exporter.name: terraform)
     api_endpoint: https://app.terraform.io
     api_token:
-    include:
-      workspaces: ^example-.*$
+
+    # The number of parallel agents to spin up locally when enriching data.
+    # this can be increased to speed up the enrichment process just know that it will increase the memory usage of the exporter.
+    # every worker will spin up its own docker container.
+    parallel_enrichment_workers: 1
+
+    # ┌─────────────────────────────────────────────────────────────────────────┐
+    # │ EXPORT-TIME FILTERING                                                   │
+    # │                                                                         │
+    # │ Filters applied during 'spacemk export' when fetching from TFC API.     │
+    # │ Use this to limit what gets saved to data.json.                         │
+    # │ Reduces API calls and data.json size for large TFC installations.       │
+    # │                                                                         │
+    # │ All patterns are regex. Only entities with names matching the pattern   │
+    # │ will be exported.                                                       │
+    # └─────────────────────────────────────────────────────────────────────────┘
+#    include:
+#      organizations: ^my-org$              # Filter TFC organizations by name
+#      workspaces: ^prod-.*$                # Filter workspaces by name
 
 #    # If you want to support variable sets, set this to `true`. This feature is experimental.
 #    # Default: false
 #    experimental_support_variable_sets: false
 
 generator:
+
+  # ┌─────────────────────────────────────────────────────────────────────────┐
+  # │ GENERATE-TIME FILTERING                                                 │
+  # │                                                                         │
+  # │ Filters applied during 'spacemk generate' when creating Terraform code. │
+  # │ Use this to control which entities from data.json get generated.        │
+  # │                                                                         │
+  # │ This allows you to run 'export' once and then run 'generate' multiple   │
+  # │ times with different filters without re-fetching from TFC.              │
+  # │                                                                         │
+  # │ All patterns are regex. Related entities are automatically filtered:    │
+  # │ - Filtering workspaces also filters their variables                     │
+  # │ - Filtering affects context attachments to stacks                       │
+  # │ - Spaces with no remaining stacks/modules are excluded                  │
+  # └─────────────────────────────────────────────────────────────────────────┘
+#  include:
+#    workspaces: ^prod-.*$                  # Filter stacks by workspace name
+#    modules: ^terraform-aws-.*$            # Filter modules by name
 
 #  # If you use a custom app in github with spacelift, set this to `true`.
 #  # If you use the marketplace github app with spacelift, set this to `false`.
