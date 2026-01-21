@@ -4,7 +4,9 @@ import logging
 import os
 import re
 import tempfile
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from http import HTTPStatus
 from pathlib import Path
 
@@ -48,6 +50,10 @@ class TerraformExporter(BaseExporter):
         self.experimental_support_variable_sets = self._config.get("experimental_support_variable_sets", False)
         if self.experimental_support_variable_sets:
             logging.warning("Experimental support for variable sets is enabled")
+
+        self.parallel_enrichment_workers = self._config.get("parallel_enrichment_workers", 1)
+        if self.parallel_enrichment_workers > 1:
+            logging.info(f"Parallel enrichment enabled with {self.parallel_enrichment_workers} workers")
 
     def _build_stack_slug(self, workspace: dict) -> str:
         name = workspace.get("attributes.name")
@@ -400,7 +406,7 @@ class TerraformExporter(BaseExporter):
                 logging.info(f"Start local TFC/TFE agent for organization '{organization.get('id')}'")
                 agent_pool_id = self._create_agent_pool(organization_id=organization.get("id"))
                 agent_container_name = f"smk-tfc-agent-{organization.get('id')}"
-                agent_container = self._start_agent_container(
+                agent_container, self.tempdir = self._start_agent_container(
                     agent_pool_id=agent_pool_id, container_name=agent_container_name
                 )
                 # Store the container ID in case it gets stopped and we need it for the error message
@@ -569,11 +575,6 @@ class TerraformExporter(BaseExporter):
                 if agent_container.exists() and agent_container.state.running:
                     logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
                     logging.debug(agent_container.logs())
-                else:
-                    logging.warning(
-                        f"Local TFC/TFE agent Docker container '{agent_container_id}' "
-                        "was already stopped when we tried to pull the logs. Skipping."
-                    )
 
         finally:
             logging.info("Stop enriching variable_set data")
@@ -598,6 +599,147 @@ class TerraformExporter(BaseExporter):
         return data
 
 
+    def _process_single_workspace_enrichment(  # noqa: PLR0913, PLR0915
+        self,
+        workspace_id: str,
+        workspace_variables: dict,
+        organization_id: str,
+        agent_pool_id: str,
+        data: dict,
+        data_lock: threading.Lock,
+        worker_tempdir: str,
+    ) -> tuple[str, dict | None]:
+        """Process a single workspace for variable enrichment.
+
+        Returns:
+            Tuple of (workspace_id, workspace_data_backup) for cleanup tracking.
+            Returns (workspace_id, None) if the workspace was skipped or already restored.
+        """
+        def find_workspace_local(workspace_id: str) -> dict:
+            for workspace in data.get("workspaces"):
+                if workspace.get("id") == workspace_id:
+                    return workspace
+            return None
+
+        def find_variable_local(variable_id: str) -> dict:
+            for variable in data.get("workspace_variables"):
+                if variable.get("id") == variable_id:
+                    return variable
+            return None
+
+        workspace = find_workspace_local(workspace_id)
+        current_configuration_version_id = workspace.get(
+            "relationships.current-configuration-version.data.id"
+        ) if workspace else None
+
+        if current_configuration_version_id is None:
+            logging.warning(
+                f"Workspace '{organization_id}/{workspace_id}' has no current configuration. Ignoring."
+            )
+            return (workspace_id, None)
+
+        logging.info(f"Backing up the '{organization_id}/{workspace_id}' workspace execution mode")
+        workspace_data_backup = self._extract_data_from_api(
+            path=f"/workspaces/{workspace_id}",
+            properties=[
+                "attributes.execution-mode",
+                "attributes.setting-overwrites",
+                "relationships.agent-pool",
+            ],
+        )[0]
+
+        try:
+            logging.info(f"Updating the '{organization_id}/{workspace_id}' workspace to use the TFC Agent")
+            self._extract_data_from_api(
+                method="PATCH",
+                path=f"/workspaces/{workspace_id}",
+                request_data={
+                    "data": {
+                        "attributes": {
+                            "agent-pool-id": agent_pool_id,
+                            "execution-mode": "agent",
+                            "setting-overwrites": {"execution-mode": True, "agent-pool": True},
+                        },
+                        "type": "workspaces",
+                    }
+                },
+            )
+
+            logging.info(f"Trigger a plan for the '{organization_id}/{workspace_id}' workspace")
+            run_data = self._extract_data_from_api(
+                method="POST",
+                path="/runs",
+                properties=["relationships.plan.data.id", "id"],
+                request_data={
+                    "data": {
+                        "attributes": {
+                            "allow-empty-apply": False,
+                            "plan-only": True,
+                            "refresh": False,
+                        },
+                        "relationships": {
+                            "workspace": {"data": {"id": workspace_id, "type": "workspaces"}},
+                        },
+                        "type": "runs",
+                    }
+                },
+            )
+
+            if len(run_data) == 0:
+                raise TerraformExporterPlanError(organization_id, workspace_id)  # noqa: TRY301
+
+            run_data = run_data[0]
+
+            logging.info(f"Retrieve the output for the plan ({organization_id}/{workspace_id})")
+            plan_id = run_data.get("relationships.plan.data.id")
+            plan_data = self._get_plan(id_=plan_id)
+            run_id = run_data.get("id")
+
+            if plan_data.get("attributes.log-read-url"):
+                log_path = f"{worker_tempdir}/{run_id}.txt"
+                logging.info(f"Reading log data from '{log_path}'")
+                p = Path(log_path)
+                with p.open(mode="r") as f:
+                    logs_data = f.read()
+                logging.info(f"Removing log file '{log_path}'")
+                p.unlink()
+
+                logging.debug("Plan output:")
+                logging.debug(logs_data)
+
+                logging.info(f"Extract the env var values from the plan output ({organization_id}/{workspace_id})")
+                with data_lock:
+                    for line in logs_data.split("\n"):
+                        for workspace_variable_id, workspace_variable_name in workspace_variables.items():
+                            prefix = f"{workspace_variable_name}="
+                            if line.startswith(prefix):
+                                value = line.removeprefix(prefix)
+                                masked_value = "*" * len(value)
+
+                                logging.debug(
+                                    f"Found sensitive env var: '{workspace_variable_name}={masked_value}'"
+                                )
+
+                                variable = find_variable_local(workspace_variable_id)
+                                if variable:
+                                    variable["attributes.value"] = value
+
+                        # KLUDGE: Ideally this should be retrieved independently for more clarity,
+                        # and only if needed.
+                        if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
+                            branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
+                            ws = find_workspace_local(workspace_id)
+                            if ws and not ws.get("attributes.vcs-repo.branch"):
+                                ws["attributes.vcs-repo.branch"] = branch_name
+
+            self._restore_workspace_exec_mode(organization_id, workspace_id, workspace_data_backup)
+
+        except Exception:
+            logging.exception(f"Error processing workspace '{organization_id}/{workspace_id}'")
+            return workspace_id, workspace_data_backup
+        else:
+            return workspace_id, None
+
     # KLUDGE: We should break this function down in smaller functions
     def _enrich_workspace_variable_data(self, data: dict) -> dict:  # noqa: PLR0912, PLR0915
         def find_workspace(data: dict, workspace_id: str) -> dict:
@@ -606,15 +748,6 @@ class TerraformExporter(BaseExporter):
                     return workspace
 
             logging.warning(f"Could not find workspace '{workspace_id}'")
-
-            return None
-
-        def find_variable(data: dict, variable_id: str) -> dict:
-            for variable in data.get("workspace_variables"):
-                if variable.get("id") == variable_id:
-                    return variable
-
-            logging.warning(f"Could not find variable '{variable_id}'")
 
             return None
 
@@ -630,7 +763,6 @@ class TerraformExporter(BaseExporter):
 
         logging.info("Start enriching workspace variables data")
 
-        # List organizations, workspaces and associated variables
         organizations = benedict()
         for variable in data.get("workspace_variables"):
             if variable.get("attributes.sensitive") is False:
@@ -650,146 +782,76 @@ class TerraformExporter(BaseExporter):
         if len(organizations) == 0 or len(organizations.keys()) == 0:
             return data
 
+        num_workers = self.parallel_enrichment_workers
+        data_lock = threading.Lock()
+
         for organization_id, workspaces in organizations.items():
-            # Bring the variable scope up, so we can use these in the `finally` block
             agent_pool_id = None
-            agent_container = None
-            current_workspace_id = None
-            workspace_data_backup = None
-            restored_agent = True
+            agent_containers: list[Container] = []
+            pending_restorations: dict[str, dict] = {}
 
             try:
-                logging.info(f"Start local TFC/TFE agent for organization '{organization_id}'")
+                logging.info(f"Start local TFC/TFE agent(s) for organization '{organization_id}'")
 
                 agent_pool_id = self._create_agent_pool(organization_id=organization_id)
 
-                agent_container_name = f"smk-tfc-agent-{organization_id}"
-                agent_container = self._start_agent_container(
-                    agent_pool_id=agent_pool_id, container_name=agent_container_name
+                actual_workers = min(num_workers, len(workspaces))
+                logging.info(
+                    f"Starting {actual_workers} agent container(s) for {len(workspaces)} workspace(s)"
                 )
 
-                # Store the container ID in case it gets stopped and we need it for the error message
-                agent_container_id = agent_container.id
+                shared_tempdir = tempfile.mkdtemp()
 
-                for workspace_id, workspace_variables in workspaces.items():
-                    current_workspace_id = workspace_id
-                    current_configuration_version_id = find_workspace(data, workspace_id).get(
-                        "relationships.current-configuration-version.data.id"
+                for i in range(actual_workers):
+                    agent_container_name = f"smk-tfc-agent-{organization_id}-{i}"
+                    container, _ = self._start_agent_container(
+                        agent_pool_id=agent_pool_id,
+                        container_name=agent_container_name,
+                        worker_tempdir=shared_tempdir,
                     )
-                    if current_configuration_version_id is None:
-                        logging.warning(
-                            f"Workspace '{organization_id}/{workspace_id}' has no current configuration. Ignoring."
+                    agent_containers.append(container)
+
+                workspace_items = list(workspaces.items())
+
+                with ThreadPoolExecutor(max_workers=actual_workers) as executor:
+                    futures = {}
+                    for workspace_id, workspace_variables in workspace_items:
+                        future = executor.submit(
+                            self._process_single_workspace_enrichment,
+                            workspace_id=workspace_id,
+                            workspace_variables=workspace_variables,
+                            organization_id=organization_id,
+                            agent_pool_id=agent_pool_id,
+                            data=data,
+                            data_lock=data_lock,
+                            worker_tempdir=shared_tempdir,
                         )
-                        continue
+                        futures[future] = workspace_id
 
-                    logging.info(f"Backing up the '{organization_id}/{workspace_id}' workspace execution mode")
-                    workspace_data_backup = self._extract_data_from_api(
-                        path=f"/workspaces/{workspace_id}",
-                        properties=[
-                            "attributes.execution-mode",
-                            "attributes.setting-overwrites",
-                            "relationships.agent-pool",
-                        ],
-                    )[
-                        0
-                    ]  # KLUDGE: There should be a way to pull single item from the API instead of a list of items
+                    for future in as_completed(futures):
+                        workspace_id = futures[future]
+                        try:
+                            ws_id, backup = future.result()
+                            logging.info(f"Workspace '{organization_id}/{workspace_id}' variable data enriched")
+                            if backup is not None:
+                                pending_restorations[ws_id] = backup
+                        except Exception:
+                            logging.exception(f"Failed to process workspace '{workspace_id}'")
 
-                    logging.info(f"Updating the '{organization_id}/{workspace_id}' workspace to use the TFC Agent")
-                    self._extract_data_from_api(
-                        method="PATCH",
-                        path=f"/workspaces/{workspace_id}",
-                        request_data={
-                            "data": {
-                                "attributes": {
-                                    "agent-pool-id": agent_pool_id,
-                                    "execution-mode": "agent",
-                                    "setting-overwrites": {"execution-mode": True, "agent-pool": True},
-                                },
-                                "type": "workspaces",
-                            }
-                        },
-                    )
-                    restored_agent = False
+                for container in agent_containers:
+                    if container.exists() and container.state.running:
+                        logging.debug(f"Local TFC/TFE agent Docker container '{container.id}' logs:")
+                        logging.debug(container.logs())
 
-                    logging.info(f"Trigger a plan for the '{organization_id}/{workspace_id}' workspace")
-                    run_data = self._extract_data_from_api(
-                        method="POST",
-                        path="/runs",
-                        properties=["relationships.plan.data.id", "id"],
-                        request_data={
-                            "data": {
-                                "attributes": {
-                                    "allow-empty-apply": False,
-                                    "plan-only": True,
-                                    "refresh": False,  # No need to waste time refreshing the state
-                                },
-                                "relationships": {
-                                    "workspace": {"data": {"id": workspace_id, "type": "workspaces"}},
-                                },
-                                "type": "runs",
-                            }
-                        },
-                    )
-
-                    if len(run_data) == 0:
-                        raise TerraformExporterPlanError(organization_id, workspace_id)
-
-                    # KLUDGE: There should be a way to pull single item from the API instead of a list of items
-                    run_data = run_data[0]
-
-                    logging.info("Retrieve the output for the plan")
-                    plan_id = run_data.get("relationships.plan.data.id")
-                    plan_data = self._get_plan(id_=plan_id)
-                    run_id = run_data.get("id")
-
-                    if plan_data.get("attributes.log-read-url"):
-                        logs_data = self._get_log_data_from_disk(run_id)
-
-                        logging.debug("Plan output:")
-                        logging.debug(logs_data)
-
-                        logging.info("Extract the env var values from the plan output")
-                        for line in logs_data.split("\n"):
-                            for workspace_variable_id, workspace_variable_name in workspace_variables.items():
-                                prefix = f"{workspace_variable_name}="
-                                if line.startswith(prefix):
-                                    value = line.removeprefix(prefix)
-                                    masked_value = "*" * len(value)
-
-                                    logging.debug(
-                                        f"Found sensitive env var: '{workspace_variable_name}={masked_value}'"
-                                    )
-
-                                    variable = find_variable(data, workspace_variable_id)
-                                    variable["attributes.value"] = value
-
-                                # KLUDGE: Ideally this should be retrieved independently for more clarity,
-                                # and only if needed.
-                                if line.startswith("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH="):
-                                    branch_name = line.removeprefix("ATLAS_CONFIGURATION_VERSION_GITHUB_BRANCH=")
-                                    workspace = find_workspace(data, workspace_id)
-                                    if workspace and not workspace.get("attributes.vcs-repo.branch"):
-                                        workspace["attributes.vcs-repo.branch"] = branch_name
-
-                    self._restore_workspace_exec_mode(organization_id, workspace_id, workspace_data_backup)
-                    restored_agent = True
-
-                if agent_container.exists() and agent_container.state.running:
-                    logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
-                    logging.debug(agent_container.logs())
-                else:
-                    logging.warning(
-                        f"Local TFC/TFE agent Docker container '{agent_container_id}' "
-                        "was already stopped when we tried to pull the logs. Skipping."
-                    )
             finally:
-                logging.info(f"Stop local TFC/TFE agent for organization '{organization_id}'")
+                logging.info(f"Stop local TFC/TFE agent(s) for organization '{organization_id}'")
 
-                if not restored_agent:
-                    self._restore_workspace_exec_mode(organization_id, current_workspace_id, workspace_data_backup)
+                for ws_id, backup in pending_restorations.items():
+                    logging.warning(f"Restoring workspace '{ws_id}' that failed during processing")
+                    self._restore_workspace_exec_mode(organization_id, ws_id, backup)
 
-                if agent_container:
-                    self._stop_agent_container(agent_container)
+                for container in agent_containers:
+                    self._stop_agent_container(container)
 
                 if agent_pool_id:
                     self._delete_agent_pool(id_=agent_pool_id)
@@ -801,7 +863,7 @@ class TerraformExporter(BaseExporter):
     def _enrich_data(self, data: dict) -> dict:
         logging.info("Start enriching data")
 
-        self._download_state_files(data)
+        # self._download_state_files(data)
         data = self._enrich_workspace_variable_data(data)
         if self.experimental_support_variable_sets:
             data = self._enrich_variable_set_data(data)
@@ -955,6 +1017,8 @@ class TerraformExporter(BaseExporter):
                 for property_ in properties:
                     datum[property_] = raw_datum.get(property_)
                 data.append(datum)
+            else:
+                data.append(raw_datum)
 
         logging.debug("Stop extracting data from API")
 
@@ -971,7 +1035,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.agent_pools"),
             path=f"/organizations/{organization.get('id')}/agent-pools",
             properties=properties,
         )
@@ -991,7 +1054,6 @@ class TerraformExporter(BaseExporter):
             "id",
         ]
         list_data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.modules"),
             path=f"/organizations/{organization.get('id')}/registry-modules",
             properties=properties,
         )
@@ -1044,7 +1106,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.policies"),
             path=f"/organizations/{organization.get('id')}/policies",
             properties=properties,
         )
@@ -1066,7 +1127,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.policy_sets"),
             path=f"/organizations/{organization.get('id')}/policy-sets",
             properties=properties,
         )
@@ -1084,7 +1144,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.projects"),
             path=f"/organizations/{organization.get('id')}/projects",
             properties=properties,
         )
@@ -1104,7 +1163,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.providers"),
             path=f"/organizations/{organization.get('id')}/registry-providers",
             properties=properties,
         )
@@ -1126,7 +1184,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.tasks"),
             path=f"/organizations/{organization.get('id')}/tasks",
             properties=properties,
         )
@@ -1145,7 +1202,6 @@ class TerraformExporter(BaseExporter):
             "relationships.organization.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.teams"),
             path=f"/organizations/{organization.get('id')}/teams",
             properties=properties,
         )
@@ -1170,7 +1226,6 @@ class TerraformExporter(BaseExporter):
             "relationships.workspaces.data",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.variable_sets"),
             path=f"/organizations/{organization.get('id')}/varsets",
             properties=properties,
         )
@@ -1193,7 +1248,6 @@ class TerraformExporter(BaseExporter):
             "relationships.varset.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.variable_set_variables"),
             path=f"/varsets/{variable_set.get('id')}/relationships/vars",
             properties=properties,
         )
@@ -1216,7 +1270,6 @@ class TerraformExporter(BaseExporter):
             "relationships.workspace.data.id",
         ]
         data = self._extract_data_from_api(
-            include_pattern=self._config.get("include.workspace_variables"),
             path=f"/workspaces/{workspace.get('id')}/vars",
             properties=properties,
         )
@@ -1783,15 +1836,32 @@ class TerraformExporter(BaseExporter):
 
         return data
 
-    def _start_agent_container(self, agent_pool_id: str, container_name: str) -> Container:
+    def _start_agent_container(
+        self, agent_pool_id: str, container_name: str, worker_tempdir: str | None = None
+    ) -> tuple[Container, str]:
+        """Start a TFC/TFE agent container.
+
+        Args:
+            agent_pool_id: The agent pool ID to register with.
+            container_name: Name for the container.
+            worker_tempdir: Optional temp directory for this worker. If None, creates one.
+
+        Returns:
+            Tuple of (container, tempdir) - the container and the temp directory used.
+        """
         token = self._create_agent_token(agent_pool_id=agent_pool_id)
 
-        self.tempdir = tempfile.mkdtemp()
+        if worker_tempdir is None:
+            worker_tempdir = tempfile.mkdtemp()
+
+        # For backward compatibility, also set self.tempdir when not using parallel workers
+        if self.parallel_enrichment_workers == 1:
+            self.tempdir = worker_tempdir
 
         container = docker.run(
             detach=True,
             envs={
-                "TFC_AGENT_NAME": "SMK-Agent",
+                "TFC_AGENT_NAME": f"SMK-Agent-{container_name}",
                 "TFC_AGENT_TOKEN": token,
                 "TFC_ADDRESS": self._config.get("api_endpoint", "https://app.terraform.io"),
             },
@@ -1799,7 +1869,7 @@ class TerraformExporter(BaseExporter):
             name=container_name,
             pull="always",
             remove=True,
-            volumes=[(self.tempdir, "/mnt/spacelift-migration-kit")]
+            volumes=[(worker_tempdir, "/mnt/spacelift-migration-kit")]
         )
 
         found = False
@@ -1818,7 +1888,7 @@ class TerraformExporter(BaseExporter):
 
         logging.debug(f"Using TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
 
-        return container
+        return container, worker_tempdir
 
     def _restore_workspace_exec_mode(self, organization_id: str, workspace_id: str,
                                      workspace_data_backup: dict) -> None:
@@ -1843,6 +1913,7 @@ class TerraformExporter(BaseExporter):
     def _stop_agent_container(self, container: Container):
         if not container.exists() or not container.state.running:
             logging.warning(f"Local TFC/TFE agent '{container}' is already stopped before trying to stop it. Ignoring.")
+            return
 
         logging.debug(f"Stopping TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
         container.stop()
