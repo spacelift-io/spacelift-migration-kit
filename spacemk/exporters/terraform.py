@@ -1281,7 +1281,11 @@ class TerraformExporter(BaseExporter):
         return entity
 
     def _generate_migration_id(self, *args: str) -> str:
-        return slugify("_".join(args)).replace("-", "_")
+        result = slugify("_".join(args)).replace("-", "_")
+        # Terraform resource names must start with a letter or underscore
+        if result and result[0].isdigit():
+            result = "_" + result
+        return result
 
     def _get_plan(self, id_: str) -> dict:
         while True:
