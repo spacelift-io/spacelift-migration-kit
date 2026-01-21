@@ -1614,6 +1614,7 @@ class TerraformExporter(BaseExporter):
             "github_enterprise": "github_custom",
             "bitbucket_server": "bitbucket_datacenter",
             "gitlab_hosted": "gitlab",
+            "gitlab_enterprise_edition": "gitlab",
             "ado_services": "azure_devops",
         }
 
