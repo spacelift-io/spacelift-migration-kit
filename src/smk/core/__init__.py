@@ -1,0 +1,1 @@
+"""SMK core module."""

@@ -1,8 +1,0 @@
-{# Generate a Terraform argument in the most concise form #}
-{% macro argument(name, value, default=None, required=False, serialize=True) %}
-  {% if value is defined and (required or (not required and value != default)) %}
-  {{name}} = {% if serialize %}{{ value|totf }}{% else %}{{ value }}{% endif %}
-  {% elif required and value is not defined %}
-    {% raise "'" ~ name ~ "' argument is required but no value was provided" %}
-  {% endif %}
-{% endmacro %}

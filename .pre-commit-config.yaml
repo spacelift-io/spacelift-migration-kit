@@ -1,59 +1,52 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
+      - id: check-illegal-windows-names
       - id: check-merge-conflict
+      - id: check-json
       - id: check-toml
       - id: check-yaml
       - id: end-of-file-fixer
       - id: forbid-submodules
-      - id: name-tests-test
+      - id: mixed-line-ending
       - id: trailing-whitespace
 
-  - repo: https://github.com/psf/black
-    rev: 24.4.0
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: d252a2a7678b47d1f2eea2f6b846ddfdcd012759 # frozen: v2.11.1
     hooks:
-      - id: black
+      - id: pyproject-fmt
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 2d496dbc18e31b83a1596685347ffe0b6041daf0 # frozen: 1.0.0
+    hooks:
+      - id: mdformat
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.1
+    rev: 45ef068da5f21267bb2a7ec4a623092959f09ce5 # frozen: v0.14.14
     hooks:
-      - id: ruff
+      - id: ruff-check
         args: [--fix]
+      - id: ruff-format
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.6
+    rev: 63c8f8312b7559622c0d82815639671ae42132ac # frozen: v2.4.1
     hooks:
       - id: codespell
 
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.39.0
+  - repo: local
     hooks:
-      - id: markdownlint
-
-  - repo: https://gitlab.com/bmares/check-json5
-    rev: v1.0.0
-    hooks:
-      - id: check-json5
-
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
-    hooks:
-      - id: hadolint
-
-  - repo: https://github.com/bridgecrewio/checkov
-    rev: 3.2.72
-    hooks:
-      - id: checkov
-        args: ["--skip-framework", "dockerfile", "--quiet"]
-
-  - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.89.0
-    hooks:
-      - id: terraform_fmt
-      - id: terraform_providers_lock
-      - id: terraform_tflint
-      - id: terraform_trivy
-      - id: terraform_validate
+      - id: ty
+        name: ty
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true

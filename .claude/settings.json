@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read f; [[ \"$f\" == *.py ]] && uv run ruff check --fix \"$f\" && uv run ruff format \"$f\"; }",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ruff check && uv run pytest --quiet --tb=line || { echo 'Quality checks failed - fix issues before completing' >&2; exit 2; }"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(gh run list:*)",
+      "Bash(just format-check:*)",
+      "Bash(just format:*)",
+      "Bash(just lint-fix:*)",
+      "Bash(just lint:*)",
+      "Bash(just pre-commit:*)",
+      "Bash(just qa)",
+      "Bash(just test-cov:*)",
+      "Bash(just test:*)",
+      "Bash(just type-check:*)",
+      "Bash(tree:*)",
+      "Bash(uv add:*)",
+      "Bash(uv remove:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv run python:*)",
+      "Bash(uv run smk:*)",
+      "WebFetch(domain:github.com)",
+      "WebSearch"
+    ]
+  }
+}

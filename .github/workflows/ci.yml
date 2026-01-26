@@ -1,26 +1,58 @@
 name: CI
-run-name: "CI (${{ github.event_name == 'pull_request' && format('pr: #{0}', github.event.number) || format('{0}: {1}', startsWith(github.event.ref, 'refs/tags') && 'tag' || 'branch', github.ref_name) }})"
-on: push
+
+on:
+  push:
+    branches: [main, smk-v3]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
 jobs:
-  nox:
-    runs-on: ${{ matrix.os }}
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        nox_sessions: ["ruff", "tests"]
-        os: ["macos-latest", "ubuntu-latest", "windows-latest"]
-        python-version: ["3.10", "3.11", "3.12"]
-    name: ${{ matrix.nox_sessions }} (${{ matrix.python-version }}, ${{ matrix.os }})
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
     steps:
-      - name: Check the repository out
-        uses: actions/checkout@v4
-      - name: Install Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install nox and poetry
-        run: |
-          pipx install nox poetry
-          pipx inject nox nox-poetry
-          pipx inject poetry poetry-plugin-export
-      - name: Run ${{ matrix.nox_sessions }} nox session
-        run: nox -rs ${{ matrix.nox_sessions }}-${{ matrix.python-version }}
+          version: "0.9.26"
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Lint
+        run: uv run ruff check
+
+      - name: Format check - Markdown
+        run: uv run mdformat --check .
+
+      - name: Format check - pyproject.toml
+        run: uv run pyproject-fmt --check pyproject.toml
+
+      - name: Format check - Python
+        run: uv run ruff format --check
+
+      - name: Type check
+        run: uv run ty check
+
+      - name: Test with coverage
+        run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.14'
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        continue-on-error: true

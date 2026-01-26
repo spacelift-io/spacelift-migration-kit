@@ -1,0 +1,3 @@
+exclude = [
+    ".pytest_cache/**",
+]

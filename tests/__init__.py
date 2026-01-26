@@ -1,1 +1,1 @@
-"""Spacelift Migration Kit tests."""
+"""Tests for SMK."""
