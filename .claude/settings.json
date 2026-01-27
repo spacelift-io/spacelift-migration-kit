@@ -41,6 +41,7 @@
       "Bash(uv run pytest:*)",
       "Bash(uv run python:*)",
       "Bash(uv run smk:*)",
+      "Skill(python-package-management)",
       "WebFetch(domain:github.com)",
       "WebSearch"
     ]

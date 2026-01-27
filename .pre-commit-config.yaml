@@ -23,6 +23,8 @@ repos:
     rev: 2d496dbc18e31b83a1596685347ffe0b6041daf0 # frozen: 1.0.0
     hooks:
       - id: mdformat
+        additional_dependencies:
+          - mdformat-frontmatter
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: 45ef068da5f21267bb2a7ec4a623092959f09ce5 # frozen: v0.14.14
