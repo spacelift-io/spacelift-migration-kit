@@ -29,8 +29,11 @@ class TerraformExporterPlanError(Exception):
         super().__init__(message)
 
 class AgentStartError(Exception):
-    def __init__(self):
-        super().__init__("Failed to verify container has started")
+    def __init__(self, container_name: str = "", attempts: int = 0):
+        message = f"Failed to verify container '{container_name}' has started after {attempts} attempts"
+        if not container_name:
+            message = "Failed to verify container has started"
+        super().__init__(message)
 
 
 class TerraformExporter(BaseExporter):
@@ -1874,6 +1877,7 @@ class TerraformExporter(BaseExporter):
 
         found = False
         attempts = 0
+        max_attempts = 10
         while not found:
             ps = docker.ps()
             for container in ps:
@@ -1881,10 +1885,16 @@ class TerraformExporter(BaseExporter):
                     logging.info(f"Container Verified Started: {container}")
                     found = True
                     break
-            attempts += 1
-            max_attempts = 10
-            if attempts > max_attempts:
-                raise AgentStartError
+            
+            if not found:
+                attempts += 1
+                if attempts > max_attempts:
+                    logging.error(f"Container '{container_name}' not found after {max_attempts} attempts")
+                    logging.error(f"Visible containers: {[c.name for c in ps]}")
+                    raise AgentStartError(container_name=container_name, attempts=attempts)
+                # Wait before next attempt to allow container to fully start
+                logging.debug(f"Container '{container_name}' not yet visible, waiting... (attempt {attempts}/{max_attempts})")
+                time.sleep(1)
 
         logging.debug(f"Using TFC/TFE agent Docker container '{container.id}' from image '{container.config.image}'")
 
