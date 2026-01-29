@@ -38,7 +38,7 @@ qa: lint format-check type-check test-cov
 setup:
     uv sync  # Install dependencies
     uv run pre-commit install  # Install pre-commit hooks
-    echo "Run `source .venv/bin/activate` to activate the Python virtual environment"
+    echo "Run 'source .venv/bin/activate' to activate the Python virtual environment"
 
 # Run automated tests
 test:
