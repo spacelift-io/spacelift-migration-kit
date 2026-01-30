@@ -45,6 +45,8 @@ extensibility through plugins. No core modifications needed.
 1. Validate at every step
 1. Never fail silently
 
+**Data Workflow**: See [docs/architecture/data-workflow.md](docs/architecture/data-workflow.md) for detailed workflow specification.
+
 **CLI**: Pattern is `smk <subject> <action>` (e.g., `smk stack export`). Built with `typer`. Optional `textual` TUI maps
 to CLI commands.
 
