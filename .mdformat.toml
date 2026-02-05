@@ -1,3 +1,4 @@
 exclude = [
     ".pytest_cache/**",
+    ".venv/**",
 ]

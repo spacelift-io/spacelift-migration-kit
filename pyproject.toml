@@ -19,8 +19,11 @@ classifiers = [
 ]
 dependencies = [
   "pluggy>=1.6",
+  "pydantic-settings>=2.12",
+  "pyyaml>=6.0.3",
   "textual>=7.5",
   "typer>=0.21.1",
+  "xdg-base-dirs>=6.0.2",
 ]
 
 scripts.smk = "smk.core.cli:app"
@@ -64,6 +67,8 @@ lint.select = [
 lint.ignore = [  ]
 lint.per-file-ignores."tests/**/*.py" = [
   "S101", # assert is allowed in tests
+  "S105", # hardcoded passwords are fine in tests
+  "S106", # hardcoded password arguments are fine in tests
 ]
 lint.isort.known-first-party = [ "smk" ]
 

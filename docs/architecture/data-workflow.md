@@ -6,7 +6,7 @@ The whole goal of SMK is to replicate the setup the user has at their current ve
 
 ### Workspace Structure
 
-SMK uses a "migration folder" that contains everything related to the migration. The user configures it as their first action after installing SMK, possibly with the `init` command. This creates a folder (default: ~/.smk, customizable via an option).
+SMK uses a "configuration folder" that contains everything related to the migration. The user configures it as their first action after installing SMK, possibly with the `init` command. This creates a folder (default: ~/.smk, customizable via an option).
 
 The folder contains:
 
@@ -108,7 +108,7 @@ Creates the HCL code that describes the resources needed to replicate the source
 
 HCL code, compatible with both Terraform and OpenTofu. OpenTofu is the default option.
 
-Generated code is stored in the `data/generated` folder in the SMK migration folder. It should be organized in a few files. There must be the recommended files (e.g., providers.tf) and we should probably split the entities in a few files for ease of maintainability but the best layout is still to be determined. Options include grouping by Spacelift entity type, space, or specific labels.
+Generated code is stored in the `data/generated` folder in the SMK configuration folder. It should be organized in a few files. There must be the recommended files (e.g., providers.tf) and we should probably split the entities in a few files for ease of maintainability but the best layout is still to be determined. Options include grouping by Spacelift entity type, space, or specific labels.
 
 SMK can provide a handful of templates for common layouts and leave users the ability to create their own template.
 
