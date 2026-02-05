@@ -40,14 +40,16 @@ def test_app_version():
     assert "SMK version" in output
 
 
-def test_app_no_args():
-    """Test that the app shows help when no args provided."""
+def test_app_no_args(mocker):
+    """Test that the app launches TUI when no args provided."""
+    mock_tui = mocker.patch("smk.core.tui.TUIApp", autospec=True)
+    mock_instance = mock_tui.return_value
+
     result = runner.invoke(app, [], color=False)
-    # Exit code 2 is expected when no args provided with no_args_is_help=True
-    assert result.exit_code == 2
-    # Output might be in stdout or combined output
-    output = strip_ansi(result.stdout + result.stderr)
-    assert "Spacelift Migration Kit" in output or "Usage:" in output
+
+    assert result.exit_code == 0
+    mock_tui.assert_called_once()
+    mock_instance.run.assert_called_once()
 
 
 def test_app_invalid_command():

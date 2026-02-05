@@ -13,7 +13,6 @@ import typer
 app = typer.Typer(
     help="Spacelift Migration Kit - Migrate infrastructure management to Spacelift",
     name="smk",
-    no_args_is_help=True,
 )
 
 
@@ -28,9 +27,10 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-@app.callback()
+@app.callback(invoke_without_command=True)
 def main_callback(
-    version: bool = typer.Option(
+    ctx: typer.Context,
+    _version: bool = typer.Option(
         False,
         "--version",
         callback=version_callback,
@@ -39,3 +39,7 @@ def main_callback(
     ),
 ) -> None:
     """Spacelift Migration Kit - Migrate infrastructure management to Spacelift."""
+    if ctx.invoked_subcommand is None:
+        from smk.core.tui import TUIApp
+
+        TUIApp().run()
