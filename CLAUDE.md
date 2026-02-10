@@ -28,6 +28,12 @@ Spacelift with minimal friction.
 
 **Multi-version testing**: CI tests against Python 3.10-3.14. Local dev uses 3.14. Test against specific versions with `uv run --python 3.12 pytest`.
 
+## Skills
+
+**Git Commits**: Use the `git-commit` skill when creating commits or branches. It handles proper staging, commit messages, and follows repository conventions.
+
+**Package Management**: Use the `python-package-management` (or `python-dev:managing-packages-with-uv`) skill when adding, removing, or updating Python packages. It ensures correct `uv` usage.
+
 ## Architecture
 
 **Core Module** (`src/smk/core/`): Low-level reusable functionality (config, workflow orchestration, plugin management
