@@ -5,17 +5,36 @@ _list:
 
 # Build desktop app for Linux
 build-linux: web-css
-    uv run pyinstaller smk.spec --clean
+    uv run pyinstaller smk.spec --clean --noconfirm
     echo "Built: dist/SMK"
+
+# Build macOS DMG installer (requires create-dmg)
+build-dmg: build-macos
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v create-dmg &> /dev/null; then
+        echo "Error: create-dmg not found. Install with: brew install create-dmg"
+        exit 1
+    fi
+    rm -f dist/SMK.dmg
+    create-dmg \
+        --volname "SMK" \
+        --window-pos 200 120 \
+        --window-size 600 400 \
+        --icon-size 100 \
+        --app-drop-link 450 185 \
+        "dist/SMK.dmg" \
+        "dist/SMK.app"
+    echo "Built: dist/SMK.dmg"
 
 # Build desktop app for macOS
 build-macos: web-css
-    uv run pyinstaller smk.spec --clean
+    uv run pyinstaller smk.spec --clean --noconfirm
     echo "Built: dist/SMK.app"
 
 # Build desktop app for Windows
 build-windows: web-css
-    uv run pyinstaller smk.spec --clean
+    uv run pyinstaller smk.spec --clean --noconfirm
     echo "Built: dist/SMK.exe"
 
 # Clean all build and test artifacts
