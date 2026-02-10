@@ -18,11 +18,16 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
+  "fastapi>=0.128.1",
+  "jinja2>=3.1.6",
   "pluggy>=1.6",
   "pydantic-settings>=2.12",
+  "pytailwindcss>=0.2",
+  "python-multipart>=0.0.22",
   "pyyaml>=6.0.3",
   "textual>=7.5",
   "typer>=0.21.1",
+  "uvicorn[standard]>=0.40",
   "xdg-base-dirs>=6.0.2",
 ]
 
@@ -30,6 +35,7 @@ scripts.smk = "smk.core.cli:app"
 
 [dependency-groups]
 dev = [
+  "httpx>=0.28.1",
   "mdformat>=1",
   "mdformat-frontmatter>=2.0.10",
   "pre-commit>=4.5.1",

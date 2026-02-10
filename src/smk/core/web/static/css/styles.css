@@ -1,0 +1,16 @@
+/* SMK Web Interface Styles */
+/* Using Flowbite CDN for Tailwind components, this file is for custom styles */
+
+/* Custom utilities not in Flowbite CDN */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
+}

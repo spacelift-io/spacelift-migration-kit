@@ -168,3 +168,40 @@ def config_show(
     typer.echo(f"Spacelift endpoint: {config.spacelift.api_endpoint or '(not set)'}")
     typer.echo(f"Spacelift key ID: {config.spacelift.api_key_id or '(not set)'}")
     typer.echo(f"Spacelift key secret: {'***' if config.spacelift.api_key_secret else '(not set)'}")
+
+
+@app.command("web")
+def web_command(
+    host: Annotated[
+        str,
+        typer.Option(
+            "--host",
+            "-h",
+            help="Host to bind the server to.",
+        ),
+    ] = "127.0.0.1",
+    no_browser: Annotated[
+        bool,
+        typer.Option(
+            "--no-browser",
+            help="Don't open browser automatically.",
+        ),
+    ] = False,
+    port: Annotated[
+        int,
+        typer.Option(
+            "--port",
+            "-p",
+            help="Port to bind the server to.",
+            min=1024,
+            max=65535,
+        ),
+    ] = 8000,
+) -> None:
+    """Start the web interface."""
+    from smk.core.web import run_server
+    from smk.core.web.config import WebConfig
+
+    config = WebConfig(host=host, open_browser=not no_browser, port=port)
+    typer.echo(f"Starting SMK web interface at http://{host}:{port}")
+    run_server(config)

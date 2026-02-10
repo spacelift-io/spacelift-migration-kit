@@ -57,3 +57,15 @@ test-cov-html:
 # Check types
 type-check:
     uv run ty check
+
+# Build Tailwind CSS
+web-css:
+    cd src/smk/core/web/tailwind && uv run tailwindcss -i input.css -o ../static/css/styles.css --minify
+
+# Watch and rebuild Tailwind CSS on changes
+web-css-watch:
+    cd src/smk/core/web/tailwind && uv run tailwindcss -i input.css -o ../static/css/styles.css --watch
+
+# Start web development server
+web-dev: web-css
+    SMK_WEB_DEBUG=true uv run smk web
