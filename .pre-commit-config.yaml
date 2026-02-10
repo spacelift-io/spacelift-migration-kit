@@ -42,7 +42,7 @@ repos:
     hooks:
       - id: ty
         name: ty
-        entry: uv run ty check
+        entry: uv run ty check --exclude 'docs/plugins/examples/**'
         language: system
         types: [python]
         pass_filenames: false
