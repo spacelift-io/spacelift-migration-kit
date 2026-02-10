@@ -58,3 +58,45 @@ def get_logs_dir(config_dir: Path | None = None) -> Path:
     if config_dir is None:
         config_dir = get_default_config_dir()
     return config_dir / "logs"
+
+
+def get_plugin_cache_file(config_dir: Path | None = None) -> Path:
+    """Get the path to the plugin cache file.
+
+    Args:
+        config_dir: Optional custom config directory. Uses default if None.
+
+    Returns:
+        Path to plugin-cache.json file.
+    """
+    if config_dir is None:
+        config_dir = get_default_config_dir()
+    return config_dir / "plugin-cache.json"
+
+
+def get_plugin_deps_dir(config_dir: Path | None = None) -> Path:
+    """Get the path to the plugin dependencies directory.
+
+    Args:
+        config_dir: Optional custom config directory. Uses default if None.
+
+    Returns:
+        Path to plugin-deps directory.
+    """
+    if config_dir is None:
+        config_dir = get_default_config_dir()
+    return config_dir / "plugin-deps"
+
+
+def get_plugins_dir(config_dir: Path | None = None) -> Path:
+    """Get the path to the third-party plugins directory.
+
+    Args:
+        config_dir: Optional custom config directory. Uses default if None.
+
+    Returns:
+        Path to plugins directory.
+    """
+    if config_dir is None:
+        config_dir = get_default_config_dir()
+    return config_dir / "plugins"
