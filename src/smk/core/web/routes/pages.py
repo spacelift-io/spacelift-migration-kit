@@ -39,3 +39,26 @@ async def config_page(request: Request) -> HTMLResponse:
             request=request,
         )
     )
+
+
+@router.get("/plugins", response_class=HTMLResponse)
+async def plugins_page(request: Request) -> HTMLResponse:
+    """Render the plugins page."""
+    templates = request.app.state.templates
+    plugin_manager = request.app.state.plugin_manager
+
+    loaded_plugins = plugin_manager.get_loaded_plugins()
+    failed_plugins = plugin_manager.get_failed_plugins()
+    is_bundled = plugin_manager.is_bundled
+    is_dev_mode = plugin_manager.is_development_mode()
+
+    template = templates.get_template("pages/plugins.html")
+    return HTMLResponse(
+        template.render(
+            loaded_plugins=loaded_plugins,
+            failed_plugins=failed_plugins,
+            is_bundled=is_bundled,
+            is_dev_mode=is_dev_mode,
+            request=request,
+        )
+    )

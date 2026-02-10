@@ -56,6 +56,13 @@ def create_app(config: WebConfig | None = None) -> FastAPI:
     # Store config in app state
     app.state.config = config
 
+    # Initialize plugin manager
+    from smk.core.plugins import SMKPluginManager
+
+    plugin_manager = SMKPluginManager()
+    plugin_manager.initialize()
+    app.state.plugin_manager = plugin_manager
+
     # Set up Jinja2 templates
     template_env = Environment(
         autoescape=True,
