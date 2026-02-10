@@ -1,5 +1,6 @@
 """FastAPI application factory."""
 
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -8,7 +9,29 @@ from jinja2 import Environment, FileSystemLoader
 
 from smk.core.web.config import WebConfig
 
-WEB_DIR = Path(__file__).parent
+try:
+    from arel import HotReload
+    from arel._models import Path as ArelPath
+except ImportError:
+    HotReload = None  # type: ignore[assignment,misc]
+    ArelPath = None  # type: ignore[assignment,misc]
+
+
+def _get_resource_path() -> Path:
+    """Get path to resources, handling frozen executables.
+
+    Returns:
+        Path to web module directory, accounting for PyInstaller's _MEIPASS.
+    """
+    if getattr(sys, "frozen", False):
+        # Running as compiled executable
+        return Path(sys._MEIPASS) / "smk" / "core" / "web"  # type: ignore[attr-defined]
+    else:
+        # Running as normal Python
+        return Path(__file__).parent
+
+
+WEB_DIR = _get_resource_path()
 STATIC_DIR = WEB_DIR / "static"
 TEMPLATES_DIR = WEB_DIR / "templates"
 
@@ -51,5 +74,20 @@ def create_app(config: WebConfig | None = None) -> FastAPI:
     app.include_router(api_router)
     app.include_router(pages_router)
     app.include_router(partials_router)
+
+    # Set up hot reload in debug mode
+    if config.debug and HotReload is not None and ArelPath is not None:
+        hot_reload = HotReload(
+            paths=[
+                ArelPath(path=str(TEMPLATES_DIR)),
+                ArelPath(path=str(STATIC_DIR)),
+            ]
+        )
+        app.add_event_handler("startup", hot_reload.startup)
+        app.add_event_handler("shutdown", hot_reload.shutdown)
+        app.add_websocket_route("/hot-reload", hot_reload)  # type: ignore[arg-type]
+        app.state.hot_reload = hot_reload
+    else:
+        app.state.hot_reload = None
 
     return app

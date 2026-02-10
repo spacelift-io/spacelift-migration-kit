@@ -3,6 +3,46 @@ set quiet:= true
 _list:
     just --list
 
+# Build desktop app for Linux
+build-linux: web-css
+    uv run pyinstaller smk.spec --clean
+    echo "Built: dist/SMK"
+
+# Build desktop app for macOS
+build-macos: web-css
+    uv run pyinstaller smk.spec --clean
+    echo "Built: dist/SMK.app"
+
+# Build desktop app for Windows
+build-windows: web-css
+    uv run pyinstaller smk.spec --clean
+    echo "Built: dist/SMK.exe"
+
+# Clean all build and test artifacts
+clean:
+    rm -rf build dist *.spec.bak        # PyInstaller artifacts
+    rm -rf .pytest_cache                # Pytest cache
+    rm -rf htmlcov .coverage            # Coverage reports
+    find . -type d -name __pycache__ -exec rm -rf {} +  # Python cache
+    find . -type f -name "*.pyc" -delete                # Compiled Python
+
+# Run web development server with auto-reload (primary dev mode)
+dev:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Starting CSS watcher and dev server..."
+    # Start CSS watcher in background
+    (cd src/smk/core/web/tailwind && uv run tailwindcss -i input.css -o ../static/css/styles.css --watch) &
+    CSS_PID=$!
+    # Trap EXIT to kill CSS watcher when server stops
+    trap "kill $CSS_PID 2>/dev/null || true" EXIT
+    # Start dev server (blocks until Ctrl+C)
+    SMK_WEB_DEBUG=true SMK_WEB_RELOAD=true uv run smk
+
+# Run desktop app in development (no auto-reload, use dev for rapid iteration)
+desktop-dev: web-css
+    SMK_WEB_DEBUG=true uv run python -m smk.core.desktop
+
 # Format code and config files
 format:
     uv run mdformat .  # Format Markdown files
@@ -36,7 +76,7 @@ qa: lint format-check type-check test-cov
 
 # Set local dev environment up
 setup:
-    uv sync  # Install dependencies
+    uv sync --extra desktop  # Install dependencies including desktop
     uv run pre-commit install  # Install pre-commit hooks
     echo "Run 'source .venv/bin/activate' to activate the Python virtual environment"
 
@@ -61,11 +101,3 @@ type-check:
 # Build Tailwind CSS
 web-css:
     cd src/smk/core/web/tailwind && uv run tailwindcss -i input.css -o ../static/css/styles.css --minify
-
-# Watch and rebuild Tailwind CSS on changes
-web-css-watch:
-    cd src/smk/core/web/tailwind && uv run tailwindcss -i input.css -o ../static/css/styles.css --watch
-
-# Start web development server
-web-dev: web-css
-    SMK_WEB_DEBUG=true uv run smk web

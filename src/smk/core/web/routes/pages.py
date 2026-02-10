@@ -14,7 +14,7 @@ async def dashboard(request: Request) -> HTMLResponse:
     """Render the dashboard page."""
     templates = request.app.state.templates
     template = templates.get_template("pages/dashboard.html")
-    return HTMLResponse(template.render())
+    return HTMLResponse(template.render(request=request))
 
 
 @router.get("/config", response_class=HTMLResponse)
@@ -36,5 +36,6 @@ async def config_page(request: Request) -> HTMLResponse:
         template.render(
             config=config,
             config_initialized=config_initialized,
+            request=request,
         )
     )

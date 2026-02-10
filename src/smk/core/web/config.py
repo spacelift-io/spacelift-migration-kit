@@ -12,3 +12,4 @@ class WebConfig(BaseSettings):
     host: str = "127.0.0.1"
     open_browser: bool = True
     port: int = 8000
+    reload: bool = False

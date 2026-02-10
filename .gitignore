@@ -1,6 +1,22 @@
+# Python
 __pycache__
+*.pyc
+
+# Virtual environment
+.venv
+
+# Testing
 .coverage
 .pytest_cache
-.ruff_cache
-.venv
 htmlcov
+
+# Linting
+.ruff_cache
+
+# PyInstaller
+build/
+dist/
+*.spec.bak
+
+# Generated CSS
+src/smk/core/web/static/css/styles.css

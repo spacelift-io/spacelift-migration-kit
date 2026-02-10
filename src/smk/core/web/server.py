@@ -17,7 +17,6 @@ def run_server(config: WebConfig) -> NoReturn:
     Args:
         config: Web server configuration.
     """
-    app = create_app(config)
     url = f"http://{config.host}:{config.port}"
 
     if config.open_browser:
@@ -28,10 +27,23 @@ def run_server(config: WebConfig) -> NoReturn:
 
         threading.Thread(target=open_browser, daemon=True).start()
 
-    uvicorn.run(
-        app,
-        host=config.host,
-        port=config.port,
-        log_level="debug" if config.debug else "info",
-    )
+    # When reload is enabled, uvicorn requires an import string instead of an app instance
+    if config.reload:
+        uvicorn.run(
+            "smk.core.web.app:create_app",
+            factory=True,
+            host=config.host,
+            port=config.port,
+            log_level="debug" if config.debug else "info",
+            reload=True,
+            reload_dirs=["src/smk"],
+        )
+    else:
+        app = create_app(config)
+        uvicorn.run(
+            app,
+            host=config.host,
+            port=config.port,
+            log_level="debug" if config.debug else "info",
+        )
     raise SystemExit(0)  # NoReturn requires this

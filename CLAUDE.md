@@ -17,7 +17,10 @@ Spacelift with minimal friction.
 
 **Key Commands**: See `justfile` for all commands.
 
-- Run CLI: `uv run smk`
+- Setup: `just setup` (installs dependencies including desktop)
+- Run dev server: `just dev` (web with auto-reload, primary dev mode)
+- Run desktop app: `just desktop-dev` (no auto-reload - use dev for rapid iteration)
+- Build desktop: `just build-macos` (or `build-windows`, `build-linux`)
 - QA checks: `just qa`
 - Lint: `just lint` or `just lint-fix`
 - Tests: `just test` or `just test-cov`
@@ -25,6 +28,10 @@ Spacelift with minimal friction.
 - Type check: `just type-check`
 
 **After code changes**: Always run `just qa`. Fix all issues before work is complete.
+
+**Development Workflow**: Use `just dev` for development with auto-reload (both Python and CSS). Use `just desktop-dev` only when testing the native desktop wrapper.
+
+**Architecture**: `smk` CLI runs web server. Desktop app is separate GUI application (SMK.app/SMK.exe) for local development or distribution.
 
 **Multi-version testing**: CI tests against Python 3.10-3.14. Local dev uses 3.14. Test against specific versions with `uv run --python 3.12 pytest`.
 
@@ -53,8 +60,11 @@ extensibility through plugins. No core modifications needed.
 
 **Data Workflow**: See [docs/architecture/data-workflow.md](docs/architecture/data-workflow.md) for detailed workflow specification.
 
-**CLI**: Pattern is `smk <subject> <action>` (e.g., `smk stack export`). Built with `typer`. Optional `textual` TUI maps
-to CLI commands.
+**User Interface**:
+
+- **Web server** (`smk` command): FastAPI application for CLI/server deployments
+- **Desktop app** (SMK.app/SMK.exe): Standalone GUI using `pywebview` wrapper around web interface
+- All configuration through web GUI in both modes
 
 ## Design Principles
 
@@ -75,10 +85,12 @@ to CLI commands.
 ## Tech Stack
 
 - Python 3.10+ (CI tested: 3.10, 3.11, 3.12, 3.13, 3.14)
+- `fastapi` (web interface)
 - `pluggy` (plugins)
 - `pydantic` (models)
 - `pydantic-settings` (config)
+- `pyinstaller` (desktop builds)
 - `pytest` (tests)
-- `textual` (TUI)
-- `typer` (CLI)
+- `pywebview` (desktop wrapper, optional)
+- `typer` (CLI launcher)
 - `uv` (packages)
