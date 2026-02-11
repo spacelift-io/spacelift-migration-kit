@@ -12,7 +12,9 @@ from smk.core.web.config import WebConfig
 try:
     from arel import HotReload
     from arel._models import Path as ArelPath
-except ImportError:
+except (ImportError, AssertionError):
+    # ImportError: arel not installed
+    # AssertionError: arel doesn't work with PyInstaller bundling
     HotReload = None  # type: ignore[assignment,misc]
     ArelPath = None  # type: ignore[assignment,misc]
 

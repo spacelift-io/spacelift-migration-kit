@@ -30,7 +30,7 @@ a = Analysis(
         "uvicorn.lifespan.off",
         # Web routes
         "smk.core.web.routes.api",
-        "smk.core.web.routes.pages",
+        "smk.core.web.routes.workflow",
         "smk.core.web.routes.partials",
         # Plugin system
         "pluggy",
