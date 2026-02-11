@@ -8,6 +8,18 @@
 # - Plugin dependencies auto-install to ~/.config/smk/plugin-deps/ at runtime
 # - pip is automatically bundled with Python for runtime installation
 # - Common dependencies (boto3, requests) can be pre-bundled to reduce runtime installs
+#
+
+import sys
+
+# Platform-specific icon selection
+# Icons generated from scripts/build-icons.sh
+if sys.platform == 'darwin':
+    ICON_PATH = 'src/smk/core/desktop/assets/icon.icns'
+elif sys.platform == 'win32':
+    ICON_PATH = 'src/smk/core/desktop/assets/icon.ico'
+else:  # Linux and others
+    ICON_PATH = 'src/smk/core/desktop/assets/icon.png'
 
 a = Analysis(
     ["src/smk/core/desktop/__main__.py"],
@@ -19,6 +31,8 @@ a = Analysis(
         ("src/smk/plugins", "smk/plugins"),  # Built-in plugins
     ],
     hiddenimports=[
+        # Desktop wrapper
+        "webview",
         # Uvicorn server dependencies
         "uvicorn.logging",
         "uvicorn.loops.auto",
@@ -68,6 +82,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False,
+    icon=ICON_PATH,
 )
 
 coll = COLLECT(
@@ -83,6 +98,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="Spacelift Migration Kit.app",
-    icon=None,
+    icon=ICON_PATH,
     bundle_identifier="io.spacelift.smk",
 )
