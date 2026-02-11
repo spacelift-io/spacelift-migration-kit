@@ -27,6 +27,10 @@ build-dmg: build-macos
         "dist/Spacelift Migration Kit.app"
     echo "Built: dist/Spacelift Migration Kit.dmg"
 
+# Build application icons from SVG source
+build-icons:
+    bash scripts/build-icons.sh
+
 # Build desktop app for macOS
 build-macos: web-css
     uv run pyinstaller smk.spec --clean --noconfirm
