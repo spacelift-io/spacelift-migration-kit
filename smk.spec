@@ -62,7 +62,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="SMK",
+    name="Spacelift-Migration-Kit",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -77,12 +77,12 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="SMK",
+    name="Spacelift-Migration-Kit",
 )
 
 app = BUNDLE(
     coll,
-    name="SMK.app",
+    name="Spacelift Migration Kit.app",
     icon=None,
     bundle_identifier="io.spacelift.smk",
 )

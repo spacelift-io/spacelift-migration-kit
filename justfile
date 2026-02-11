@@ -6,7 +6,7 @@ _list:
 # Build desktop app for Linux
 build-linux: web-css
     uv run pyinstaller smk.spec --clean --noconfirm
-    echo "Built: dist/SMK"
+    echo "Built: dist/Spacelift-Migration-Kit"
 
 # Build macOS DMG installer (requires create-dmg)
 build-dmg: build-macos
@@ -16,26 +16,26 @@ build-dmg: build-macos
         echo "Error: create-dmg not found. Install with: brew install create-dmg"
         exit 1
     fi
-    rm -f dist/SMK.dmg
+    rm -f dist/"Spacelift Migration Kit.dmg"
     create-dmg \
-        --volname "SMK" \
+        --volname "Spacelift Migration Kit" \
         --window-pos 200 120 \
         --window-size 600 400 \
         --icon-size 100 \
         --app-drop-link 450 185 \
-        "dist/SMK.dmg" \
-        "dist/SMK.app"
-    echo "Built: dist/SMK.dmg"
+        "dist/Spacelift Migration Kit.dmg" \
+        "dist/Spacelift Migration Kit.app"
+    echo "Built: dist/Spacelift Migration Kit.dmg"
 
 # Build desktop app for macOS
 build-macos: web-css
     uv run pyinstaller smk.spec --clean --noconfirm
-    echo "Built: dist/SMK.app"
+    echo "Built: dist/Spacelift Migration Kit.app"
 
 # Build desktop app for Windows
 build-windows: web-css
     uv run pyinstaller smk.spec --clean --noconfirm
-    echo "Built: dist/SMK.exe"
+    echo "Built: dist/Spacelift-Migration-Kit.exe"
 
 # Clean all build and test artifacts
 clean:
