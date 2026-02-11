@@ -82,7 +82,7 @@ def launch_desktop(config: WebConfig | None = None) -> None:
     webview.create_window(
         "SMK - Spacelift Migration Kit",
         f"http://127.0.0.1:{port}",
-        width=1280,
-        height=800,
+        width=1600,
+        height=1000,
     )
     webview.start(menu=menu)
