@@ -1,0 +1,56 @@
+{% extends "workflow_base.html" %}
+
+{% block title %}Complete{% endblock %}
+
+{% block content %}
+<div class="text-center max-w-3xl mx-auto">
+  <div class="mb-8">
+    <div class="w-20 h-20 mx-auto bg-spacelift-green rounded-full flex items-center justify-center">
+      <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+      </svg>
+    </div>
+  </div>
+  <h2 class="text-4xl font-bold text-gray-900 mb-4 dark:text-white">Migration Complete!</h2>
+  <p class="text-xl text-gray-600 mb-8 dark:text-gray-300">Your infrastructure has been successfully migrated to Spacelift.</p>
+
+  <div class="border border-gray-200 rounded-lg p-6 mb-8 text-left dark:border-gray-700">
+    <h3 class="text-lg font-semibold mb-4 dark:text-white">Migration Summary</h3>
+    <div class="space-y-3">
+      <div class="flex justify-between">
+        <span class="text-gray-600 dark:text-gray-400">Workspaces migrated:</span>
+        <span class="font-semibold dark:text-white">42</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600 dark:text-gray-400">Variables transferred:</span>
+        <span class="font-semibold dark:text-white">156</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600 dark:text-gray-400">State files migrated:</span>
+        <span class="font-semibold dark:text-white">38</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-gray-600 dark:text-gray-400">Time elapsed:</span>
+        <span class="font-semibold dark:text-white">2h 15m</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4 mb-8">
+    <a href="#" class="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left dark:border-gray-600 dark:hover:bg-gray-700">
+      <h4 class="font-semibold mb-1 dark:text-white">View in Spacelift</h4>
+      <p class="text-sm text-gray-600 dark:text-gray-400">Open your Spacelift dashboard to see your migrated resources.</p>
+    </a>
+    <a href="#" class="p-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-left dark:border-gray-600 dark:hover:bg-gray-700">
+      <h4 class="font-semibold mb-1 dark:text-white">Download Report</h4>
+      <p class="text-sm text-gray-600 dark:text-gray-400">Get a detailed migration report for your records.</p>
+    </a>
+  </div>
+
+  <div class="flex justify-center gap-4">
+    <a href="/start" class="px-8 py-3 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-shadow" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
+      Start New Migration
+    </a>
+  </div>
+</div>
+{% endblock %}

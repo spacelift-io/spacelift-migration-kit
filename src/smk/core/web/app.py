@@ -75,11 +75,11 @@ def create_app(config: WebConfig | None = None) -> FastAPI:
 
     # Include routers
     from smk.core.web.routes.api import router as api_router
-    from smk.core.web.routes.pages import router as pages_router
     from smk.core.web.routes.partials import router as partials_router
+    from smk.core.web.routes.workflow import router as workflow_router
 
     app.include_router(api_router)
-    app.include_router(pages_router)
+    app.include_router(workflow_router)
     app.include_router(partials_router)
 
     # Set up hot reload in debug mode

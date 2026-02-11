@@ -1,0 +1,63 @@
+{% extends "workflow_base.html" %}
+
+{% block title %}Configure{% endblock %}
+
+{% block content %}
+<h2 class="text-3xl font-bold text-gray-900 mb-4 dark:text-white">Configure SMK</h2>
+<p class="text-gray-600 mb-8 dark:text-gray-300">Set up your migration parameters and connect to your source vendor.</p>
+
+<div class="space-y-6">
+  <div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
+    <h3 class="text-lg font-semibold mb-4 dark:text-white">Source Vendor</h3>
+    <select class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+      <option>Select your current platform...</option>
+      <option>Terraform Cloud</option>
+      <option>Terraform Enterprise</option>
+      <option>GitLab CI</option>
+      <option>GitHub Actions</option>
+      <option>Other</option>
+    </select>
+  </div>
+
+  <div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
+    <h3 class="text-lg font-semibold mb-4 dark:text-white">Spacelift Configuration</h3>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">API Endpoint</label>
+        <input type="text" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="https://your-org.app.spacelift.io">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">API Key</label>
+        <input type="password" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Enter your API key">
+      </div>
+    </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-lg p-6 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+    <div class="flex items-start">
+      <svg class="w-6 h-6 text-blue-600 mr-3 mt-1 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <div>
+        <h4 class="font-semibold text-blue-900 mb-1 dark:text-blue-300">Plugin System</h4>
+        <p class="text-sm text-blue-800 dark:text-blue-400">SMK uses plugins to support different vendors. The appropriate plugin will be loaded based on your selection.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="flex justify-between mt-8">
+  {% if prev_step %}
+  <a href="/{{ prev_step }}" class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+    Previous
+  </a>
+  {% else %}
+  <div></div>
+  {% endif %}
+  {% if next_step %}
+  <a href="/{{ next_step }}" class="px-6 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
+    Continue
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "workflow_base.html" %}
+
+{% block title %}Migrate{% endblock %}
+
+{% block content %}
+<h2 class="text-3xl font-bold text-gray-900 mb-4 dark:text-white">Migrate Resources</h2>
+<p class="text-gray-600 mb-8 dark:text-gray-300">Review and approve migration batches.</p>
+
+<div class="border border-gray-200 rounded-lg p-6 mb-6 dark:border-gray-700">
+  <div class="flex items-center justify-between mb-4">
+    <h3 class="text-lg font-semibold dark:text-white">Batch 1 of 5</h3>
+    <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full dark:bg-blue-900/50 dark:text-blue-300">Ready to Review</span>
+  </div>
+  <p class="text-sm text-gray-600 mb-4 dark:text-gray-400">8 workspaces ready for migration</p>
+
+  <div class="bg-gray-50 rounded-lg p-4 mb-4 dark:bg-gray-700">
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium dark:text-white">prod-api-gateway</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400">Terraform 1.5.2</span>
+    </div>
+    <div class="flex items-center justify-between mb-2">
+      <span class="text-sm font-medium dark:text-white">prod-database</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400">Terraform 1.5.2</span>
+    </div>
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-medium dark:text-white">prod-networking</span>
+      <span class="text-xs text-gray-500 dark:text-gray-400">Terraform 1.5.2</span>
+    </div>
+    <div class="text-center mt-3">
+      <button class="text-sm text-spacelift-purple hover:underline">+ 5 more workspaces</button>
+    </div>
+  </div>
+
+  <div class="flex space-x-3">
+    <button class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700">
+      Review HCL
+    </button>
+    <button class="flex-1 px-4 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
+      Approve & Run
+    </button>
+  </div>
+</div>
+
+<div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
+  <h3 class="text-lg font-semibold mb-3 dark:text-white">Migration Progress</h3>
+  <div class="flex items-center">
+    <div class="flex-1 bg-gray-200 rounded-full h-2 mr-4 dark:bg-gray-700">
+      <div class="bg-spacelift-green h-2 rounded-full" style="width: 0%"></div>
+    </div>
+    <span class="text-sm text-gray-600 dark:text-gray-400">0 of 42</span>
+  </div>
+</div>
+
+<div class="flex justify-between mt-8">
+  {% if prev_step %}
+  <a href="/{{ prev_step }}" class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+    Previous
+  </a>
+  {% else %}
+  <div></div>
+  {% endif %}
+  {% if next_step %}
+  <a href="/{{ next_step }}" class="px-6 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
+    Continue
+  </a>
+  {% endif %}
+</div>
+{% endblock %}

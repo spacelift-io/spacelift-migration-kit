@@ -1,0 +1,30 @@
+{% macro stepper(current_step, completed_steps, workflow_steps) %}
+<ol class="flex items-center w-full text-sm font-medium text-center text-gray-500">
+  {% for step in workflow_steps %}
+    {% set is_first = loop.first %}
+    {% set is_last = loop.last %}
+    {% set is_active = step.id == current_step %}
+    {% set is_completed = step.id in completed_steps %}
+
+    <li class="flex items-center {% if not is_last %}w-full{% endif %} relative" data-step="{{ loop.index0 }}">
+      <span class="flex items-center justify-center w-10 h-10 rounded-full lg:h-12 lg:w-12 shrink-0 {% if is_active %}step-active{% elif is_completed %}step-completed{% else %}step-pending{% endif %} text-white">
+        {% if is_completed %}
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+        {% elif step.icon == "home" %}
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+          </svg>
+        {% elif step.number %}
+          <span class="{% if not is_active and not is_completed %}text-gray-500{% endif %}">{{ step.number }}</span>
+        {% endif %}
+      </span>
+      <span class="absolute -bottom-6 left-0 w-10 lg:w-12 text-center text-xs whitespace-nowrap">{{ step.name }}</span>
+      {% if not is_last %}
+      <div class="flex w-full after:content-[''] after:w-full after:h-1 after:border-b after:border-gray-300 after:border-4 after:inline-block"></div>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ol>
+{% endmacro %}

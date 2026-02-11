@@ -25,6 +25,9 @@
   },
   "permissions": {
     "allow": [
+      "Bash(agent-browser close:*)",
+      "Bash(agent-browser open:*)",
+      "Bash(agent-browser screenshot:*)",
       "Bash(gh run list:*)",
       "Bash(just format-check:*)",
       "Bash(just format:*)",
@@ -41,6 +44,7 @@
       "Bash(uv run pytest:*)",
       "Bash(uv run python:*)",
       "Bash(uv run smk:*)",
+      "Skill(agent-browser)",
       "Skill(git-commit)",
       "Skill(python-package-management)",
       "WebFetch(domain:github.com)",

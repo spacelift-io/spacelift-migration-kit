@@ -2,3 +2,24 @@
 
 @source "../templates/**/*.html";
 @source "../static/**/*.js";
+
+@theme {
+  --color-spacelift-yellow: #F4C542;
+  --color-spacelift-purple: #8B5CF6;
+  --color-spacelift-green: #10B981;
+  --color-spacelift-dark: #1F2937;
+  --color-spacelift-light: #F9FAFB;
+}
+
+/* Workflow stepper styles */
+.step-active {
+  background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);
+}
+
+.step-completed {
+  background-color: #10B981;
+}
+
+.step-pending {
+  background-color: #E5E7EB;
+}
