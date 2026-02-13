@@ -201,8 +201,8 @@ class Generator:
         if include_config.get("modules"):
             self._filter_modules(data, include_config["modules"])
 
-        included_context_ids = self._filter_contexts(data, included_stack_ids)
-        self._filter_context_variables(data, included_context_ids)
+        # included_context_ids = self._filter_contexts(data, included_stack_ids)
+        # self._filter_context_variables(data, included_context_ids)
         self._filter_spaces(data)
 
         logging.info("Stop filtering data based on include patterns")
