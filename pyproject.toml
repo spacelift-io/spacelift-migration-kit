@@ -104,5 +104,11 @@ exclude_lines = [
 ]
 show_missing = true
 
+[tool.ty.src]
+exclude = [
+  "docs/plugins/examples/**", # Example plugins use optional deps not installed in CI
+  "src/smk/core/desktop/**",  # Desktop code requires optional pywebview dep
+]
+
 [tool.deadcode]
 exclude = [ "tests" ]

@@ -124,7 +124,7 @@ test-cov-html:
 
 # Check types
 type-check:
-    uv run ty check --exclude 'docs/plugins/examples/**'
+    uv run ty check
 
 # Build Tailwind CSS
 web-css:
