@@ -37,7 +37,7 @@ Spacelift with minimal friction.
 
 ## Skills
 
-**Git Commits**: Use the `git-commit` skill when creating commits or branches. It handles proper staging, commit messages, and follows repository conventions.
+**Git Commits**: Use the `git` skill when creating commits or branches. It handles proper staging, commit messages, and follows repository conventions.
 
 **Package Management**: Use the `python-package-management` (or `python-dev:managing-packages-with-uv`) skill when adding, removing, or updating Python packages. It ensures correct `uv` usage.
 

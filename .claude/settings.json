@@ -45,7 +45,7 @@
       "Bash(uv run python:*)",
       "Bash(uv run smk:*)",
       "Skill(agent-browser)",
-      "Skill(git-commit)",
+      "Skill(git)",
       "Skill(python-package-management)",
       "WebFetch(domain:github.com)",
       "WebSearch"

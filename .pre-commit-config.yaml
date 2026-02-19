@@ -38,6 +38,12 @@ repos:
     hooks:
       - id: codespell
 
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: 91ab4bf57e58b32adf1a122681f6ebe164d081c8 # frozen: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
   - repo: local
     hooks:
       - id: ty
