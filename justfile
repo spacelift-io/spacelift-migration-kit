@@ -49,6 +49,11 @@ clean:
     find . -type d -name __pycache__ -exec rm -rf {} +  # Python cache
     find . -type f -name "*.pyc" -delete                # Compiled Python
 
+# Upgrade all dependencies to their latest acceptable versions
+deps-upgrade:
+    uv lock --upgrade
+    uv sync
+
 # Run web development server with auto-reload (primary dev mode)
 dev:
     #!/usr/bin/env bash
