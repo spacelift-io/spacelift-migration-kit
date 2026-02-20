@@ -15,11 +15,13 @@ def temp_plugins_dir(tmp_path: Path) -> Path:
     return plugins_dir
 
 
-def test_discover_builtin_plugins_returns_empty_list():
-    """Test builtin plugin discovery returns empty list."""
+def test_discover_builtin_plugins_returns_hashicorp_and_spacelift():
+    """Test builtin plugin discovery returns hashicorp and spacelift modules."""
     loader = PluginLoader()
     plugins = loader.discover_builtin_plugins()
-    assert plugins == []
+    plugin_names = [getattr(p, "__name__", "") for p in plugins]
+    assert any("hashicorp" in name for name in plugin_names)
+    assert any("spacelift" in name for name in plugin_names)
 
 
 def test_discover_third_party_plugins_empty_directory(temp_plugins_dir: Path):

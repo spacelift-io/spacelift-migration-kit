@@ -29,12 +29,18 @@ def test_workflow_start_as_homepage(client: TestClient) -> None:
 
 
 def test_workflow_configure(client: TestClient) -> None:
-    """Test workflow configure page."""
+    """Test workflow configure page shows dynamic plugin list."""
     response = client.get("/configure")
     assert response.status_code == 200
     assert b"Configure SMK" in response.content
-    assert b"Source Vendor" in response.content
-    assert b"Spacelift Configuration" in response.content
+    assert b"Source Configuration" in response.content
+    assert b"Destination Spacelift Configuration" in response.content
+    # Dynamic plugins present
+    assert b"HashiCorp" in response.content
+    assert b"Spacelift" in response.content
+    # No hardcoded static <option> entries from old implementation
+    assert b"<option>Terraform Cloud</option>" not in response.content
+    assert b"<option>GitLab CI</option>" not in response.content
 
 
 def test_workflow_export(client: TestClient) -> None:

@@ -106,6 +106,10 @@ class SMKPluginManager:
         """
         return self.loaded_plugins.copy()
 
+    def get_source_plugins(self) -> list[dict]:
+        """Return metadata dicts for all registered source plugins."""
+        return [r for r in self.pm.hook.smk_get_source_info() if r is not None]
+
     def get_failed_plugins(self) -> dict[str, str]:
         """Get dictionary of failed plugins with error messages.
 

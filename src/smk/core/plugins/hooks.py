@@ -9,6 +9,20 @@ import pluggy
 hookspec = pluggy.HookspecMarker("smk")
 
 
+# Source Plugin Registration Hooks
+@hookspec
+def smk_get_source_info() -> dict | None:
+    """Return source plugin metadata for the configure UI.
+
+    Source plugins implement this to advertise their display name, description,
+    and configuration fields. Non-source plugins return None or omit this hook.
+
+    Returns:
+        Dict matching SourcePluginInfo schema, or None.
+    """
+    raise NotImplementedError
+
+
 # Export Stage Hooks
 @hookspec
 def smk_export_data(vendor_config: dict) -> dict:

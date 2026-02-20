@@ -21,16 +21,21 @@ class PluginLoader:
         Returns:
             List of built-in plugin modules.
         """
-        # Built-in plugins are explicitly imported, not discovered
-        # This list will be populated as built-in plugins are added
         builtin_plugins = []
 
-        # Example of how to import built-in plugins when they exist:
-        # try:
-        #     from smk.plugins import terraform_cloud
-        #     builtin_plugins.append(terraform_cloud)
-        # except ImportError:
-        #     pass
+        try:
+            from smk.plugins import hashicorp
+
+            builtin_plugins.append(hashicorp)
+        except ImportError:
+            pass
+
+        try:
+            from smk.plugins import spacelift
+
+            builtin_plugins.append(spacelift)
+        except ImportError:
+            pass
 
         return builtin_plugins
 

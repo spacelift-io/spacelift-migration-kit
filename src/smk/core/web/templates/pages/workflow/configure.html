@@ -6,58 +6,184 @@
 <h2 class="text-3xl font-bold text-gray-900 mb-4 dark:text-white">Configure SMK</h2>
 <p class="text-gray-600 mb-8 dark:text-gray-300">Set up your migration parameters and connect to your source vendor.</p>
 
-<div class="space-y-6">
-  <div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
-    <h3 class="text-lg font-semibold mb-4 dark:text-white">Source Vendor</h3>
-    <select class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-      <option>Select your current platform...</option>
-      <option>Terraform Cloud</option>
-      <option>Terraform Enterprise</option>
-      <option>GitLab CI</option>
-      <option>GitHub Actions</option>
-      <option>Other</option>
-    </select>
-  </div>
+<div x-data="configureForm()" class="space-y-6">
 
+  {# Source: vendor select + plugin fields in one panel #}
   <div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
-    <h3 class="text-lg font-semibold mb-4 dark:text-white">Spacelift Configuration</h3>
+    <h3 class="text-lg font-semibold mb-4 dark:text-white">Source Configuration</h3>
     <div class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">API Endpoint</label>
-        <input type="text" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="https://your-org.app.spacelift.io">
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">Vendor</label>
+        <select x-model="selectedPlugin" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          <option value="">Select your current platform...</option>
+          {% for plugin in source_plugins %}
+          <option value="{{ plugin.plugin_id }}">{{ plugin.display_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {% for plugin in source_plugins %}
+      {% if plugin.description %}
+      <p x-show="selectedPlugin === '{{ plugin.plugin_id }}'" x-cloak
+         class="text-sm text-gray-600 dark:text-gray-400">{{ plugin.description }}</p>
+      {% endif %}
+      {% for field in plugin.fields %}
+      <div x-show="selectedPlugin === '{{ plugin.plugin_id }}'{% if field.depends_on %} && fieldValues['{{ plugin.plugin_id }}']['{{ field.depends_on.field }}'] === '{{ field.depends_on.value }}'{% endif %}" x-cloak>
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+          {{ field.label }}{% if field.required %} <span class="text-red-500">*</span>{% endif %}
+        </label>
+        {% if field.type == "select" %}
+        <select x-model="fieldValues['{{ plugin.plugin_id }}']['{{ field.key }}']"
+                class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          {% for opt in field.options %}
+          <option value="{{ opt.value }}">{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+        {% elif field.type == "password" %}
+        <input type="password"
+               x-model="fieldValues['{{ plugin.plugin_id }}']['{{ field.key }}']"
+               class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+               placeholder="{{ field.placeholder }}">
+        {% else %}
+        <input type="{{ field.type }}"
+               x-model="fieldValues['{{ plugin.plugin_id }}']['{{ field.key }}']"
+               class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+               placeholder="{{ field.placeholder }}">
+        {% endif %}
+        {% if field.help_text %}
+        <p class="text-xs text-gray-500 mt-1 dark:text-gray-400">{{ field.help_text }}</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Spacelift destination config (always visible) #}
+  <div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
+    <h3 class="text-lg font-semibold mb-4 dark:text-white">Destination Spacelift Configuration</h3>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+          API Endpoint <span class="text-red-500">*</span>
+        </label>
+        <input type="url" x-model="spaceliftEndpoint"
+               class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+               placeholder="https://your-org.app.spacelift.io">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">API Key</label>
-        <input type="password" class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Enter your API key">
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+          API Key ID <span class="text-red-500">*</span>
+        </label>
+        <input type="text" x-model="spaceliftKeyId"
+               class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+               placeholder="Enter your API key ID">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
+          API Key Secret <span class="text-red-500">*</span>
+        </label>
+        <input type="password" x-model="spaceliftKeySecret"
+               class="w-full p-3 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+               placeholder="Enter your API key secret">
       </div>
     </div>
   </div>
 
-  <div class="border border-gray-200 rounded-lg p-6 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
-    <div class="flex items-start">
-      <svg class="w-6 h-6 text-blue-600 mr-3 mt-1 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <div>
-        <h4 class="font-semibold text-blue-900 mb-1 dark:text-blue-300">Plugin System</h4>
-        <p class="text-sm text-blue-800 dark:text-blue-400">SMK uses plugins to support different vendors. The appropriate plugin will be loaded based on your selection.</p>
-      </div>
-    </div>
+  {# Error message #}
+  <div x-show="errorMsg" x-cloak class="border border-red-200 rounded-lg p-4 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+    <p class="text-sm text-red-800 dark:text-red-400" x-text="errorMsg"></p>
   </div>
+
+  {# Navigation #}
+  <div class="flex justify-between mt-8">
+    {% if prev_step %}
+    <a href="/{{ prev_step }}" class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+      Previous
+    </a>
+    {% else %}
+    <div></div>
+    {% endif %}
+    {% if next_step %}
+    <button @click="saveConfig('/{{ next_step }}')"
+            class="px-6 py-2 text-white rounded-lg"
+            style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
+      Save &amp; Continue
+    </button>
+    {% endif %}
+  </div>
+
 </div>
 
-<div class="flex justify-between mt-8">
-  {% if prev_step %}
-  <a href="/{{ prev_step }}" class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
-    Previous
-  </a>
-  {% else %}
-  <div></div>
-  {% endif %}
-  {% if next_step %}
-  <a href="/{{ next_step }}" class="px-6 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
-    Continue
-  </a>
-  {% endif %}
-</div>
+<script>
+function configureForm() {
+  const sourcePlug = {{ source_plugins | tojson }};
+  const savedConfig = {{ current_config | tojson }};
+
+  // Build initial fieldValues: { plugin_id: { field_key: default_value } }
+  const fieldValues = {};
+  sourcePlug.forEach(function(plugin) {
+    fieldValues[plugin.plugin_id] = {};
+    plugin.fields.forEach(function(field) {
+      if (field.type === 'select' && field.options.length > 0) {
+        fieldValues[plugin.plugin_id][field.key] = field.options[0].value;
+      } else {
+        fieldValues[plugin.plugin_id][field.key] = '';
+      }
+    });
+  });
+
+  // Pre-populate from saved config
+  let selectedPlugin = '';
+  let spaceliftEndpoint = '';
+  let spaceliftKeyId = '';
+  let spaceliftKeySecret = '';
+
+  if (savedConfig) {
+    selectedPlugin = savedConfig.source?.plugin || '';
+    if (selectedPlugin && savedConfig.source?.credentials) {
+      Object.assign(fieldValues[selectedPlugin] || {}, savedConfig.source.credentials);
+    }
+    spaceliftEndpoint = savedConfig.spacelift?.api_endpoint || '';
+    spaceliftKeyId = savedConfig.spacelift?.api_key_id || '';
+    spaceliftKeySecret = savedConfig.spacelift?.api_key_secret || '';
+  }
+
+  return {
+    selectedPlugin,
+    fieldValues,
+    spaceliftEndpoint,
+    spaceliftKeyId,
+    spaceliftKeySecret,
+    errorMsg: '',
+
+    async saveConfig(nextStep) {
+      this.errorMsg = '';
+      const credentials = this.selectedPlugin ? Object.assign({}, this.fieldValues[this.selectedPlugin]) : {};
+      const body = {
+        source_plugin: this.selectedPlugin || null,
+        source_credentials: credentials,
+        spacelift_api_endpoint: this.spaceliftEndpoint || null,
+        spacelift_api_key_id: this.spaceliftKeyId || null,
+        spacelift_api_key_secret: this.spaceliftKeySecret || null,
+      };
+      try {
+        const resp = await fetch('/api/config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(body),
+        });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          this.errorMsg = data.detail || 'Failed to save configuration.';
+          return;
+        }
+        window.location.href = nextStep;
+      } catch (err) {
+        this.errorMsg = 'Network error: ' + err.message;
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

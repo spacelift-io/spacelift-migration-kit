@@ -3,6 +3,9 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from smk.core.config.manager import ConfigManager
+from smk.core.exceptions import ConfigNotInitializedError
+
 router = APIRouter(tags=["workflow"])
 
 # Workflow step definitions
@@ -62,6 +65,15 @@ async def workflow_configure(request: Request) -> HTMLResponse:
     templates = request.app.state.templates
     context = _get_workflow_context("configure")
     context["request"] = request
+    context["source_plugins"] = sorted(
+        request.app.state.plugin_manager.get_source_plugins(),
+        key=lambda p: p["display_name"],
+    )
+    try:
+        config = ConfigManager().load()
+        context["current_config"] = config.model_dump()
+    except ConfigNotInitializedError:
+        context["current_config"] = None
     template = templates.get_template("pages/workflow/configure.html")
     return HTMLResponse(template.render(**context))
 
