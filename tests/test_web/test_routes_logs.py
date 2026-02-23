@@ -23,7 +23,7 @@ def test_logs_page_contains_log_viewer(client: TestClient) -> None:
 def test_logs_stream_content_type(client: TestClient) -> None:
     """SSE stream returns text/event-stream content type."""
 
-    async def _finite(log_file: Path):  # noqa: ARG001
+    async def _finite(log_file: Path, request: object):  # noqa: ARG001
         yield "data: {}\n\n"
 
     with patch("smk.core.web.routes.logs._log_stream", _finite), client.stream("GET", "/logs/stream") as response:
@@ -40,7 +40,12 @@ async def test_logs_stream_replays_existing_entries(tmp_path: Path) -> None:
     entry = {"time": "T", "level": "INFO", "logger": "smk.test", "message": "hello"}
     log_file.write_text(json.dumps(entry) + "\n")
 
-    gen = _log_stream(log_file)
+    from unittest.mock import AsyncMock
+
+    mock_request = AsyncMock()
+    mock_request.is_disconnected.return_value = False
+
+    gen = _log_stream(log_file, mock_request)
     try:
         event = await gen.__anext__()
     finally:

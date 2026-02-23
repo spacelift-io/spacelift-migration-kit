@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["logs"])
 
 
-async def _log_stream(log_file: Path) -> AsyncGenerator[str, None]:
+async def _log_stream(log_file: Path, request: Request) -> AsyncGenerator[str, None]:
     offset = 0
     if log_file.exists():
         with log_file.open(encoding="utf-8") as f:
@@ -21,7 +21,7 @@ async def _log_stream(log_file: Path) -> AsyncGenerator[str, None]:
                 if line:
                     yield f"data: {line}\n\n"
             offset = f.tell()
-    while True:
+    while not await request.is_disconnected():
         await asyncio.sleep(0.5)
         if not log_file.exists():
             continue
@@ -46,7 +46,7 @@ async def logs_page(request: Request) -> HTMLResponse:
 async def logs_stream(request: Request) -> StreamingResponse:
     log_file: Path = request.app.state.log_file
     return StreamingResponse(
-        _log_stream(log_file),
+        _log_stream(log_file, request),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
