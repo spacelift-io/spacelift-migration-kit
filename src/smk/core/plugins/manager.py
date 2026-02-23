@@ -1,5 +1,6 @@
 """Plugin manager coordinating plugin system."""
 
+import logging
 import sys
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,8 @@ import pluggy
 from smk.core.plugins.cache import PluginCache
 from smk.core.plugins.dependencies import PluginDependencyManager
 from smk.core.plugins.loader import PluginLoader
+
+logger = logging.getLogger(__name__)
 
 
 class SMKPluginManager:
@@ -60,9 +63,11 @@ class SMKPluginManager:
                 self.pm.register(plugin_module)
                 plugin_name = getattr(plugin_module, "__name__", "unknown")
                 self.loaded_plugins[plugin_name] = plugin_module
+                logger.info("Plugin loaded: %s", plugin_name)
             except Exception as e:
                 plugin_name = getattr(plugin_module, "__name__", "unknown")
                 self.failed_plugins[plugin_name] = str(e)
+                logger.warning("Plugin failed to load: %s — %s", plugin_name, e)
 
     def _load_third_party_plugins(self) -> None:
         """Load third-party plugins from ~/.config/smk/plugins/."""
@@ -94,9 +99,11 @@ class SMKPluginManager:
 
             # Track successful load
             self.loaded_plugins[plugin_name] = module
+            logger.info("Plugin loaded: %s", plugin_name)
 
         except Exception as e:
             self.failed_plugins[plugin_name] = f"Failed to load: {e!s}"
+            logger.warning("Plugin failed to load: %s — %s", plugin_name, e)
 
     def get_loaded_plugins(self) -> dict[str, Any]:
         """Get dictionary of successfully loaded plugins.

@@ -1,11 +1,14 @@
 """Workflow routes for migration wizard."""
 
+import logging
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from smk.core.config.manager import ConfigManager
 from smk.core.exceptions import ConfigNotInitializedError
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["workflow"])
 
 # Workflow step definitions
@@ -70,6 +73,7 @@ def _save_step(step: str) -> str:
         furthest_idx = step_ids.index(state["furthest_step"]) if state["furthest_step"] in step_ids else 0
         furthest = step_ids[max(current_idx, furthest_idx)]
         manager.save_state(last_step=step, furthest_step=furthest)
+        logger.info("Step visited: %s (furthest: %s)", step, furthest)
         return furthest
     except Exception:
         return step

@@ -1,5 +1,6 @@
 """FastAPI application factory."""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -8,6 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from jinja2 import Environment, FileSystemLoader
 
 from smk.core.web.config import WebConfig
+
+logger = logging.getLogger(__name__)
 
 try:
     from arel import HotReload
@@ -50,13 +53,22 @@ def create_app(config: WebConfig | None = None) -> FastAPI:
     if config is None:
         config = WebConfig()
 
+    # Set up file logging before plugin loading so plugin events are captured
+    from smk.core.config.manager import ConfigManager
+    from smk.core.logging import setup_logging
+
+    log_file = setup_logging(ConfigManager().logs_dir, debug=config.debug)
+
     app = FastAPI(
         debug=config.debug,
         title="SMK Web Interface",
     )
 
-    # Store config in app state
+    # Store config and log file path in app state
     app.state.config = config
+    app.state.log_file = log_file  # SSE endpoint will tail this path
+
+    logger.info("SMK web application starting (debug=%s)", config.debug)
 
     # Initialize plugin manager
     from smk.core.plugins import SMKPluginManager
