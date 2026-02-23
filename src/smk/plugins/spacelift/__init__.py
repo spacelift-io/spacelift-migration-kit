@@ -45,7 +45,7 @@ def smk_get_source_info() -> dict:
 
 
 @hookimpl
-def smk_export_data(vendor_config: dict) -> dict:  # noqa: ARG001
+def smk_export_data(vendor_config: dict) -> dict | None:
     """Export data from source Spacelift account.
 
     Args:
@@ -54,5 +54,7 @@ def smk_export_data(vendor_config: dict) -> dict:  # noqa: ARG001
     Returns:
         Dictionary containing exported entities.
     """
+    if vendor_config.get("source_plugin") != "spacelift":
+        return None
     # Stub: real implementation would use vendor_config["credentials"]
     return {"policies": [], "spaces": [], "stacks": []}

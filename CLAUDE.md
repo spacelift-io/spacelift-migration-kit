@@ -18,7 +18,7 @@ Spacelift with minimal friction.
 **Key Commands**: See `justfile` for all commands.
 
 - Setup: `just setup` (installs dependencies including desktop)
-- Run dev server: `just dev` (web with auto-reload, primary dev mode)
+- Run dev server: `just dev 2>&1 | tee /tmp/smk-dev.log` (web with auto-reload; tee writes server logs to `/tmp/smk-dev.log` for inspection)
 - Run desktop app: `just desktop-dev` (no auto-reload - use dev for rapid iteration)
 - Build desktop: `just build-macos` (or `build-windows`, `build-linux`)
 - QA checks: `just qa`
