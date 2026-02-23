@@ -1,7 +1,9 @@
 """Workflow routes for migration wizard."""
 
+import contextlib
+
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from smk.core.config.manager import ConfigManager
 from smk.core.exceptions import ConfigNotInitializedError
@@ -48,10 +50,22 @@ def _get_workflow_context(current_step: str) -> dict:
     }
 
 
-@router.get("/", response_class=HTMLResponse)
-@router.get("/start", response_class=HTMLResponse)
-async def workflow_start(request: Request) -> HTMLResponse:
-    """Render the workflow start page."""
+def _save_last_step(step: str) -> None:
+    """Save the last visited workflow step, silently ignoring errors.
+
+    Args:
+        step: The step ID to save.
+    """
+    with contextlib.suppress(Exception):
+        ConfigManager().save_last_step(step)
+
+
+@router.get("/", response_class=HTMLResponse, response_model=None)
+async def workflow_root(request: Request) -> HTMLResponse | RedirectResponse:
+    """Redirect to last visited step, or render start page."""
+    last_step = ConfigManager().load_last_step()
+    if last_step != "start":
+        return RedirectResponse(url=f"/{last_step}")
     templates = request.app.state.templates
     context = _get_workflow_context("start")
     context["request"] = request
@@ -59,9 +73,28 @@ async def workflow_start(request: Request) -> HTMLResponse:
     return HTMLResponse(template.render(**context))
 
 
+@router.get("/start", response_class=HTMLResponse)
+async def workflow_start(request: Request) -> HTMLResponse:
+    """Render the workflow start page."""
+    templates = request.app.state.templates
+    context = _get_workflow_context("start")
+    context["request"] = request
+    last_step = ConfigManager().load_last_step()
+    if last_step != "start":
+        step_names = {step["id"]: step["name"] for step in WORKFLOW_STEPS}
+        context["resume_step"] = last_step
+        context["resume_step_name"] = step_names.get(last_step, last_step)
+    else:
+        context["resume_step"] = None
+        context["resume_step_name"] = None
+    template = templates.get_template("pages/workflow/start.html")
+    return HTMLResponse(template.render(**context))
+
+
 @router.get("/configure", response_class=HTMLResponse)
 async def workflow_configure(request: Request) -> HTMLResponse:
     """Render the workflow configure page."""
+    _save_last_step("configure")
     templates = request.app.state.templates
     context = _get_workflow_context("configure")
     context["request"] = request
@@ -81,6 +114,7 @@ async def workflow_configure(request: Request) -> HTMLResponse:
 @router.get("/export", response_class=HTMLResponse)
 async def workflow_export(request: Request) -> HTMLResponse:
     """Render the workflow export page."""
+    _save_last_step("export")
     templates = request.app.state.templates
     context = _get_workflow_context("export")
     context["request"] = request
@@ -91,6 +125,7 @@ async def workflow_export(request: Request) -> HTMLResponse:
 @router.get("/audit", response_class=HTMLResponse)
 async def workflow_audit(request: Request) -> HTMLResponse:
     """Render the workflow audit page."""
+    _save_last_step("audit")
     templates = request.app.state.templates
     context = _get_workflow_context("audit")
     context["request"] = request
@@ -101,6 +136,7 @@ async def workflow_audit(request: Request) -> HTMLResponse:
 @router.get("/migrate", response_class=HTMLResponse)
 async def workflow_migrate(request: Request) -> HTMLResponse:
     """Render the workflow migrate page."""
+    _save_last_step("migrate")
     templates = request.app.state.templates
     context = _get_workflow_context("migrate")
     context["request"] = request
@@ -111,6 +147,7 @@ async def workflow_migrate(request: Request) -> HTMLResponse:
 @router.get("/cleanup", response_class=HTMLResponse)
 async def workflow_cleanup(request: Request) -> HTMLResponse:
     """Render the workflow cleanup page."""
+    _save_last_step("cleanup")
     templates = request.app.state.templates
     context = _get_workflow_context("cleanup")
     context["request"] = request
@@ -121,6 +158,7 @@ async def workflow_cleanup(request: Request) -> HTMLResponse:
 @router.get("/complete", response_class=HTMLResponse)
 async def workflow_complete(request: Request) -> HTMLResponse:
     """Render the workflow complete page."""
+    _save_last_step("complete")
     templates = request.app.state.templates
     context = _get_workflow_context("complete")
     context["request"] = request

@@ -36,6 +36,11 @@ class ConfigManager:
         return get_logs_dir(self.config_dir)
 
     @property
+    def state_file(self) -> Path:
+        """Get the path to the state file."""
+        return self.config_dir / "state.yaml"
+
+    @property
     def is_initialized(self) -> bool:
         """Check if SMK configuration has been initialized."""
         return self.config_file.exists()
@@ -117,6 +122,29 @@ class ConfigManager:
             data = yaml.safe_load(f) or {}
 
         return SMKConfig(**data)
+
+    def load_last_step(self) -> str:
+        """Load the last visited workflow step from state file.
+
+        Returns:
+            The last step ID, or "start" if missing or unreadable.
+        """
+        try:
+            with self.state_file.open() as f:
+                data = yaml.safe_load(f) or {}
+            return str(data.get("last_step", "start"))
+        except Exception:
+            return "start"
+
+    def save_last_step(self, step: str) -> None:
+        """Save the last visited workflow step to state file.
+
+        Args:
+            step: The step ID to save.
+        """
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        with self.state_file.open("w") as f:
+            yaml.dump({"last_step": step}, f, default_flow_style=False)
 
     def save(self, config: SMKConfig) -> None:
         """Save configuration to file.

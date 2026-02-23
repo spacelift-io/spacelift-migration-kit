@@ -47,12 +47,26 @@
   </div>
 
   <div class="mt-12">
+    {% if resume_step %}
+    <div class="flex flex-col items-center gap-4">
+      <a href="/{{ resume_step }}" class="inline-flex items-center px-8 py-3 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-shadow" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
+        Continue Migration — {{ resume_step_name }}
+        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+        </svg>
+      </a>
+      <a href="/configure" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline">
+        Start from the beginning
+      </a>
+    </div>
+    {% else %}
     <a href="/{{ next_step }}" class="inline-flex items-center px-8 py-3 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-shadow" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
       Get Started
       <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
       </svg>
     </a>
+    {% endif %}
   </div>
 </div>
 {% endblock %}
