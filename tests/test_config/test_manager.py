@@ -126,6 +126,63 @@ class TestConfigManagerInit:
         assert config.source.plugin == "new-plugin"
 
 
+class TestConfigManagerState:
+    """Tests for ConfigManager load_state and save_state methods."""
+
+    def test_load_state_defaults_when_missing(self, tmp_path: Path):
+        """load_state should return start/start when state file missing."""
+        manager = ConfigManager(tmp_path)
+        state = manager.load_state()
+        assert state == {"furthest_step": "start", "last_step": "start"}
+
+    def test_load_state_reads_both_fields(self, tmp_path: Path):
+        """load_state should return both last_step and furthest_step."""
+        manager = ConfigManager(tmp_path)
+        manager.save_state(last_step="configure", furthest_step="export")
+        state = manager.load_state()
+        assert state == {"furthest_step": "export", "last_step": "configure"}
+
+    def test_load_state_migrates_old_format(self, tmp_path: Path):
+        """load_state should use last_step as furthest_step for old state.yaml."""
+        state_file = tmp_path / "state.yaml"
+        state_file.write_text("last_step: export\n")
+        manager = ConfigManager(tmp_path)
+        state = manager.load_state()
+        assert state == {"furthest_step": "export", "last_step": "export"}
+
+    def test_load_state_defaults_on_corrupt_file(self, tmp_path: Path):
+        """load_state should return start/start on unreadable file."""
+        state_file = tmp_path / "state.yaml"
+        state_file.write_text("not: valid: yaml: [[[")
+        manager = ConfigManager(tmp_path)
+        # corrupt YAML may or may not raise; we just want safe defaults
+        state = manager.load_state()
+        assert state["last_step"] == "start"
+        assert state["furthest_step"] == "start"
+
+    def test_save_state_creates_file(self, tmp_path: Path):
+        """save_state should create state.yaml with both fields."""
+        manager = ConfigManager(tmp_path)
+        manager.save_state(last_step="configure", furthest_step="export")
+        with (tmp_path / "state.yaml").open() as f:
+            data = yaml.safe_load(f)
+        assert data == {"furthest_step": "export", "last_step": "configure"}
+
+    def test_save_state_uses_sort_keys(self, tmp_path: Path):
+        """save_state should write keys in alphabetical order."""
+        manager = ConfigManager(tmp_path)
+        manager.save_state(last_step="configure", furthest_step="export")
+        raw = (tmp_path / "state.yaml").read_text()
+        assert raw.index("furthest_step") < raw.index("last_step")
+
+    def test_save_state_creates_dir_if_missing(self, tmp_path: Path):
+        """save_state should create config dir when it doesn't exist."""
+        config_dir = tmp_path / "nonexistent"
+        manager = ConfigManager(config_dir)
+        manager.save_state(last_step="start", furthest_step="start")
+        assert (config_dir / "state.yaml").exists()
+
+
 class TestConfigManagerLoadSave:
     """Tests for ConfigManager load and save methods."""
 

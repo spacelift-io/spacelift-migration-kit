@@ -123,28 +123,37 @@ class ConfigManager:
 
         return SMKConfig(**data)
 
-    def load_last_step(self) -> str:
-        """Load the last visited workflow step from state file.
+    def load_state(self) -> dict[str, str]:
+        """Load workflow state from state file.
 
         Returns:
-            The last step ID, or "start" if missing or unreadable.
+            Dict with "last_step" and "furthest_step", both defaulting to "start".
+            If only "last_step" is present (old state.yaml), furthest_step defaults to last_step.
         """
         try:
             with self.state_file.open() as f:
                 data = yaml.safe_load(f) or {}
-            return str(data.get("last_step", "start"))
+            last_step = str(data.get("last_step", "start"))
+            furthest_step = str(data.get("furthest_step", last_step))
+            return {"furthest_step": furthest_step, "last_step": last_step}
         except Exception:
-            return "start"
+            return {"furthest_step": "start", "last_step": "start"}
 
-    def save_last_step(self, step: str) -> None:
-        """Save the last visited workflow step to state file.
+    def save_state(self, *, furthest_step: str, last_step: str) -> None:
+        """Save workflow state to state file.
 
         Args:
-            step: The step ID to save.
+            furthest_step: The furthest step reached in the workflow.
+            last_step: The most recently visited step.
         """
         self.config_dir.mkdir(parents=True, exist_ok=True)
         with self.state_file.open("w") as f:
-            yaml.dump({"last_step": step}, f, default_flow_style=False)
+            yaml.dump(
+                {"furthest_step": furthest_step, "last_step": last_step},
+                f,
+                default_flow_style=False,
+                sort_keys=True,
+            )
 
     def save(self, config: SMKConfig) -> None:
         """Save configuration to file.

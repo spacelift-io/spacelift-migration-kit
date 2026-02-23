@@ -11,8 +11,9 @@ from smk.core.web.config import WebConfig
 @pytest.fixture(autouse=True)
 def isolated_state(monkeypatch: pytest.MonkeyPatch) -> None:
     """Prevent tests from reading/writing the real state.yaml."""
-    monkeypatch.setattr(ConfigManager, "load_last_step", lambda _self: "start")
-    monkeypatch.setattr(ConfigManager, "save_last_step", lambda _self, _step: None)
+    default_state = {"furthest_step": "start", "last_step": "start"}
+    monkeypatch.setattr(ConfigManager, "load_state", lambda _self: default_state)
+    monkeypatch.setattr(ConfigManager, "save_state", lambda _self, **_kwargs: None)
 
 
 @pytest.fixture

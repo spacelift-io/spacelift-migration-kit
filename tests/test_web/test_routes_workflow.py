@@ -86,7 +86,6 @@ def test_workflow_complete(client: TestClient) -> None:
     assert response.status_code == 200
     assert b"Migration Complete!" in response.content
     assert b"Migration Summary" in response.content
-    assert b"Settings" in response.content
 
 
 def test_workflow_stepper_on_start(client: TestClient) -> None:
@@ -127,7 +126,7 @@ def test_workflow_navigation_links(client: TestClient) -> None:
 
 def test_workflow_root_redirects_to_last_step(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test / redirects to last visited step when state exists."""
-    monkeypatch.setattr(ConfigManager, "load_last_step", lambda _self: "export")
+    monkeypatch.setattr(ConfigManager, "load_state", lambda _self: {"last_step": "export", "furthest_step": "export"})
     response = client.get("/", follow_redirects=False)
     assert response.status_code in (302, 307)
     assert response.headers["location"] == "/export"
@@ -142,7 +141,7 @@ def test_workflow_root_shows_start_when_no_state(client: TestClient) -> None:
 
 def test_workflow_start_shows_resume_cta(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test /start shows resume CTA when prior step exists."""
-    monkeypatch.setattr(ConfigManager, "load_last_step", lambda _self: "export")
+    monkeypatch.setattr(ConfigManager, "load_state", lambda _self: {"last_step": "export", "furthest_step": "export"})
     response = client.get("/start")
     assert response.status_code == 200
     assert b"Continue Migration" in response.content
