@@ -1,23 +1,11 @@
 {
   "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path' | { read f; [[ \"$f\" == *.py ]] && uv run ruff check --fix \"$f\" && uv run ruff format \"$f\"; }",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "uv run ruff check && uv run pytest --quiet --tb=line || { echo 'Quality checks failed - fix issues before completing' >&2; exit 2; }"
+            "command": "uv run ruff format && uv run ruff check --fix && uv run ty check && uv run pytest --quiet --tb=line || { echo 'Quality checks failed - fix issues before completing' >&2; exit 2; }"
           }
         ]
       }
