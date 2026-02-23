@@ -12,7 +12,7 @@
   <nav class="bg-white border-b border-gray-200 fixed w-full z-30 top-0">
     <div class="px-6 py-4">
       <div class="flex items-center justify-between">
-        <div class="flex items-center">
+        <a href="/" class="flex items-center">
           <svg class="w-10 h-10" viewBox="0 0 76.56 65.65" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="c" x1="0" y1="354.36" x2="76.56" y2="354.36" gradientTransform="translate(-56.41 367.21) rotate(9.24) scale(1 -1)" gradientUnits="userSpaceOnUse">
@@ -25,10 +25,10 @@
             <path fill="#131417" d="M59.03,13.08C53.49,1.58,39.68-3.24,28.18,2.3c-9.2,4.44-14.4,14.39-12.78,24.47,1.11,6.89,46.79-.16,45.62-7.38-.36-2.19-1.03-4.32-1.99-6.32Z"/>
           </svg>
           <span class="ml-3 text-xl font-semibold text-gray-900">Spacelift Migration Kit</span>
-        </div>
+        </a>
         <div class="flex items-center space-x-6">
           <a href="#" class="text-gray-700 hover:text-spacelift-yellow font-medium">Data</a>
-          <a href="#" class="text-gray-700 hover:text-spacelift-yellow font-medium">Logs</a>
+          <a href="/logs" class="text-gray-700 hover:text-spacelift-yellow font-medium">Logs</a>
           <a href="https://docs.spacelift.io/product/migrating-to-spacelift" class="text-gray-700 hover:text-spacelift-yellow font-medium" target="_blank" rel="noopener noreferrer">Docs</a>
         </div>
       </div>
@@ -38,10 +38,12 @@
   <!-- Main Content Area with top padding for fixed header -->
   <div class="pt-20 pb-8">
     <!-- Progress Stepper -->
+    {% block stepper %}
     <div class="max-w-7xl mx-auto px-6 py-8">
       {% from "components/_workflow_stepper.html" import stepper %}
       {{ stepper(current_step, completed_steps, workflow_steps) }}
     </div>
+    {% endblock %}
 
     <!-- Content Area -->
     <div class="max-w-7xl mx-auto px-6 mt-16">

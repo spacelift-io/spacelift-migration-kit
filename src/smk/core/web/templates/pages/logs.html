@@ -1,0 +1,101 @@
+{% extends "workflow_base.html" %}
+
+{% block title %}Logs{% endblock %}
+
+{% block stepper %}{% endblock %}
+
+{% block content %}
+<div x-data="logViewer()" x-init="init()">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-gray-900">Application Logs</h1>
+    <div class="flex items-center gap-2">
+      <span
+        x-show="connected"
+        class="inline-flex items-center gap-2 text-sm font-medium text-green-600"
+      >
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        Live
+      </span>
+      <span
+        x-show="!connected"
+        class="inline-flex items-center gap-2 text-sm font-medium text-yellow-600"
+      >
+        <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+        Connecting…
+      </span>
+    </div>
+  </div>
+
+  <!-- Log container -->
+  <div
+    x-ref="container"
+    class="h-[60vh] bg-gray-900 rounded-lg overflow-y-auto p-4 font-mono text-sm"
+  >
+    <template x-for="(entry, i) in entries" :key="i">
+      <div class="flex gap-3 leading-relaxed py-0.5">
+        <span class="text-gray-400 shrink-0" x-text="formatTime(entry.time)"></span>
+        <span class="shrink-0 w-16 text-right" :class="levelClass(entry.level)" x-text="entry.level"></span>
+        <span class="text-gray-400 shrink-0 truncate max-w-[180px]" x-text="entry.logger"></span>
+        <span class="text-gray-200 break-all" x-text="entry.message"></span>
+      </div>
+    </template>
+    <div x-show="entries.length === 0" class="text-gray-500 text-center pt-8">
+      Waiting for log entries…
+    </div>
+  </div>
+</div>
+
+<script>
+function logViewer() {
+  return {
+    entries: [],
+    connected: false,
+    _es: null,
+
+    init() {
+      const es = new EventSource('/logs/stream');
+      this._es = es;
+
+      es.onopen = () => { this.connected = true; };
+      es.onerror = () => { this.connected = false; };
+
+      es.onmessage = (event) => {
+        try {
+          const entry = JSON.parse(event.data);
+          this.entries.push(entry);
+          this.$nextTick(() => {
+            const c = this.$refs.container;
+            c.scrollTop = c.scrollHeight;
+          });
+        } catch (_) {
+          // Ignore unparsable lines
+        }
+      };
+    },
+
+    formatTime(iso) {
+      const d = new Date(iso);
+      const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const today = new Date();
+      const sameDay = d.getFullYear() === today.getFullYear()
+        && d.getMonth() === today.getMonth()
+        && d.getDate() === today.getDate();
+      if (sameDay) return time;
+      const date = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      return `${date} ${time}`;
+    },
+
+    levelClass(level) {
+      const map = {
+        ERROR: 'text-red-400',
+        WARNING: 'text-yellow-400',
+        INFO: 'text-blue-400',
+        DEBUG: 'text-gray-500',
+      };
+      return map[level] ?? 'text-gray-400';
+    },
+  };
+}
+</script>
+{% endblock %}
