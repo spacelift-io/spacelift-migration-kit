@@ -149,6 +149,42 @@ def test_workflow_start_shows_resume_cta(client: TestClient, monkeypatch: pytest
     assert b"Start from the beginning" in response.content
 
 
+def test_configure_page_with_config_not_initialized(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """workflow_configure sets current_config=None when ConfigManager.load raises."""
+    from smk.core.exceptions import ConfigNotInitializedError
+
+    monkeypatch.setattr(
+        "smk.core.web.routes.workflow.ConfigManager.load",
+        lambda _self: (_ for _ in ()).throw(ConfigNotInitializedError()),
+    )
+    response = client.get("/configure")
+    assert response.status_code == 200
+
+
+def test_save_step_exception_returns_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_save_step returns the step string when ConfigManager.load_state raises."""
+    from smk.core.web.routes.workflow import _save_step
+
+    monkeypatch.setattr(
+        "smk.core.web.routes.workflow.ConfigManager.load_state",
+        lambda _self: (_ for _ in ()).throw(RuntimeError("boom")),
+    )
+
+    result = _save_step("configure")
+    assert result == "configure"
+
+
+def test_get_workflow_context_invalid_furthest_step() -> None:
+    """_get_workflow_context falls back to index 0 for unknown furthest_step."""
+    from smk.core.web.routes.workflow import _get_workflow_context
+
+    context = _get_workflow_context("configure", furthest_step="nonexistent")
+    # furthest_index falls back to max(current_index=1, 0) = 1
+    # completed_steps excludes current_step "configure" from range(0, 2)
+    assert context["current_step"] == "configure"
+    assert "nonexistent" not in context["completed_steps"]
+
+
 def test_workflow_context_helper() -> None:
     """Test _get_workflow_context helper function."""
     from smk.core.web.routes.workflow import _get_workflow_context

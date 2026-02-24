@@ -88,3 +88,92 @@ def test_is_development_mode():
     manager = SMKPluginManager()
     # Should be True in tests (not frozen)
     assert manager.is_development_mode() is True
+
+
+def test_load_builtin_plugins_records_failure() -> None:
+    """_load_builtin_plugins adds to failed_plugins when pm.register raises."""
+    manager = SMKPluginManager()
+
+    fake_module = MagicMock()
+    fake_module.__name__ = "bad_plugin"
+
+    with (
+        patch.object(manager.loader, "discover_builtin_plugins", return_value=[fake_module]),
+        patch.object(manager.pm, "register", side_effect=RuntimeError("conflict")),
+    ):
+        manager._load_builtin_plugins()
+
+    assert "bad_plugin" in manager.failed_plugins
+
+
+def test_load_plugin_success(tmp_path: Path) -> None:
+    """_load_plugin adds plugin to loaded_plugins on success."""
+    plugin_file = tmp_path / "myplugin.py"
+    plugin_file.write_text("# empty plugin\n")
+
+    manager = SMKPluginManager()
+
+    with (
+        patch.object(manager.dep_manager, "handle_dependencies", return_value=(True, None)),
+        patch.object(manager.pm, "register"),
+    ):
+        manager._load_plugin(plugin_file)
+
+    assert "myplugin" in manager.loaded_plugins
+
+
+def test_load_plugin_dep_failure(tmp_path: Path) -> None:
+    """_load_plugin adds to failed_plugins when dependency check fails."""
+    plugin_file = tmp_path / "badplugin.py"
+    plugin_file.write_text("")
+
+    manager = SMKPluginManager()
+
+    with patch.object(manager.dep_manager, "handle_dependencies", return_value=(False, "missing dep")):
+        manager._load_plugin(plugin_file)
+
+    assert "badplugin" in manager.failed_plugins
+    assert manager.failed_plugins["badplugin"] == "missing dep"
+
+
+def test_load_plugin_exception(tmp_path: Path) -> None:
+    """_load_plugin adds to failed_plugins when load_plugin_module raises."""
+    plugin_file = tmp_path / "errplugin.py"
+    plugin_file.write_text("")
+
+    manager = SMKPluginManager()
+
+    with (
+        patch.object(manager.dep_manager, "handle_dependencies", return_value=(True, None)),
+        patch.object(manager.loader, "load_plugin_module", side_effect=ImportError("bad import")),
+    ):
+        manager._load_plugin(plugin_file)
+
+    assert "errplugin" in manager.failed_plugins
+
+
+def test_load_third_party_plugins_calls_load_plugin(tmp_path: Path) -> None:
+    """_load_third_party_plugins calls _load_plugin for each discovered plugin."""
+    plugin_file = tmp_path / "myplugin.py"
+    plugin_file.write_text("")
+
+    manager = SMKPluginManager()
+
+    with (
+        patch.object(manager.loader, "discover_third_party_plugins", return_value=[plugin_file]),
+        patch.object(manager, "_load_plugin") as mock_load,
+    ):
+        manager._load_third_party_plugins()
+
+    mock_load.assert_called_once_with(plugin_file)
+
+
+def test_get_source_plugins_filters_none() -> None:
+    """get_source_plugins excludes None results from hook calls."""
+    manager = SMKPluginManager()
+
+    with patch.object(manager.pm.hook, "smk_get_source_info", return_value=[None, {"plugin_id": "x"}]):
+        plugins = manager.get_source_plugins()
+
+    assert len(plugins) == 1
+    assert plugins[0]["plugin_id"] == "x"

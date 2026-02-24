@@ -255,3 +255,94 @@ def test_export_network_error_raises_smk_error_with_guidance(
         pytest.raises(SMKError, match="network connection"),
     ):
         smk_export_data(vendor_config)
+
+
+def test_export_skips_non_hashicorp_source(vendor_config: dict[str, Any]) -> None:
+    """smk_export_data returns None when source_plugin != 'hashicorp'."""
+    config = dict(vendor_config)
+    config["source_plugin"] = "other"
+    result = smk_export_data(config)
+    assert result is None
+
+
+def test_export_get_source_info_structure() -> None:
+    """smk_get_source_info returns expected keys."""
+    from smk.plugins.hashicorp import smk_get_source_info
+
+    info = smk_get_source_info()
+    assert info["plugin_id"] == "hashicorp"
+    assert "display_name" in info
+    assert "fields" in info
+
+
+def test_export_rate_limited_raises_smk_error(
+    tmp_path: Path,
+    vendor_config: dict[str, Any],
+) -> None:
+    from pytfe.errors import RateLimited
+
+    from smk.core.exceptions import SMKError
+
+    client = MagicMock()
+    exc = RateLimited("rate limited")
+    exc.retry_after = 30
+    client.organizations.list.side_effect = exc
+    with (
+        patch("smk.plugins.hashicorp.TFEClient", return_value=client),
+        patch("smk.plugins.hashicorp.get_data_dir", return_value=tmp_path),
+        pytest.raises(SMKError, match="Rate limited"),
+    ):
+        smk_export_data(vendor_config)
+
+
+def test_export_server_error_raises_smk_error(
+    tmp_path: Path,
+    vendor_config: dict[str, Any],
+) -> None:
+    from pytfe.errors import ServerError
+
+    from smk.core.exceptions import SMKError
+
+    client = MagicMock()
+    client.organizations.list.side_effect = ServerError("500 internal")
+    with (
+        patch("smk.plugins.hashicorp.TFEClient", return_value=client),
+        patch("smk.plugins.hashicorp.get_data_dir", return_value=tmp_path),
+        pytest.raises(SMKError, match="server error"),
+    ):
+        smk_export_data(vendor_config)
+
+
+def test_export_tfe_error_raises_smk_error(
+    tmp_path: Path,
+    vendor_config: dict[str, Any],
+) -> None:
+    from pytfe.errors import TFEError
+
+    from smk.core.exceptions import SMKError
+
+    client = MagicMock()
+    client.organizations.list.side_effect = TFEError("generic tfe error")
+    with (
+        patch("smk.plugins.hashicorp.TFEClient", return_value=client),
+        patch("smk.plugins.hashicorp.get_data_dir", return_value=tmp_path),
+        pytest.raises(SMKError, match="API error"),
+    ):
+        smk_export_data(vendor_config)
+
+
+def test_export_org_with_no_name_raises_value_error(
+    tmp_path: Path,
+    vendor_config: dict[str, Any],
+) -> None:
+    from pytfe.models import Organization
+
+    org = Organization(id="org-no-name", name=None, email="x@x.com")
+    client = MagicMock()
+    client.organizations.list.return_value = iter([org])
+    with (
+        patch("smk.plugins.hashicorp.TFEClient", return_value=client),
+        patch("smk.plugins.hashicorp.get_data_dir", return_value=tmp_path),
+        pytest.raises(ValueError, match="no name"),
+    ):
+        smk_export_data(vendor_config)

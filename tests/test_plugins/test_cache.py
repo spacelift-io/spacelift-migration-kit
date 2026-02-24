@@ -84,3 +84,29 @@ def test_cache_handles_corrupted_file(temp_cache_file: Path) -> None:
 
     cache = PluginCache(temp_cache_file)
     assert cache._cache == {}
+
+
+def test_set_dependencies_installed_when_key_already_in_cache(temp_cache_file: Path) -> None:
+    """set_dependencies_installed updates existing cache entry without reinitializing dict."""
+    cache = PluginCache(temp_cache_file)
+    plugin_path = Path("/fake/plugin")
+
+    # First call creates the entry
+    cache.set_dependencies_installed(plugin_path, True)
+    # Second call updates the existing entry (hits the branch where key IS in cache)
+    cache.set_dependencies_installed(plugin_path, False)
+
+    assert cache.is_dependencies_installed(plugin_path) is False
+
+
+def test_set_plugin_hash_when_key_already_in_cache(temp_cache_file: Path) -> None:
+    """set_plugin_hash updates existing cache entry without reinitializing dict."""
+    cache = PluginCache(temp_cache_file)
+    plugin_path = Path("/fake/plugin2")
+
+    # First call creates the entry
+    cache.set_plugin_hash(plugin_path, "hash1")
+    # Second call updates the existing entry (hits the branch where key IS in cache)
+    cache.set_plugin_hash(plugin_path, "hash2")
+
+    assert cache.get_plugin_hash(plugin_path) == "hash2"

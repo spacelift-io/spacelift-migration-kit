@@ -93,6 +93,12 @@ addopts = "--strict-markers"
 [tool.coverage.run]
 source = [ "src/smk" ]
 branch = true
+omit = [
+  # Executes launch_desktop() at module import time; importing it under test would open a GUI window.
+  "src/smk/core/desktop/__main__.py",
+  # Executes run_server(WebConfig()) at module import time; importing it under test would bind a port and block.
+  "src/smk/core/web/__main__.py",
+]
 
 [tool.coverage.report]
 fail_under = 80

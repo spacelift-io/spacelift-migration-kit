@@ -187,3 +187,22 @@ def test_parse_plugin_metadata_handles_invalid_yaml(temp_plugins_dir: Path):
     metadata = loader.parse_plugin_metadata(plugin_dir)
 
     assert metadata == {}
+
+
+def test_load_plugin_module_raises_when_spec_loader_is_none(temp_plugins_dir: Path):
+    """load_plugin_module raises ImportError when spec has no loader."""
+    import importlib.util
+    from unittest.mock import MagicMock, patch
+
+    plugin_file = temp_plugins_dir / "bad_plugin.py"
+    plugin_file.write_text("")
+
+    bad_spec = MagicMock()
+    bad_spec.loader = None
+
+    loader = PluginLoader()
+    with (
+        patch.object(importlib.util, "spec_from_file_location", return_value=bad_spec),
+        pytest.raises(ImportError),
+    ):
+        loader.load_plugin_module(plugin_file)

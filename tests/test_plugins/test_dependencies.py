@@ -1,7 +1,7 @@
 """Tests for plugin dependency manager."""
 
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -174,3 +174,107 @@ def test_get_requirements_single_file_plugin(dep_manager_dev: PluginDependencyMa
     requirements = dep_manager_dev._get_requirements(plugin_file)
 
     assert requirements == ["boto3"]
+
+
+def test_install_dependencies_success_bundled(
+    dep_manager_bundled: PluginDependencyManager,
+    tmp_path: Path,
+    mock_cache: PluginCache,
+) -> None:
+    """_install_dependencies returns (True, None) and marks cache on success."""
+    plugin_path = tmp_path / "plugin.py"
+    plugin_path.write_text("")
+
+    with patch("smk.core.plugins.dependencies.subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0)
+        success, error = dep_manager_bundled._install_dependencies(plugin_path, ["boto3"])
+
+    assert success is True
+    assert error is None
+    mock_cache.set_dependencies_installed.assert_called_once_with(plugin_path, True)  # type: ignore[attr-defined]
+
+
+def test_install_dependencies_failure_bundled(
+    dep_manager_bundled: PluginDependencyManager,
+    tmp_path: Path,
+) -> None:
+    """_install_dependencies returns (False, error) on CalledProcessError."""
+    import subprocess
+
+    plugin_path = tmp_path / "plugin.py"
+    plugin_path.write_text("")
+
+    exc = subprocess.CalledProcessError(1, "pip", stderr="install failed")
+    with patch("smk.core.plugins.dependencies.subprocess.run", side_effect=exc):
+        success, error = dep_manager_bundled._install_dependencies(plugin_path, ["boto3"])
+
+    assert success is False
+    assert error is not None
+    assert "Failed" in error
+
+
+def test_install_dependencies_skips_dup_sys_path(
+    dep_manager_bundled: PluginDependencyManager,
+    tmp_path: Path,
+) -> None:
+    """_install_dependencies does not add deps_dir to sys.path if already present."""
+    import sys
+
+    plugin_path = tmp_path / "plugin.py"
+    plugin_path.write_text("")
+    deps_dir = str(dep_manager_bundled.deps_dir)
+
+    original_path = list(sys.path)
+    sys.path.insert(0, deps_dir)
+    try:
+        with patch("smk.core.plugins.dependencies.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            dep_manager_bundled._install_dependencies(plugin_path, ["boto3"])
+
+        assert sys.path.count(deps_dir) == 1
+    finally:
+        sys.path[:] = original_path
+
+
+def test_handle_dependencies_bundled_mode_auto_installs(
+    dep_manager_bundled: PluginDependencyManager,
+    tmp_path: Path,
+) -> None:
+    """handle_dependencies calls _install_dependencies in bundled mode with missing deps."""
+    plugin_path = tmp_path / "plugin"
+    plugin_path.mkdir()
+    (plugin_path / "requirements.txt").write_text("nonexistent-package-xyz-bundled")
+
+    with patch.object(dep_manager_bundled, "_install_dependencies", return_value=(True, None)) as mock_install:
+        success, error = dep_manager_bundled.handle_dependencies(plugin_path)
+
+    mock_install.assert_called_once()
+    assert success is True
+    assert error is None
+
+
+def test_check_dependencies_installed_package_not_missing(dep_manager_dev: PluginDependencyManager, tmp_path: Path):
+    """check_dependencies does not add package to missing when it IS available."""
+    plugin_path = tmp_path / "plugin"
+    plugin_path.mkdir()
+    # 'sys' is always available; using it to cover the branch where package IS importable
+    (plugin_path / "requirements.txt").write_text("sys")
+
+    has_deps, missing = dep_manager_dev.check_dependencies(plugin_path)
+
+    assert has_deps is True
+    assert "sys" not in missing
+
+
+def test_get_requirements_os_error(dep_manager_dev: PluginDependencyManager, tmp_path: Path):
+    """_get_requirements returns empty list on OSError reading requirements file."""
+    import pathlib
+
+    plugin_path = tmp_path / "plugin"
+    plugin_path.mkdir()
+    (plugin_path / "requirements.txt").write_text("boto3")
+
+    with patch.object(pathlib.Path, "read_text", side_effect=OSError("permission denied")):
+        requirements = dep_manager_dev._get_requirements(plugin_path)
+
+    assert requirements == []

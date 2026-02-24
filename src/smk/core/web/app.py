@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 try:
     from arel import HotReload
     from arel._models import Path as ArelPath
-except (ImportError, AssertionError):
+except (ImportError, AssertionError):  # pragma: no cover — arel only missing/broken in PyInstaller bundles
     # ImportError: arel not installed
     # AssertionError: arel doesn't work with PyInstaller bundling
     HotReload = None  # type: ignore[assignment,misc]
@@ -30,7 +30,8 @@ def _get_resource_path() -> Path:
     """
     if getattr(sys, "frozen", False):
         # Running as compiled executable
-        return Path(sys._MEIPASS) / "smk" / "core" / "web"  # type: ignore[attr-defined]
+        # sys.frozen is True only inside a PyInstaller bundle; cannot be simulated without module reimport.
+        return Path(sys._MEIPASS) / "smk" / "core" / "web"  # type: ignore[attr-defined]  # pragma: no cover
     else:
         # Running as normal Python
         return Path(__file__).parent

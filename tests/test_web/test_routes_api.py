@@ -124,6 +124,20 @@ def test_export_status_exported(client: TestClient, tmp_path: Path) -> None:
     }
 
 
+def test_get_config_returns_error_when_not_initialized(client: TestClient) -> None:
+    """GET /api/config returns error dict when config is not initialized."""
+    from unittest.mock import patch
+
+    from smk.core.exceptions import ConfigNotInitializedError
+
+    with patch("smk.core.web.routes.api.ConfigManager") as mock_cm:
+        mock_cm.return_value.load.side_effect = ConfigNotInitializedError
+        response = client.get("/api/config")
+
+    assert response.status_code == 200
+    assert response.json() == {"error": "Configuration not initialized"}
+
+
 def test_post_config_saves_successfully(client: TestClient) -> None:
     """POST /api/config saves configuration and returns status saved."""
     from unittest.mock import MagicMock, patch

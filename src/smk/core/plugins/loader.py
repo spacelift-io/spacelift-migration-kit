@@ -27,14 +27,14 @@ class PluginLoader:
             from smk.plugins import hashicorp
 
             builtin_plugins.append(hashicorp)
-        except ImportError:
+        except ImportError:  # pragma: no cover — hashicorp plugin; only absent in stripped deployments
             pass
 
         try:
             from smk.plugins import spacelift
 
             builtin_plugins.append(spacelift)
-        except ImportError:
+        except ImportError:  # pragma: no cover — spacelift plugin; only absent in stripped deployments
             pass
 
         return builtin_plugins

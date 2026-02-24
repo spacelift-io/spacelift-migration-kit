@@ -21,7 +21,8 @@ def run_server(config: WebConfig) -> NoReturn:
 
     if config.open_browser:
         # Open browser after server starts
-        def open_browser() -> None:
+        # Body is a daemon-thread OS side-effect (sleep + browser open); not unit-testable.
+        def open_browser() -> None:  # pragma: no cover
             time.sleep(1)
             webbrowser.open(url)
 
@@ -47,4 +48,4 @@ def run_server(config: WebConfig) -> NoReturn:
             port=config.port,
             log_level="debug" if config.debug else "info",
         )
-    raise SystemExit(0)  # NoReturn requires this
+    raise SystemExit(0)  # pragma: no cover — unreachable; uvicorn.run blocks until exit, raise satisfies NoReturn
