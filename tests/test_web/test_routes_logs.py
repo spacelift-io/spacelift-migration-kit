@@ -23,7 +23,7 @@ def test_logs_page_contains_log_viewer(client: TestClient) -> None:
 def test_logs_stream_content_type(client: TestClient) -> None:
     """SSE stream returns text/event-stream content type."""
 
-    async def _finite(log_file: Path, request: object):  # noqa: ARG001
+    async def _finite(log_file: Path, request: object, *, live: bool = True):  # noqa: ARG001
         yield "data: {}\n\n"
 
     with patch("smk.core.web.routes.logs._log_stream", _finite), client.stream("GET", "/logs/stream") as response:
@@ -54,3 +54,30 @@ async def test_logs_stream_replays_existing_entries(tmp_path: Path) -> None:
     assert event.startswith("data: ")
     parsed = json.loads(event[6:].strip())
     assert parsed["message"] == "hello"
+
+
+def test_list_log_files_returns_list(client: TestClient, tmp_path: Path) -> None:
+    """GET /api/logs returns list of log files with correct current flags."""
+    current = tmp_path / "smk-2026-02-23T120000.log"
+    older = tmp_path / "smk-2026-02-22T080000.log"
+    current.write_text("")
+    older.write_text("")
+
+    client.app.state.log_file = current  # type: ignore[attr-defined]
+
+    response = client.get("/api/logs")
+    assert response.status_code == 200
+
+    files = response.json()
+    assert isinstance(files, list)
+    assert len(files) == 2
+
+    by_name = {f["name"]: f for f in files}
+    assert by_name[current.name]["current"] is True
+    assert by_name[older.name]["current"] is False
+
+
+def test_logs_stream_rejects_traversal(client: TestClient) -> None:
+    """GET /logs/stream?file=../etc/passwd returns 400."""
+    response = client.get("/logs/stream?file=../etc/passwd")
+    assert response.status_code == 400

@@ -64,6 +64,14 @@ async def get_config() -> dict[str, Any]:
         return {"error": "Configuration not initialized"}
 
 
+@router.get("/logs")
+async def list_log_files(request: Request) -> list[dict[str, Any]]:
+    """Return list of available log files."""
+    current = request.app.state.log_file
+    all_files = sorted(current.parent.glob("smk-*.log"), key=lambda f: f.name, reverse=True)
+    return [{"name": f.name, "current": f == current} for f in sorted(all_files, key=lambda f: f != current)]
+
+
 @router.get("/plugins/sources")
 async def get_source_plugins(request: Request) -> list[dict]:
     """Return metadata for all registered source plugins."""

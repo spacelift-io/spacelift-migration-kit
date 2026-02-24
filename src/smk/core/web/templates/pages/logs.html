@@ -9,20 +9,36 @@
   <!-- Header -->
   <div class="flex items-center justify-between mb-4">
     <h1 class="text-2xl font-bold text-gray-900">Application Logs</h1>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-3">
+      <select
+        x-model="selectedFile"
+        @change="connect($event.target.value)"
+        class="text-sm border border-gray-300 rounded-lg pl-2 pr-6 py-1 bg-white text-gray-700 focus:outline-none focus:border-blue-500"
+      >
+        <template x-for="s in sessions" :key="s.name">
+          <option :value="s.name" x-text="labelFor(s)"></option>
+        </template>
+      </select>
       <span
-        x-show="connected"
+        x-show="live && connected"
         class="inline-flex items-center gap-2 text-sm font-medium text-green-600"
       >
         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
         Live
       </span>
       <span
-        x-show="!connected"
+        x-show="live && !connected"
         class="inline-flex items-center gap-2 text-sm font-medium text-yellow-600"
       >
         <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
         Connecting…
+      </span>
+      <span
+        x-show="!live"
+        class="inline-flex items-center gap-2 text-sm font-medium text-gray-500"
+      >
+        <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+        Archived
       </span>
     </div>
   </div>
@@ -51,14 +67,42 @@ function logViewer() {
   return {
     entries: [],
     connected: false,
+    live: true,
+    selectedFile: '',
+    sessions: [],
     _es: null,
 
-    init() {
-      const es = new EventSource('/logs/stream');
+    async init() {
+      const res = await fetch('/api/logs');
+      this.sessions = await res.json();
+      const current = this.sessions.find(s => s.current);
+      this.selectedFile = current ? current.name : (this.sessions[0]?.name ?? '');
+      this.connect(this.selectedFile);
+    },
+
+    connect(file) {
+      if (this._es) {
+        this._es.close();
+        this._es = null;
+      }
+      this.entries = [];
+      this.connected = false;
+
+      const session = this.sessions.find(s => s.name === file);
+      this.live = session?.current ?? true;
+
+      const url = file ? `/logs/stream?file=${encodeURIComponent(file)}` : '/logs/stream';
+      const es = new EventSource(url);
       this._es = es;
 
       es.onopen = () => { this.connected = true; };
-      es.onerror = () => { this.connected = false; };
+      es.onerror = () => {
+        this.connected = false;
+        if (!this.live) {
+          es.close();
+          this._es = null;
+        }
+      };
 
       es.onmessage = (event) => {
         try {
@@ -72,6 +116,20 @@ function logViewer() {
           // Ignore unparsable lines
         }
       };
+    },
+
+    labelFor(s) {
+      if (s.current) return 'Current Session';
+      // Parse smk-YYYY-MM-DDTHHMMSS.log
+      const m = s.name.match(/^smk-(\d{4}-\d{2}-\d{2}T\d{2})(\d{2})(\d{2})\.log$/);
+      if (m) {
+        const iso = `${m[1]}:${m[2]}:${m[3]}`;
+        const d = new Date(iso);
+        if (!isNaN(d)) {
+          return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+      }
+      return s.name;
     },
 
     formatTime(iso) {

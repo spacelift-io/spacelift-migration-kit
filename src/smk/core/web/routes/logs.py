@@ -5,14 +5,14 @@ import logging
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["logs"])
 
 
-async def _log_stream(log_file: Path, request: Request) -> AsyncGenerator[str, None]:
+async def _log_stream(log_file: Path, request: Request, *, live: bool = True) -> AsyncGenerator[str, None]:
     offset = 0
     if log_file.exists():
         with log_file.open(encoding="utf-8") as f:
@@ -21,6 +21,8 @@ async def _log_stream(log_file: Path, request: Request) -> AsyncGenerator[str, N
                 if line:
                     yield f"data: {line}\n\n"
             offset = f.tell()
+    if not live:
+        return
     while not await request.is_disconnected():
         await asyncio.sleep(0.5)
         if not log_file.exists():
@@ -43,10 +45,18 @@ async def logs_page(request: Request) -> HTMLResponse:
 
 
 @router.get("/logs/stream")
-async def logs_stream(request: Request) -> StreamingResponse:
-    log_file: Path = request.app.state.log_file
+async def logs_stream(request: Request, file: str | None = None) -> StreamingResponse:
+    current_log: Path = request.app.state.log_file
+    if file is not None:
+        if Path(file).name != file:
+            raise HTTPException(status_code=400, detail="Invalid file name")
+        log_file = current_log.parent / file
+        live = log_file == current_log
+    else:
+        log_file = current_log
+        live = True
     return StreamingResponse(
-        _log_stream(log_file, request),
+        _log_stream(log_file, request, live=live),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
