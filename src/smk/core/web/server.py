@@ -37,6 +37,7 @@ def run_server(config: WebConfig) -> NoReturn:
             log_level="debug" if config.debug else "info",
             reload=True,
             reload_dirs=["src/smk"],
+            reload_includes=["*.py"],
         )
     else:
         app = create_app(config)
