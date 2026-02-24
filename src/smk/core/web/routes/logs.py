@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections import deque
 from collections.abc import AsyncGenerator
 from pathlib import Path
 
@@ -11,16 +12,21 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["logs"])
 
+TAIL_LINES = 2000
+
 
 async def _log_stream(log_file: Path, request: Request, *, live: bool = True) -> AsyncGenerator[str, None]:
     offset = 0
     if log_file.exists():
         with log_file.open(encoding="utf-8") as f:
+            recent: deque[str] = deque(maxlen=TAIL_LINES)
             for line in f:
                 line = line.strip()
                 if line:
-                    yield f"data: {line}\n\n"
+                    recent.append(line)
             offset = f.tell()
+        for line in recent:
+            yield f"data: {line}\n\n"
     if not live:
         return
     while not await request.is_disconnected():

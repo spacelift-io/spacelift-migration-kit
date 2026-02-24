@@ -43,6 +43,15 @@
     </div>
   </div>
 
+  <!-- Truncation notice -->
+  <div
+    x-show="truncated"
+    class="mb-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700"
+  >
+    Showing the last 2,000 lines. Earlier entries are in the raw log file at
+    <code x-text="logDir" class="font-mono"></code>.
+  </div>
+
   <!-- Log container -->
   <div
     x-ref="container"
@@ -63,20 +72,28 @@
 </div>
 
 <script>
+const MAX_ENTRIES = 2000;
+
 function logViewer() {
   return {
     entries: [],
     connected: false,
     live: true,
+    truncated: false,
+    logDir: '',
     selectedFile: '',
     sessions: [],
     _es: null,
+    _replayDone: false,
 
     async init() {
       const res = await fetch('/api/logs');
       this.sessions = await res.json();
       const current = this.sessions.find(s => s.current);
       this.selectedFile = current ? current.name : (this.sessions[0]?.name ?? '');
+      if (this.selectedFile) {
+        this.logDir = this.selectedFile;
+      }
       this.connect(this.selectedFile);
     },
 
@@ -87,9 +104,12 @@ function logViewer() {
       }
       this.entries = [];
       this.connected = false;
+      this.truncated = false;
+      this._replayDone = false;
 
       const session = this.sessions.find(s => s.name === file);
       this.live = session?.current ?? true;
+      this.logDir = file;
 
       const url = file ? `/logs/stream?file=${encodeURIComponent(file)}` : '/logs/stream';
       const es = new EventSource(url);
@@ -101,12 +121,20 @@ function logViewer() {
         if (!this.live) {
           es.close();
           this._es = null;
+          this._replayDone = true;
         }
       };
 
       es.onmessage = (event) => {
         try {
           const entry = JSON.parse(event.data);
+          if (!this._replayDone && this.entries.length === MAX_ENTRIES) {
+            // Replay is still pushing and we've already hit the cap — file was truncated
+            this.truncated = true;
+          }
+          if (this.entries.length >= MAX_ENTRIES) {
+            this.entries.shift();
+          }
           this.entries.push(entry);
           this.$nextTick(() => {
             const c = this.$refs.container;

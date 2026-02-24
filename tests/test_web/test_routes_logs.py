@@ -32,6 +32,28 @@ def test_logs_stream_content_type(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_logs_stream_tail_limits_initial_lines(tmp_path: Path) -> None:
+    """_log_stream yields at most TAIL_LINES entries on initial connect."""
+    from unittest.mock import AsyncMock
+
+    from smk.core.web.routes.logs import TAIL_LINES, _log_stream
+
+    log_file = tmp_path / "big.log"
+    n = TAIL_LINES + 50
+    lines = [json.dumps({"time": "T", "level": "INFO", "logger": "smk", "message": f"line {i}"}) for i in range(n)]
+    log_file.write_text("\n".join(lines) + "\n")
+
+    mock_request = AsyncMock()
+    mock_request.is_disconnected.return_value = True
+
+    events = [e async for e in _log_stream(log_file, mock_request, live=False)]
+
+    assert len(events) == TAIL_LINES
+    assert json.loads(events[-1][6:].strip())["message"] == f"line {n - 1}"
+    assert json.loads(events[0][6:].strip())["message"] == f"line {50}"
+
+
+@pytest.mark.asyncio
 async def test_logs_stream_replays_existing_entries(tmp_path: Path) -> None:
     """_log_stream replays existing log file entries on connect."""
     from smk.core.web.routes.logs import _log_stream
