@@ -121,3 +121,39 @@ def test_get_plugin_cache_file_custom():
     custom_dir = Path("/custom/path")
     cache_file = get_plugin_cache_file(custom_dir)
     assert cache_file == Path("/custom/path/plugin-cache.json")
+
+
+def test_get_db_path_default():
+    """DB path should be smk.db under config dir."""
+    from smk.core.config.paths import get_db_path
+
+    db_path = get_db_path()
+    assert db_path.name == "smk.db"
+    assert db_path.parent == get_default_config_dir()
+
+
+def test_get_db_path_custom():
+    """DB path should respect custom config dir."""
+    from smk.core.config.paths import get_db_path
+
+    custom_dir = Path("/custom/path")
+    db_path = get_db_path(custom_dir)
+    assert db_path == Path("/custom/path/smk.db")
+
+
+def test_get_output_dir_default():
+    """Output dir should be under config dir."""
+    from smk.core.config.paths import get_output_dir
+
+    output_dir = get_output_dir()
+    assert output_dir.name == "output"
+    assert output_dir.parent == get_default_config_dir()
+
+
+def test_get_output_dir_custom():
+    """Output dir should respect custom config dir."""
+    from smk.core.config.paths import get_output_dir
+
+    custom_dir = Path("/custom/path")
+    output_dir = get_output_dir(custom_dir)
+    assert output_dir == Path("/custom/path/output")

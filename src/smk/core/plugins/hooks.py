@@ -97,93 +97,30 @@ def smk_pre_export(batch: dict) -> None:
     raise NotImplementedError
 
 
-# Transform Stage Hooks
+# Migration Stage Hooks
 @hookspec
-def smk_post_transform(transformed_data: dict) -> dict:
-    """Modify transformed data after transformation stage.
+def smk_transform_entity(
+    entity_type: str,
+    entity: dict,
+    source_plugin: str,
+) -> dict | None:
+    """Transform a source entity into a Spacelift resource dict.
 
-    Called after transformation completes. Can modify transformed entities.
+    The entity dict may contain "_smk_parent_hcl_resource_name" injected by
+    the manager if a migrated/selected parent exists.
 
     Args:
-        transformed_data: Transformed Spacelift entities.
+        entity_type: Entity type id (e.g. 'workspaces').
+        entity: Raw source entity dict (from export JSON).
+        source_plugin: Active source plugin id. Return None if not your plugin.
 
     Returns:
-        Modified transformed data.
-    """
-    raise NotImplementedError
-
-
-@hookspec
-def smk_pre_transform(export_data: dict) -> None:
-    """Pre-transform hook called before transformation begins.
-
-    Args:
-        export_data: Exported data from source vendor.
-    """
-    raise NotImplementedError
-
-
-@hookspec
-def smk_transform_space(space: dict) -> dict:
-    """Transform individual space entity.
-
-    Args:
-        space: Space entity from source platform.
-
-    Returns:
-        Transformed space entity mapped to Spacelift model.
-    """
-    raise NotImplementedError
-
-
-@hookspec
-def smk_transform_stack(stack: dict) -> dict:
-    """Transform individual stack entity.
-
-    Args:
-        stack: Stack entity from source platform.
-
-    Returns:
-        Transformed stack entity mapped to Spacelift model.
-    """
-    raise NotImplementedError
-
-
-# Generate Stage Hooks
-@hookspec
-def smk_generate_hcl(entities: list[dict]) -> str:
-    """Generate HCL code for entities.
-
-    Args:
-        entities: List of transformed Spacelift entities.
-
-    Returns:
-        Generated HCL code as string.
-    """
-    raise NotImplementedError
-
-
-@hookspec
-def smk_post_generate(hcl_code: str) -> str:
-    """Modify generated HCL after generation stage.
-
-    Called after HCL generation completes. Can modify generated code.
-
-    Args:
-        hcl_code: Generated HCL code.
-
-    Returns:
-        Modified HCL code.
-    """
-    raise NotImplementedError
-
-
-@hookspec
-def smk_pre_generate(transformed_data: dict) -> None:
-    """Pre-generate hook called before HCL generation begins.
-
-    Args:
-        transformed_data: Transformed Spacelift entities.
+        {
+          "resource_type": str,    # e.g. "spacelift_stack"
+          "resource_name": str,    # Terraform identifier, e.g. "ws_prod_api"
+          "attributes": dict,      # values prefixed "$ref:" are TF references
+        }
+        Returns None if not this plugin's entity type.
     """
     raise NotImplementedError
 

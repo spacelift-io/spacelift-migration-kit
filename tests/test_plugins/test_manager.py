@@ -254,3 +254,189 @@ def test_run_audit_filters_none_from_hook(tmp_path: Path) -> None:
         result = manager.run_audit("hashicorp", [{"id": "workspaces", "display_name": "Workspaces"}])
 
     assert result == {"workspaces": []}
+
+
+def test_transform_entity_returns_first_non_none() -> None:
+    """transform_entity returns first non-None result from hook."""
+    manager = SMKPluginManager()
+    expected = {"resource_type": "spacelift_space", "resource_name": "org_x", "attributes": {}}
+
+    with patch.object(manager.pm.hook, "smk_transform_entity", return_value=[None, expected]):
+        result = manager.transform_entity("organizations", {"id": "org-1", "name": "x"}, "hashicorp")
+
+    assert result == expected
+
+
+def test_transform_entity_returns_none_when_all_none() -> None:
+    """transform_entity returns None when all plugins return None."""
+    manager = SMKPluginManager()
+
+    with patch.object(manager.pm.hook, "smk_transform_entity", return_value=[None, None]):
+        result = manager.transform_entity("organizations", {"id": "org-1"}, "hashicorp")
+
+    assert result is None
+
+
+def test_transform_batch_processes_selected_entities(tmp_path: Path) -> None:
+    """transform_batch transforms all selected entities."""
+    import json
+
+    from smk.core.db import get_db
+    from smk.core.db.batches import create_batch
+
+    db = get_db(tmp_path)
+    batch = create_batch(db)
+    db.execute(
+        """INSERT INTO batch_entities
+           (batch_id, entity_type, entity_id, entity_name, status, source_entity)
+           VALUES (?, 'organizations', 'org-1', 'my-org', 'selected', ?)""",
+        (batch["id"], json.dumps({"id": "org-1", "name": "my-org"})),
+    )
+    db.commit()
+
+    manager = SMKPluginManager()
+    result = {
+        "resource_type": "spacelift_space",
+        "resource_name": "org_my_org",
+        "attributes": {"name": "my-org", "parent_space_id": "root"},
+    }
+
+    with patch.object(manager, "transform_entity", return_value=result):
+        manager.transform_batch(batch["id"], "hashicorp", db)
+
+    row = db.execute("SELECT status, hcl_resource_name FROM batch_entities WHERE entity_id = 'org-1'").fetchone()
+    assert row["status"] == "ready"
+    assert row["hcl_resource_name"] == "spacelift_space.org_my_org"
+    db.close()
+
+
+def test_transform_batch_records_error_on_exception(tmp_path: Path) -> None:
+    """transform_batch records error when transform_entity raises."""
+    import json
+
+    from smk.core.db import get_db
+    from smk.core.db.batches import create_batch
+
+    db = get_db(tmp_path)
+    batch = create_batch(db)
+    db.execute(
+        """INSERT INTO batch_entities
+           (batch_id, entity_type, entity_id, entity_name, status, source_entity)
+           VALUES (?, 'workspaces', 'ws-1', 'prod', 'selected', ?)""",
+        (batch["id"], json.dumps({"id": "ws-1", "name": "prod"})),
+    )
+    db.commit()
+
+    manager = SMKPluginManager()
+
+    with patch.object(manager, "transform_entity", side_effect=ValueError("boom")):
+        manager.transform_batch(batch["id"], "hashicorp", db)
+
+    row = db.execute("SELECT status, error_message FROM batch_entities WHERE entity_id = 'ws-1'").fetchone()
+    assert row["status"] == "error"
+    assert "boom" in row["error_message"]
+    db.close()
+
+
+def test_transform_batch_injects_parent_hcl_name(tmp_path: Path) -> None:
+    """transform_batch injects _smk_parent_hcl_resource_name when parent is ready."""
+    import json
+
+    from smk.core.db import get_db
+    from smk.core.db.batches import create_batch
+
+    db = get_db(tmp_path)
+    batch = create_batch(db)
+    # Parent org is already ready
+    db.execute(
+        """INSERT INTO batch_entities
+           (batch_id, entity_type, entity_id, entity_name, status, source_entity, hcl_resource_name)
+           VALUES (?, 'organizations', 'org-1', 'my-org', 'ready', ?, 'spacelift_space.org_my_org')""",
+        (batch["id"], json.dumps({"id": "org-1", "name": "my-org"})),
+    )
+    # Child project
+    db.execute(
+        """INSERT INTO batch_entities
+           (batch_id, entity_type, entity_id, entity_name, parent_type, parent_id, status, source_entity)
+           VALUES (?, 'projects', 'prj-1', 'default', 'organizations', 'org-1', 'selected', ?)""",
+        (batch["id"], json.dumps({"id": "prj-1", "name": "default"})),
+    )
+    db.commit()
+
+    captured_entities = []
+
+    def capture_transform(_entity_type, entity, _source_plugin):
+        captured_entities.append(entity)
+        return {
+            "resource_type": "spacelift_space",
+            "resource_name": "proj_default",
+            "attributes": {},
+        }
+
+    manager = SMKPluginManager()
+    with patch.object(manager, "transform_entity", side_effect=capture_transform):
+        manager.transform_batch(batch["id"], "hashicorp", db)
+
+    assert any("_smk_parent_hcl_resource_name" in e for e in captured_entities)
+    parent_injected = next(e for e in captured_entities if "_smk_parent_hcl_resource_name" in e)
+    assert parent_injected["_smk_parent_hcl_resource_name"] == "spacelift_space.org_my_org"
+    db.close()
+
+
+def test_transform_batch_no_result_sets_error(tmp_path: Path) -> None:
+    """transform_batch records error when transform_entity returns None."""
+    import json
+
+    from smk.core.db import get_db
+    from smk.core.db.batches import create_batch
+
+    db = get_db(tmp_path)
+    batch = create_batch(db)
+    db.execute(
+        """INSERT INTO batch_entities
+           (batch_id, entity_type, entity_id, entity_name, status, source_entity)
+           VALUES (?, 'workspaces', 'ws-1', 'prod', 'selected', ?)""",
+        (batch["id"], json.dumps({"id": "ws-1", "name": "prod"})),
+    )
+    db.commit()
+
+    manager = SMKPluginManager()
+    with patch.object(manager, "transform_entity", return_value=None):
+        manager.transform_batch(batch["id"], "hashicorp", db)
+
+    row = db.execute("SELECT status FROM batch_entities WHERE entity_id = 'ws-1'").fetchone()
+    assert row["status"] == "error"
+    db.close()
+
+
+def test_transform_batch_no_parent_hcl_when_parent_not_in_batch(tmp_path: Path) -> None:
+    """transform_batch does not inject parent name when parent is absent from batch."""
+    import json
+
+    from smk.core.db import get_db
+    from smk.core.db.batches import create_batch
+
+    db = get_db(tmp_path)
+    batch = create_batch(db)
+    # Child project with parent_type + parent_id set, but parent NOT in batch
+    db.execute(
+        """INSERT INTO batch_entities
+           (batch_id, entity_type, entity_id, entity_name, parent_type, parent_id, status, source_entity)
+           VALUES (?, 'projects', 'prj-1', 'default', 'organizations', 'org-99', 'selected', ?)""",
+        (batch["id"], json.dumps({"id": "prj-1", "name": "default"})),
+    )
+    db.commit()
+
+    captured_entities = []
+
+    def capture_transform(_entity_type, entity, _source_plugin):
+        captured_entities.append(entity)
+        return {"resource_type": "spacelift_space", "resource_name": "x", "attributes": {}}
+
+    manager = SMKPluginManager()
+    with patch.object(manager, "transform_entity", side_effect=capture_transform):
+        manager.transform_batch(batch["id"], "hashicorp", db)
+
+    # prj-1 should NOT have _smk_parent_hcl_resource_name since org-99 is not in batch
+    assert "_smk_parent_hcl_resource_name" not in captured_entities[0]
+    db.close()

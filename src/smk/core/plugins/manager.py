@@ -1,6 +1,8 @@
 """Plugin manager coordinating plugin system."""
 
+import json
 import logging
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any
@@ -158,6 +160,77 @@ class SMKPluginManager:
             Dictionary mapping plugin name to error message.
         """
         return self.failed_plugins.copy()
+
+    def transform_entity(self, entity_type: str, entity: dict[str, Any], source_plugin: str) -> dict[str, Any] | None:
+        """Call smk_transform_entity; return first non-None result."""
+        results = self.pm.hook.smk_transform_entity(
+            entity_type=entity_type,
+            entity=entity,
+            source_plugin=source_plugin,
+        )
+        for result in results:
+            if result is not None:
+                return result
+        return None
+
+    def transform_batch(self, batch_id: int, source_plugin: str, db: sqlite3.Connection) -> None:
+        """Transform all 'selected' entities in the batch.
+
+        For each entity:
+        1. Set status=transforming in DB
+        2. Look up parent's hcl_resource_name from DB; inject as
+           _smk_parent_hcl_resource_name into a copy of source_entity
+        3. Call transform_entity()
+        4. On success: update_entity_transform(spacelift_entity, hcl_resource_name)
+        5. On exception: update_entity_error(str(e))
+        """
+        from smk.core.db.entities import get_batch_entities, update_entity_error, update_entity_transform
+
+        selected = get_batch_entities(db, batch_id, status="selected")
+        for ent in selected:
+            entity_type = ent["entity_type"]
+            entity_id = ent["entity_id"]
+
+            # Mark as transforming
+            db.execute(
+                "UPDATE batch_entities SET status = 'transforming'"
+                " WHERE batch_id = ? AND entity_type = ? AND entity_id = ?",
+                (batch_id, entity_type, entity_id),
+            )
+            db.commit()
+
+            try:
+                source_entity: dict[str, Any] = json.loads(ent["source_entity"] or "{}")
+
+                # Inject parent HCL resource name if available
+                if ent.get("parent_type") and ent.get("parent_id"):
+                    parent_row = db.execute(
+                        """
+                        SELECT hcl_resource_name FROM batch_entities
+                        WHERE entity_type = ? AND entity_id = ?
+                        """,
+                        (ent["parent_type"], ent["parent_id"]),
+                    ).fetchone()
+                    if parent_row and parent_row["hcl_resource_name"]:
+                        source_entity = {
+                            **source_entity,
+                            "_smk_parent_hcl_resource_name": parent_row["hcl_resource_name"],
+                        }
+
+                result = self.transform_entity(entity_type, source_entity, source_plugin)
+                if result is None:
+                    raise ValueError(f"No plugin handled entity_type={entity_type!r}")
+
+                update_entity_transform(
+                    db,
+                    batch_id,
+                    entity_type,
+                    entity_id,
+                    spacelift_entity=result,
+                    hcl_resource_name=f"{result['resource_type']}.{result['resource_name']}",
+                )
+            except Exception as e:
+                update_entity_error(db, batch_id, entity_type, entity_id, str(e))
 
     def is_development_mode(self) -> bool:
         """Check if running in development mode.

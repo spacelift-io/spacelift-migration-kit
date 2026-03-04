@@ -3,54 +3,363 @@
 {% block title %}Migrate{% endblock %}
 
 {% block content %}
+<div x-data="migratePage()" x-init="init()">
+
 <h2 class="text-3xl font-bold text-gray-900 mb-4 dark:text-white">Migrate Resources</h2>
-<p class="text-gray-600 mb-8 dark:text-gray-300">Review and approve migration batches.</p>
+<p class="text-gray-600 mb-6 dark:text-gray-300">Select entities to migrate, transform them to Spacelift resources, and generate HCL.</p>
 
-<div class="border border-gray-200 rounded-lg p-6 mb-6 dark:border-gray-700">
-  <div class="flex items-center justify-between mb-4">
-    <h3 class="text-lg font-semibold dark:text-white">Batch 1 of 5</h3>
-    <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full dark:bg-blue-900/50 dark:text-blue-300">Ready to Review</span>
+<!-- ── Phase: Select ─────────────────────────────────────────────────────────── -->
+<template x-if="phase === 'select'">
+  <div>
+    <!-- Batch header -->
+    <div class="flex items-center mb-4">
+      <span class="text-lg font-semibold dark:text-white" x-text="currentBatch ? 'Batch #' + currentBatch.id : ''"></span>
+    </div>
+
+    <!-- Entity type tabs -->
+    <div class="border border-gray-200 rounded-lg dark:border-gray-700 mb-4">
+      <div class="flex border-b border-gray-200 dark:border-gray-700">
+        <template x-for="tab in tabs" :key="tab.id">
+          <button
+            @click="switchTab(tab.id)"
+            :class="activeTab === tab.id
+              ? 'border-b-2 border-spacelift-yellow text-gray-900 dark:text-white'
+              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+            class="px-6 py-3 text-sm font-medium"
+          >
+            <span x-text="tab.label"></span>
+            <template x-if="tab.selected > 0">
+              <span class="ml-1 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded-full" x-text="tab.selected"></span>
+            </template>
+          </button>
+        </template>
+      </div>
+
+      <!-- Search + filter bar -->
+      <div class="flex items-center gap-2 p-3 border-b border-gray-200 dark:border-gray-700">
+        <div class="relative flex-1">
+          <svg class="absolute left-2.5 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input
+            type="text"
+            x-model="search"
+            @input.debounce.300ms="loadEntities()"
+            placeholder="Search..."
+            class="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-spacelift-purple"
+          />
+        </div>
+        <select
+          x-model="filterMode"
+          @change="loadEntities()"
+          class="text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 bg-white dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-spacelift-purple"
+        >
+          <option value="all">All</option>
+          <option value="unmigrated">Not migrated</option>
+          <option value="selected">Selected</option>
+          <option value="unselected">Unselected</option>
+          <option value="migrated">Migrated</option>
+        </select>
+      </div>
+
+      <!-- Select-page row -->
+      <div class="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-sm">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            :checked="pageAllSelected()"
+            @change="togglePage($event.target.checked)"
+            class="rounded"
+          />
+          <span class="text-gray-600 dark:text-gray-400">Select page (<span x-text="entities.length"></span>)</span>
+        </label>
+        <span class="text-gray-500 dark:text-gray-400">
+          <span x-text="totalSelected()"></span> selected · <span x-text="pagination.total"></span> total
+        </span>
+      </div>
+
+      <!-- Entity rows -->
+      <div class="divide-y divide-gray-100 dark:divide-gray-700">
+        <template x-if="loading">
+          <div class="p-8 text-center text-gray-400 text-sm">Loading…</div>
+        </template>
+        <template x-if="!loading && entities.length === 0">
+          <div class="p-8 text-center text-gray-400 text-sm">No entities found</div>
+        </template>
+        <template x-for="entity in entities" :key="entity.entity_id">
+          <div class="flex items-center gap-3 px-4 py-3">
+            <!-- Checkbox (disabled for auto-included deps) -->
+            <input
+              type="checkbox"
+              :checked="isSelected(entity)"
+              :disabled="entity.auto_included"
+              :title="entity.auto_included ? 'Auto-included as a dependency — deselect the child entity to remove' : ''"
+              @change="toggleEntity(entity, $event.target.checked)"
+              class="rounded"
+              :class="entity.auto_included ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
+            />
+            <!-- Entity ID (truncated) -->
+            <span class="text-xs font-mono text-gray-400 dark:text-gray-500 w-24 truncate shrink-0" x-text="entity.entity_id" :title="entity.entity_id"></span>
+            <!-- Name -->
+            <span class="text-sm font-medium dark:text-white flex-1 truncate" x-text="entity.entity_name || entity.entity_id"></span>
+            <!-- Parent -->
+            <span class="text-xs text-gray-400 dark:text-gray-500 truncate max-w-32" x-text="entity.parent_name || '—'"></span>
+            <!-- Status chip -->
+            <span
+              class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+              :class="statusChipClass(entity.batch_status)"
+              x-text="statusChipLabel(entity.batch_status, entity.auto_included)"
+            ></span>
+          </div>
+        </template>
+      </div>
+
+      <!-- Pagination -->
+      <div class="flex items-center justify-center gap-2 p-3 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-400">
+        <button
+          @click="goPage(pagination.page - 1)"
+          :disabled="pagination.page <= 1"
+          class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
+        >←</button>
+        <span x-text="`${pagination.page} / ${Math.max(1, Math.ceil(pagination.total / pagination.per_page))}`"></span>
+        <button
+          @click="goPage(pagination.page + 1)"
+          :disabled="pagination.page >= Math.ceil(pagination.total / pagination.per_page)"
+          class="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
+        >→</button>
+      </div>
+    </div>
+
+    <!-- Footer action bar -->
+    <div class="flex items-center justify-between mt-4">
+      <span class="text-sm text-gray-500 dark:text-gray-400">
+        <span x-text="totalSelected()"></span> entities selected across all types
+      </span>
+      <button
+        @click="startTransform()"
+        :disabled="totalSelected() === 0 || !currentBatch"
+        class="px-6 py-2 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+        style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);"
+      >Transform →</button>
+    </div>
   </div>
-  <p class="text-sm text-gray-600 mb-4 dark:text-gray-400">8 workspaces ready for migration</p>
+</template>
 
-  <div class="bg-gray-50 rounded-lg p-4 mb-4 dark:bg-gray-700">
-    <div class="flex items-center justify-between mb-2">
-      <span class="text-sm font-medium dark:text-white">prod-api-gateway</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400">Terraform 1.5.2</span>
+<!-- ── Phase: Transform ──────────────────────────────────────────────────────── -->
+<template x-if="phase === 'transform'">
+  <div>
+    <div class="flex items-center gap-3 mb-4">
+      <button @click="phase = 'select'" class="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">← Back</button>
+      <span class="text-lg font-semibold dark:text-white" x-text="'Batch #' + currentBatch?.id + ' — Transform'"></span>
     </div>
-    <div class="flex items-center justify-between mb-2">
-      <span class="text-sm font-medium dark:text-white">prod-database</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400">Terraform 1.5.2</span>
+
+    <!-- Progress bar -->
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4">
+      <div class="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+        <span>Transforming entities…</span>
+        <span>
+          <span class="text-green-600 dark:text-green-400" x-text="transformStats.ready || 0"></span> ready,
+          <span class="text-red-600 dark:text-red-400" x-text="transformStats.error || 0"></span> errors,
+          <span class="text-gray-400" x-text="transformStats.transforming || 0"></span> pending
+        </span>
+      </div>
+      <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div
+          class="h-2 rounded-full transition-all"
+          style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);"
+          :style="`width: ${transformPercent()}%`"
+        ></div>
+      </div>
     </div>
+
+    <!-- Entity rows with status -->
+    <div class="border border-gray-200 dark:border-gray-700 rounded-lg mb-4 divide-y divide-gray-100 dark:divide-gray-700">
+      <template x-for="entity in batchEntities" :key="entity.id">
+        <div>
+          <div
+            class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            :class="entity.status === 'ready' ? 'cursor-pointer' : 'cursor-default'"
+            @click="entity.status === 'ready' && toggleReview(entity)"
+          >
+            <span class="text-xs font-mono text-gray-400 w-24 truncate shrink-0" x-text="entity.entity_id"></span>
+            <span class="text-sm font-medium dark:text-white flex-1" x-text="entity.entity_name || entity.entity_id"></span>
+            <!-- spinner for transforming -->
+            <template x-if="entity.status === 'transforming'">
+              <svg class="animate-spin w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            </template>
+            <span
+              class="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+              :class="transformStatusChipClass(entity.status)"
+              x-text="entity.status"
+            ></span>
+            <!-- Retry for errored -->
+            <template x-if="entity.status === 'error'">
+              <button
+                @click.stop="retryEntity(entity)"
+                class="text-xs text-blue-600 hover:underline dark:text-blue-400"
+              >↺ Retry</button>
+            </template>
+            <!-- Expand/collapse chevron for ready entities -->
+            <template x-if="entity.status === 'ready'">
+              <svg
+                class="w-4 h-4 text-gray-400 shrink-0 transition-transform"
+                :class="reviewEntity && reviewEntity.id === entity.id ? 'rotate-90' : ''"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </template>
+          </div>
+          <!-- Error message -->
+          <template x-if="entity.status === 'error' && entity.error_message">
+            <div class="px-4 pb-3">
+              <p class="text-xs text-red-600 dark:text-red-400 font-mono bg-red-50 dark:bg-red-900/20 rounded p-2" x-text="entity.error_message"></p>
+            </div>
+          </template>
+          <!-- Review panel for ready entities -->
+          <template x-if="reviewEntity && reviewEntity.id === entity.id && entity.status === 'ready'">
+            <div class="border-t border-gray-200 dark:border-gray-700 grid grid-cols-3 gap-0 divide-x divide-gray-200 dark:divide-gray-700 bg-gray-50 dark:bg-gray-900">
+              <div class="p-3">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Source Entity</div>
+                <pre class="text-xs font-mono leading-4 overflow-x-auto text-gray-800 dark:text-gray-200" x-html="highlight(parseJSON(entity.source_entity))"></pre>
+              </div>
+              <div class="p-3">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Spacelift Entity</div>
+                <pre class="text-xs font-mono leading-4 overflow-x-auto text-gray-800 dark:text-gray-200" x-html="highlight(parseJSON(entity.spacelift_entity))"></pre>
+              </div>
+              <div class="p-3">
+                <div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">HCL</div>
+                <pre class="text-xs font-mono leading-4 overflow-x-auto text-gray-800 dark:text-gray-200" x-text="entityHcl(entity)"></pre>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- Confirm button -->
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium dark:text-white">prod-networking</span>
-      <span class="text-xs text-gray-500 dark:text-gray-400">Terraform 1.5.2</span>
-    </div>
-    <div class="text-center mt-3">
-      <button class="text-sm text-spacelift-purple hover:underline">+ 5 more workspaces</button>
+      <button @click="phase = 'select'" class="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">← Back to Select</button>
+      <div class="flex items-center gap-3">
+        <template x-if="confirmBlocked()">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Fix or deselect errored entities first.</span>
+        </template>
+        <button
+          @click="confirmBatch()"
+          :disabled="confirmBlocked() || isConfirming"
+          class="px-6 py-2 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+          style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);"
+          :title="confirmBlocked() ? 'Fix or deselect errored entities first.' : ''"
+        >
+          <template x-if="isConfirming">
+            <span>Generating…</span>
+          </template>
+          <template x-if="!isConfirming">
+            <span>Confirm &amp; Generate HCL →</span>
+          </template>
+        </button>
+      </div>
     </div>
   </div>
+</template>
 
-  <div class="flex space-x-3">
-    <button class="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700">
-      Review HCL
-    </button>
-    <button class="flex-1 px-4 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-      Approve & Run
-    </button>
-  </div>
-</div>
+<!-- ── Phase: Confirm ────────────────────────────────────────────────────────── -->
+<template x-if="phase === 'confirm'">
+  <div class="space-y-6">
+    <!-- Success card -->
+    <div class="border border-green-200 dark:border-green-700 rounded-lg p-8 text-center">
+      <div class="text-5xl mb-4">✓</div>
+      <h3 class="text-xl font-semibold text-green-800 dark:text-green-300 mb-1" x-text="'batch-' + String(confirmResult.batch_id).padStart(3, '0') + '.tf written'"></h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 font-mono mb-6" x-text="confirmResult.hcl_path"></p>
 
-<div class="border border-gray-200 rounded-lg p-6 dark:border-gray-700">
-  <h3 class="text-lg font-semibold mb-3 dark:text-white">Migration Progress</h3>
-  <div class="flex items-center">
-    <div class="flex-1 bg-gray-200 rounded-full h-2 mr-4 dark:bg-gray-700">
-      <div class="bg-spacelift-green h-2 rounded-full" style="width: 0%"></div>
+      <!-- Apply instructions -->
+      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-2 text-left inline-block">
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Apply the generated HCL to create resources in Spacelift:</p>
+        <div class="flex items-center gap-3">
+          <code class="text-sm font-mono dark:text-gray-200">cd ~/.config/smk/output &amp;&amp; tofu apply</code>
+          <button
+            @click="copyCommand()"
+            class="text-xs text-blue-600 hover:underline dark:text-blue-400 shrink-0"
+            x-text="copied ? 'Copied!' : 'Copy'"
+          ></button>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400 dark:text-gray-500 mb-0">
+        Run this after each batch. Resources from earlier batches are referenced by name from Terraform state.
+      </p>
     </div>
-    <span class="text-sm text-gray-600 dark:text-gray-400">0 of 42</span>
-  </div>
-</div>
 
+    <!-- What's next -->
+    <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">What would you like to do next?</h4>
+
+      <!-- More to migrate -->
+      <template x-if="unmigratedCount > 0">
+        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <div>
+            <p class="text-sm text-gray-700 dark:text-gray-300 font-medium">Migrate more entities</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400" x-text="`${unmigratedCount} entities have not been migrated yet.`"></p>
+          </div>
+          <button
+            @click="startAnotherBatch()"
+            class="shrink-0 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+          >Migrate another batch →</button>
+        </div>
+      </template>
+
+      <!-- Continue to Clean Up -->
+      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-700 dark:text-gray-300 font-medium">Continue to Clean Up</p>
+          <template x-if="unmigratedCount > 0">
+            <p class="text-xs text-amber-600 dark:text-amber-400" x-text="`⚠ ${unmigratedCount} entities have not been migrated. Clean up will remove source resources that may not yet exist in Spacelift.`"></p>
+          </template>
+          <template x-if="unmigratedCount === 0">
+            <p class="text-xs text-gray-500 dark:text-gray-400">All entities have been migrated. You're ready to clean up.</p>
+          </template>
+        </div>
+        <div class="shrink-0">
+          <!-- No warning: direct link -->
+          <template x-if="unmigratedCount === 0">
+            {% if next_step %}
+            <a href="/{{ next_step }}" class="inline-block px-4 py-2 text-sm font-medium text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">Continue to Clean Up →</a>
+            {% endif %}
+          </template>
+          <!-- Warning: confirmation step -->
+          <template x-if="unmigratedCount > 0">
+            <div>
+              <template x-if="!showCleanUpWarning">
+                <button
+                  @click="showCleanUpWarning = true"
+                  class="px-4 py-2 text-sm font-medium text-white rounded-lg"
+                  style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);"
+                >Continue to Clean Up →</button>
+              </template>
+              <template x-if="showCleanUpWarning">
+                <div class="text-right space-y-2">
+                  <p class="text-xs text-amber-700 dark:text-amber-300 font-medium">Proceed without migrating all entities?</p>
+                  <div class="flex gap-2 justify-end">
+                    <button @click="showCleanUpWarning = false" class="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white">Cancel</button>
+                    {% if next_step %}
+                    <a href="/{{ next_step }}" class="inline-block px-3 py-1.5 text-xs text-white rounded-lg font-medium" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">Yes, proceed anyway</a>
+                    {% endif %}
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+</div><!-- end x-data -->
+
+<!-- Navigation -->
 <div class="flex justify-between mt-8">
   {% if prev_step %}
   <a href="/{{ prev_step }}" class="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
@@ -59,10 +368,319 @@
   {% else %}
   <div></div>
   {% endif %}
-  {% if next_step %}
-  <a href="/{{ next_step }}" class="px-6 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
-    Continue
-  </a>
-  {% endif %}
 </div>
+
+<script>
+function migratePage() {
+  return {
+    phase: 'select',
+    currentBatch: null,
+    tabs: [
+      { id: 'organizations', label: 'Organizations', selected: 0 },
+      { id: 'projects', label: 'Projects', selected: 0 },
+      { id: 'workspaces', label: 'Workspaces', selected: 0 },
+    ],
+    activeTab: 'workspaces',
+    entities: [],
+    pagination: { page: 1, per_page: 50, total: 0 },
+    search: '',
+    filterMode: 'all',
+    loading: false,
+    // Transform phase
+    batchEntities: [],
+    transformStats: {},
+    reviewEntity: null,
+    pollInterval: null,
+    isConfirming: false,
+    confirmResult: {},
+    copied: false,
+    unmigratedCount: 0,
+    showCleanUpWarning: false,
+
+    async init() {
+      await this.loadBatch();
+      await this.loadEntities();
+    },
+
+    async loadBatch() {
+      const res = await fetch('/api/migrate/batch/current');
+      const data = await res.json();
+      this.currentBatch = Object.keys(data).length ? data : null;
+      if (!this.currentBatch) {
+        await this.createBatch();
+      }
+      await this.refreshTabCounts();
+    },
+
+    async createBatch() {
+      const res = await fetch('/api/migrate/batch', { method: 'POST' });
+      if (res.ok) {
+        this.currentBatch = await res.json();
+      }
+    },
+
+    async refreshTabCounts() {
+      // Count selected entities per tab by querying each type
+      for (const tab of this.tabs) {
+        const res = await fetch(`/api/migrate/entities?type=${tab.id}&filter=selected&per_page=1`);
+        const data = await res.json();
+        tab.selected = data.total || 0;
+      }
+    },
+
+    async switchTab(tabId) {
+      this.activeTab = tabId;
+      this.pagination.page = 1;
+      this.search = '';
+      this.filterMode = 'all';
+      await this.loadEntities();
+    },
+
+    async loadEntities() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams({
+          type: this.activeTab,
+          page: this.pagination.page,
+          per_page: this.pagination.per_page,
+          search: this.search,
+          filter: this.filterMode,
+        });
+        const res = await fetch(`/api/migrate/entities?${params}`);
+        const data = await res.json();
+        this.entities = data.items || [];
+        this.pagination = { ...this.pagination, total: data.total || 0, page: data.page || 1 };
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async goPage(p) {
+      const maxPage = Math.ceil(this.pagination.total / this.pagination.per_page);
+      if (p < 1 || p > maxPage) return;
+      this.pagination.page = p;
+      await this.loadEntities();
+    },
+
+    isSelected(entity) {
+      return entity.batch_status !== null && entity.batch_status !== 'migrated';
+    },
+
+    pageAllSelected() {
+      return this.entities.length > 0 && this.entities.every(e => this.isSelected(e) || e.batch_status === 'migrated');
+    },
+
+    async togglePage(checked) {
+      const ids = this.entities
+        .filter(e => e.batch_status !== 'migrated')
+        .map(e => e.entity_id);
+      if (ids.length === 0) return;
+      await this.sendSelect(this.activeTab, ids, checked);
+    },
+
+    async toggleEntity(entity, checked) {
+      if (entity.auto_included) return;
+      await this.sendSelect(entity.entity_id ? this.activeTab : this.activeTab, [entity.entity_id], checked);
+    },
+
+    async sendSelect(entityType, entityIds, selected) {
+      await fetch('/api/migrate/entities/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entity_type: entityType, entity_ids: entityIds, selected }),
+      });
+      await this.loadBatch();
+      await this.loadEntities();
+    },
+
+    totalSelected() {
+      return this.tabs.reduce((s, t) => s + t.selected, 0);
+    },
+
+    statusChipClass(status) {
+      if (!status) return 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+      return {
+        selected: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+        transforming: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+        ready: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+        error: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+        migrated: 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
+      }[status] || 'bg-gray-100 text-gray-500';
+    },
+
+    statusChipLabel(status, autoIncluded) {
+      if (autoIncluded && status === 'selected') return 'dependency';
+      return status || '—';
+    },
+
+    // ── Transform phase ──────────────────────────────────────────────────────
+
+    async startTransform() {
+      if (!this.currentBatch) return;
+      this.phase = 'transform';
+      this.reviewEntity = null;
+      await this.loadBatchEntities();
+      // POST to start transform; do a final poll when it completes
+      fetch(`/api/migrate/batch/${this.currentBatch.id}/transform`, { method: 'POST' })
+        .then(() => this.pollTransform());
+      // Poll status every 500ms while transform runs
+      this.pollInterval = setInterval(() => this.pollTransform(), 500);
+    },
+
+    async loadBatchEntities() {
+      if (!this.currentBatch) return;
+      const res = await fetch(`/api/migrate/batch/${this.currentBatch.id}/transform/status`);
+      this.transformStats = await res.json();
+      this.batchEntities = await this.loadAllBatchEntities();
+    },
+
+    async pollTransform() {
+      if (!this.currentBatch) return;
+      const res = await fetch(`/api/migrate/batch/${this.currentBatch.id}/transform/status`);
+      this.transformStats = await res.json();
+      this.batchEntities = await this.loadAllBatchEntities();
+
+      const pending = (this.transformStats.transforming || 0) + (this.transformStats.selected || 0);
+      if (pending === 0) {
+        this.stopPolling();
+      }
+    },
+
+    async loadAllBatchEntities() {
+      if (!this.currentBatch) return [];
+      const res = await fetch(`/api/migrate/batch/${this.currentBatch.id}/entities`);
+      const rows = await res.json();
+      // Map DB row fields to expected entity shape used by the template
+      return rows.map(e => ({ ...e, id: e.entity_id }));
+    },
+
+    stopPolling() {
+      if (this.pollInterval) {
+        clearInterval(this.pollInterval);
+        this.pollInterval = null;
+      }
+    },
+
+    transformPercent() {
+      const total = this.transformStats.total || 0;
+      if (!total) return 0;
+      return Math.round(((this.transformStats.ready || 0) / total) * 100);
+    },
+
+    transformStatusChipClass(status) {
+      return {
+        selected: 'bg-gray-100 text-gray-500',
+        transforming: 'bg-blue-100 text-blue-700',
+        ready: 'bg-green-100 text-green-700',
+        error: 'bg-red-100 text-red-700',
+      }[status] || 'bg-gray-100 text-gray-500';
+    },
+
+    toggleReview(entity) {
+      this.reviewEntity = this.reviewEntity?.id === entity.id ? null : entity;
+    },
+
+    parseJSON(str) {
+      if (!str) return {};
+      try { return JSON.parse(str); } catch { return {}; }
+    },
+
+    highlight(obj) {
+      const json = JSON.stringify(obj, null, 2);
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+        let cls = 'text-blue-600 dark:text-blue-400';
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? 'text-purple-600 dark:text-purple-400' : 'text-green-600 dark:text-green-400';
+        } else if (/true|false/.test(match)) {
+          cls = 'text-yellow-600 dark:text-yellow-400';
+        } else if (/null/.test(match)) {
+          cls = 'text-gray-400';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      });
+    },
+
+    entityHcl(entity) {
+      const se = this.parseJSON(entity.spacelift_entity);
+      if (!se.resource_type) return '';
+      const hclVal = (v) => {
+        if (typeof v === 'string' && v.startsWith('$ref:')) return v.slice(5);
+        if (typeof v === 'string') return `"${v}"`;
+        if (typeof v === 'boolean') return v ? 'true' : 'false';
+        if (v === null) return 'null';
+        if (Array.isArray(v)) return `[${v.map(hclVal).join(', ')}]`;
+        return String(v);
+      };
+      const lines = [`resource "${se.resource_type}" "${se.resource_name}" {`];
+      for (const [k, v] of Object.entries(se.attributes || {}).sort(([a], [b]) => a.localeCompare(b))) {
+        lines.push(`  ${k} = ${hclVal(v)}`);
+      }
+      lines.push('}');
+      return lines.join('\n');
+    },
+
+    async retryEntity(entity) {
+      // Re-select the entity (which resets status) then re-run transform
+      await fetch('/api/migrate/entities/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entity_type: entity.entity_type,
+          entity_ids: [entity.entity_id],
+          selected: true,
+        }),
+      });
+      await this.startTransform();
+    },
+
+    confirmBlocked() {
+      return (this.transformStats.error || 0) > 0 || (this.transformStats.transforming || 0) > 0;
+    },
+
+    async confirmBatch() {
+      if (!this.currentBatch || this.isConfirming) return;
+      this.isConfirming = true;
+      try {
+        const res = await fetch(`/api/migrate/batch/${this.currentBatch.id}/confirm`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || 'Confirm failed');
+          return;
+        }
+        this.confirmResult = await res.json();
+        this.phase = 'confirm';
+        this.currentBatch = null;
+        this.showCleanUpWarning = false;
+        this.unmigratedCount = await this.loadUnmigratedCount();
+      } finally {
+        this.isConfirming = false;
+      }
+    },
+
+    async loadUnmigratedCount() {
+      let total = 0;
+      for (const t of ['organizations', 'projects', 'workspaces']) {
+        const res = await fetch(`/api/migrate/entities?type=${t}&filter=unselected&per_page=1`);
+        const data = await res.json();
+        total += data.total || 0;
+      }
+      return total;
+    },
+
+    async copyCommand() {
+      await navigator.clipboard.writeText('cd ~/.config/smk/output && tofu apply');
+      this.copied = true;
+      setTimeout(() => { this.copied = false; }, 2000);
+    },
+
+    async startAnotherBatch() {
+      this.phase = 'select';
+      this.confirmResult = {};
+      this.showCleanUpWarning = false;
+      await this.loadBatch();
+      await this.loadEntities();
+    },
+  };
+}
+</script>
 {% endblock %}

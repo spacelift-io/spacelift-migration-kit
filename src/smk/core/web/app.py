@@ -88,14 +88,21 @@ def create_app(config: WebConfig | None = None) -> FastAPI:
     # Mount static files
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+    # Initialize database
+    from smk.core.db import init_db
+
+    init_db()
+
     # Include routers
     from smk.core.web.routes.api import router as api_router
     from smk.core.web.routes.logs import router as logs_router
+    from smk.core.web.routes.migrate import router as migrate_router
     from smk.core.web.routes.partials import router as partials_router
     from smk.core.web.routes.workflow import router as workflow_router
 
     app.include_router(api_router)
     app.include_router(logs_router)
+    app.include_router(migrate_router)
     app.include_router(partials_router)
     app.include_router(workflow_router)
 

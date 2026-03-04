@@ -7,6 +7,7 @@ Terraform Enterprise. The distinction is controlled by the `product` field.
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 
 import orjson
@@ -124,6 +125,110 @@ def _audit_workspaces(entities: list[dict]) -> list[dict]:
         if not ws.get("attributes", {}).get("vcs-repo"):
             issues.append({"entity_id": ws_id, "entity": ws, "severity": "warning", "message": "No VCS configuration"})
     return issues
+
+
+def _resource_name(name: str) -> str:
+    """Sanitize a name into a valid Terraform resource identifier."""
+    s = re.sub(r"[^a-z0-9]", "_", name.lower())
+    s = re.sub(r"_+", "_", s).strip("_")
+    return s or "unknown"
+
+
+def _entity_name(entity: dict[str, Any]) -> str:
+    """Extract display name from entity."""
+    return entity.get("name") or entity.get("attributes", {}).get("name") or entity.get("id", "")
+
+
+@hookimpl
+def smk_transform_entity(
+    entity_type: str,
+    entity: dict[str, Any],
+    source_plugin: str,
+) -> dict[str, Any] | None:
+    """Transform a HashiCorp source entity into a Spacelift resource dict."""
+    if source_plugin != "hashicorp":
+        return None
+
+    name = _entity_name(entity)
+    parent_hcl = entity.get("_smk_parent_hcl_resource_name")
+
+    if entity_type == "organizations":
+        return {
+            "resource_type": "spacelift_space",
+            "resource_name": _resource_name(name),
+            "attributes": {
+                "name": name,
+                "parent_space_id": "root",
+            },
+        }
+
+    if entity_type == "projects":
+        attrs: dict[str, Any] = {"name": name}
+        if parent_hcl:
+            attrs["parent_space_id"] = f"$ref:{parent_hcl}.id"
+            parent_qualifier = parent_hcl.split(".", 1)[-1]
+            proj_resource_name = _resource_name(f"{parent_qualifier}_{name}")
+        else:
+            attrs["parent_space_id"] = "root"
+            proj_resource_name = _resource_name(name)
+        return {
+            "resource_type": "spacelift_space",
+            "resource_name": proj_resource_name,
+            "attributes": attrs,
+        }
+
+    if entity_type == "workspaces":
+        # pytfe exports fields at the top level; JSON API format nests them under "attributes"
+        raw = entity.get("attributes", entity)
+
+        ws_attrs: dict[str, Any] = {"name": name}
+
+        if parent_hcl:
+            ws_attrs["space_id"] = f"$ref:{parent_hcl}.id"
+
+        description = raw.get("description") or raw.get("description")
+        if description:
+            ws_attrs["description"] = description
+
+        auto_apply = raw.get("auto_apply") if "auto_apply" in raw else raw.get("auto-apply")
+        if auto_apply is not None:
+            ws_attrs["autodeploy"] = auto_apply
+
+        tf_version = raw.get("terraform_version") or raw.get("terraform-version")
+        if tf_version:
+            ws_attrs["terraform_version"] = tf_version
+
+        working_dir = (raw.get("working_directory") or raw.get("working-directory") or "").rstrip("/")
+        if working_dir:
+            ws_attrs["project_root"] = working_dir
+
+        vcs_repo = entity.get("vcs_repo") or entity.get("vcs-repo") or raw.get("vcs-repo")
+        if vcs_repo:
+            identifier = vcs_repo.get("identifier", "")
+            if "/" in identifier:
+                ws_attrs["namespace"], ws_attrs["repository"] = identifier.split("/", 1)
+            elif identifier:
+                ws_attrs["repository"] = identifier
+            branch = vcs_repo.get("branch") or ""
+            if branch:
+                ws_attrs["branch"] = branch
+
+        labels = raw.get("tag_names") or raw.get("tag-names") or []
+        if labels:
+            ws_attrs["labels"] = labels
+
+        if parent_hcl:
+            parent_qualifier = parent_hcl.split(".", 1)[-1]
+            ws_resource_name = _resource_name(f"{parent_qualifier}_{name}")
+        else:
+            ws_resource_name = _resource_name(name)
+        return {
+            "resource_type": "spacelift_stack",
+            "resource_name": ws_resource_name,
+            "attributes": ws_attrs,
+        }
+
+    return None
 
 
 @hookimpl

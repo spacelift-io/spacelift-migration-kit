@@ -66,8 +66,7 @@ def test_workflow_migrate(client: TestClient) -> None:
     response = client.get("/migrate")
     assert response.status_code == 200
     assert b"Migrate Resources" in response.content
-    assert b"Batch 1 of 5" in response.content
-    assert b"Migration Progress" in response.content
+    assert b"migratePage" in response.content
 
 
 def test_workflow_cleanup(client: TestClient) -> None:
