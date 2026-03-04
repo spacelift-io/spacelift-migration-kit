@@ -91,11 +91,52 @@ def test_post_export_returns_502_on_plugin_error(client: TestClient) -> None:
     assert "unauthorized" in response.json()["detail"]
 
 
-def test_export_status_not_exported(client: TestClient, tmp_path: Path) -> None:
-    """GET /api/export/status returns exported: false when source files are missing."""
+def test_export_status_not_exported_when_not_initialized(client: TestClient) -> None:
+    """GET /api/export/status returns exported: false when config is not initialized."""
     from unittest.mock import patch
 
-    with patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path):
+    with patch("smk.core.web.routes.api.ConfigManager") as mock_cm:
+        mock_cm.return_value.is_initialized = False
+        response = client.get("/api/export/status")
+
+    assert response.status_code == 200
+    assert response.json() == {"exported": False}
+
+
+def test_export_status_not_exported_when_load_raises(client: TestClient) -> None:
+    """GET /api/export/status returns exported: false when config load raises."""
+    from unittest.mock import patch
+
+    from smk.core.exceptions import ConfigNotInitializedError
+
+    with patch("smk.core.web.routes.api.ConfigManager") as mock_cm:
+        mock_cm.return_value.is_initialized = True
+        mock_cm.return_value.load.side_effect = ConfigNotInitializedError
+        response = client.get("/api/export/status")
+
+    assert response.status_code == 200
+    assert response.json() == {"exported": False}
+
+
+def test_export_status_not_exported(client: TestClient, tmp_path: Path) -> None:
+    """GET /api/export/status returns exported: false when source files are missing."""
+    from unittest.mock import MagicMock, patch
+
+    mock_config = MagicMock()
+    mock_config.source.plugin = "hashicorp"
+    entity_types = [
+        {"id": "organizations", "display_name": "Organizations"},
+        {"id": "projects", "display_name": "Projects"},
+        {"id": "workspaces", "display_name": "Workspaces"},
+    ]
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path),
+        patch.object(client.app.state.plugin_manager, "get_entity_types", return_value=entity_types),
+    ):
+        mock_cm.return_value.is_initialized = True
+        mock_cm.return_value.load.return_value = mock_config
         response = client.get("/api/export/status")
 
     assert response.status_code == 200
@@ -104,7 +145,7 @@ def test_export_status_not_exported(client: TestClient, tmp_path: Path) -> None:
 
 def test_export_status_exported(client: TestClient, tmp_path: Path) -> None:
     """GET /api/export/status returns exported: true with counts when source files exist."""
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     import orjson
 
@@ -112,7 +153,21 @@ def test_export_status_exported(client: TestClient, tmp_path: Path) -> None:
     (tmp_path / "projects.json").write_bytes(orjson.dumps([{"id": 1}]))
     (tmp_path / "workspaces.json").write_bytes(orjson.dumps([{"id": 1}, {"id": 2}, {"id": 3}]))
 
-    with patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path):
+    mock_config = MagicMock()
+    mock_config.source.plugin = "hashicorp"
+    entity_types = [
+        {"id": "organizations", "display_name": "Organizations"},
+        {"id": "projects", "display_name": "Projects"},
+        {"id": "workspaces", "display_name": "Workspaces"},
+    ]
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path),
+        patch.object(client.app.state.plugin_manager, "get_entity_types", return_value=entity_types),
+    ):
+        mock_cm.return_value.is_initialized = True
+        mock_cm.return_value.load.return_value = mock_config
         response = client.get("/api/export/status")
 
     assert response.status_code == 200
@@ -122,6 +177,160 @@ def test_export_status_exported(client: TestClient, tmp_path: Path) -> None:
         "projects": 1,
         "workspaces": 3,
     }
+
+
+def test_get_entity_types_returns_list(client: TestClient) -> None:
+    """GET /api/entity-types returns entity types for configured plugin."""
+    from unittest.mock import MagicMock, patch
+
+    mock_config = MagicMock()
+    mock_config.source.plugin = "hashicorp"
+    entity_types = [{"id": "workspaces", "display_name": "Workspaces"}]
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch.object(client.app.state.plugin_manager, "get_entity_types", return_value=entity_types),
+    ):
+        mock_cm.return_value.load.return_value = mock_config
+        response = client.get("/api/entity-types")
+
+    assert response.status_code == 200
+    assert response.json() == entity_types
+
+
+def test_get_entity_types_returns_empty_when_not_initialized(client: TestClient) -> None:
+    """GET /api/entity-types returns empty list when config is not initialized."""
+    from unittest.mock import patch
+
+    from smk.core.exceptions import ConfigNotInitializedError
+
+    with patch("smk.core.web.routes.api.ConfigManager") as mock_cm:
+        mock_cm.return_value.load.side_effect = ConfigNotInitializedError
+        response = client.get("/api/entity-types")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_post_audit_returns_results(client: TestClient) -> None:
+    """POST /api/audit runs audit and returns entity types + issues."""
+    from unittest.mock import MagicMock, patch
+
+    mock_config = MagicMock()
+    mock_config.source.plugin = "hashicorp"
+    entity_types = [{"id": "workspaces", "display_name": "Workspaces"}]
+    audit_results = {"workspaces": [{"entity_id": "ws-1", "severity": "warning", "message": "No VCS configuration"}]}
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch("smk.core.web.routes.api.get_data_dir") as mock_data_dir,
+        patch.object(client.app.state.plugin_manager, "get_entity_types", return_value=entity_types),
+        patch("smk.core.web.routes.api.asyncio.to_thread") as mock_thread,
+    ):
+        mock_cm.return_value.load.return_value = mock_config
+        mock_data_dir.return_value = MagicMock()
+        mock_thread.return_value = audit_results
+        response = client.post("/api/audit")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["entity_types"] == entity_types
+    assert data["issues"] == audit_results
+
+
+def test_post_audit_returns_400_when_not_initialized(client: TestClient) -> None:
+    """POST /api/audit returns 400 when configuration not initialized."""
+    from unittest.mock import patch
+
+    from smk.core.exceptions import ConfigNotInitializedError
+
+    with patch("smk.core.web.routes.api.ConfigManager") as mock_cm:
+        mock_cm.return_value.load.side_effect = ConfigNotInitializedError
+        response = client.post("/api/audit")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Configuration not initialized"
+
+
+def test_post_audit_returns_502_on_error(client: TestClient) -> None:
+    """POST /api/audit returns 502 when audit raises an exception."""
+    from unittest.mock import MagicMock, patch
+
+    mock_config = MagicMock()
+    mock_config.source.plugin = "hashicorp"
+    entity_types = [{"id": "workspaces", "display_name": "Workspaces"}]
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch.object(client.app.state.plugin_manager, "get_entity_types", return_value=entity_types),
+        patch("smk.core.web.routes.api.asyncio.to_thread") as mock_thread,
+    ):
+        mock_cm.return_value.load.return_value = mock_config
+        mock_thread.side_effect = RuntimeError("disk error")
+        response = client.post("/api/audit")
+
+    assert response.status_code == 502
+    assert "disk error" in response.json()["detail"]
+
+
+def test_audit_status_not_audited(client: TestClient, tmp_path: Path) -> None:
+    """GET /api/audit/status returns audited: false when results file is missing."""
+    from unittest.mock import patch
+
+    with patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path):
+        response = client.get("/api/audit/status")
+
+    assert response.status_code == 200
+    assert response.json() == {"audited": False}
+
+
+def test_audit_status_returns_cached_results(client: TestClient, tmp_path: Path) -> None:
+    """GET /api/audit/status returns cached results when file exists."""
+    from unittest.mock import MagicMock, patch
+
+    import orjson
+
+    issues = {"workspaces": [{"entity_id": "ws-1", "severity": "warning", "message": "No VCS configuration"}]}
+    (tmp_path / "audit_results.json").write_bytes(orjson.dumps(issues))
+
+    mock_config = MagicMock()
+    mock_config.source.plugin = "hashicorp"
+    entity_types = [{"id": "workspaces", "display_name": "Workspaces"}]
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path),
+        patch.object(client.app.state.plugin_manager, "get_entity_types", return_value=entity_types),
+    ):
+        mock_cm.return_value.load.return_value = mock_config
+        response = client.get("/api/audit/status")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["audited"] is True
+    assert data["entity_types"] == entity_types
+    assert data["issues"] == issues
+
+
+def test_audit_status_not_audited_when_config_not_initialized(client: TestClient, tmp_path: Path) -> None:
+    """GET /api/audit/status returns audited: false when config not initialized."""
+    from unittest.mock import patch
+
+    import orjson
+
+    from smk.core.exceptions import ConfigNotInitializedError
+
+    (tmp_path / "audit_results.json").write_bytes(orjson.dumps({}))
+
+    with (
+        patch("smk.core.web.routes.api.ConfigManager") as mock_cm,
+        patch("smk.core.web.routes.api.get_data_dir", return_value=tmp_path),
+    ):
+        mock_cm.return_value.load.side_effect = ConfigNotInitializedError
+        response = client.get("/api/audit/status")
+
+    assert response.status_code == 200
+    assert response.json() == {"audited": False}
 
 
 def test_get_config_returns_error_when_not_initialized(client: TestClient) -> None:

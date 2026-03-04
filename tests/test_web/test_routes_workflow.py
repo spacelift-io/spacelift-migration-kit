@@ -58,8 +58,7 @@ def test_workflow_audit(client: TestClient) -> None:
     response = client.get("/audit")
     assert response.status_code == 200
     assert b"Audit Source Data" in response.content
-    assert b"Audit Results" in response.content
-    assert b"Workspaces" in response.content
+    assert b"Run Audit" in response.content
 
 
 def test_workflow_migrate(client: TestClient) -> None:

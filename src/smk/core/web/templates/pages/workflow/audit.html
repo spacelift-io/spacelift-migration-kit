@@ -3,45 +3,119 @@
 {% block title %}Audit{% endblock %}
 
 {% block content %}
+<div x-data="auditPage()" x-init="init()">
+
 <h2 class="text-3xl font-bold text-gray-900 mb-4 dark:text-white">Audit Source Data</h2>
 <p class="text-gray-600 mb-8 dark:text-gray-300">Review exported data for completeness and identify any issues.</p>
 
-<div class="grid md:grid-cols-3 gap-6 mb-6">
-  <div class="border border-gray-200 rounded-lg p-6 text-center dark:border-gray-700">
-    <div class="text-3xl font-bold text-spacelift-purple mb-2">42</div>
-    <div class="text-sm text-gray-600 dark:text-gray-400">Workspaces</div>
+<!-- Summary cards -->
+<template x-if="state === 'done'">
+  <div class="grid gap-6 mb-6" :style="`grid-template-columns: repeat(${entityTypes.length}, minmax(0, 1fr))`">
+    <template x-for="et in entityTypes" :key="et.id">
+      <div class="border border-gray-200 rounded-lg p-6 text-center dark:border-gray-700">
+        <div class="text-3xl font-bold text-spacelift-purple mb-1" x-text="(issues[et.id] || []).length"></div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">issues</div>
+        <div class="text-sm text-gray-600 dark:text-gray-400" x-text="et.display_name"></div>
+      </div>
+    </template>
   </div>
-  <div class="border border-gray-200 rounded-lg p-6 text-center dark:border-gray-700">
-    <div class="text-3xl font-bold text-spacelift-yellow mb-2">156</div>
-    <div class="text-sm text-gray-600 dark:text-gray-400">Variables</div>
+</template>
+
+<!-- Tabs + issue list -->
+<template x-if="state === 'done'">
+  <div class="border border-gray-200 rounded-lg mb-6 dark:border-gray-700">
+    <!-- Tab bar -->
+    <div class="flex border-b border-gray-200 dark:border-gray-700">
+      <template x-for="et in entityTypes" :key="et.id">
+        <button
+          @click="activeTab = et.id"
+          :class="activeTab === et.id
+            ? 'border-b-2 border-spacelift-yellow text-gray-900 dark:text-white'
+            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'"
+          class="px-6 py-3 text-sm font-medium"
+          x-text="et.display_name"
+        ></button>
+      </template>
+    </div>
+
+    <!-- Tab content -->
+    <template x-for="et in entityTypes" :key="et.id">
+      <div x-show="activeTab === et.id" class="p-4">
+        <template x-if="(issues[et.id] || []).length === 0">
+          <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200 dark:bg-green-900/20 dark:border-green-800">
+            <svg class="w-5 h-5 text-green-600 mr-3 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-sm text-green-800 dark:text-green-300">No issues found</span>
+          </div>
+        </template>
+        <template x-if="(issues[et.id] || []).length > 0">
+          <div class="space-y-2">
+            <template x-for="(group, idx) in groupedIssues(et.id)" :key="idx">
+              <div x-data="{ open: false }" class="rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+                <!-- entity header row -->
+                <div class="flex items-start p-3 bg-gray-50 dark:bg-gray-700 gap-3">
+                  <span class="text-xs font-mono text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" x-text="group.entity_id"></span>
+                  <!-- issue badges -->
+                  <div class="flex flex-wrap gap-1 flex-1 min-w-0">
+                    <template x-for="(issue, iidx) in group.issues" :key="iidx">
+                      <span
+                        :class="{
+                          'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300': issue.severity === 'error',
+                          'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300': issue.severity === 'warning',
+                          'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300': issue.severity === 'info',
+                        }"
+                        class="text-xs font-medium px-2 py-0.5 rounded"
+                        x-text="issue.message"
+                      ></span>
+                    </template>
+                  </div>
+                  <!-- expand toggle -->
+                  <template x-if="group.entity">
+                    <button
+                      @click="open = !open"
+                      class="shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                      :title="open ? 'Collapse entity' : 'Expand entity'"
+                    >
+                      <svg class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </button>
+                  </template>
+                </div>
+                <!-- collapsible entity JSON with syntax highlighting -->
+                <div x-show="open" class="border-t border-gray-700 bg-gray-900">
+                  <pre class="p-4 text-xs font-mono leading-5 overflow-x-auto" x-html="highlight(group.entity)"></pre>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </template>
   </div>
-  <div class="border border-gray-200 rounded-lg p-6 text-center dark:border-gray-700">
-    <div class="text-3xl font-bold text-spacelift-green mb-2">38</div>
-    <div class="text-sm text-gray-600 dark:text-gray-400">State Files</div>
+</template>
+
+<!-- idle info box -->
+<div x-show="state === 'idle'" class="border border-yellow-200 rounded-lg p-6 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800 mb-6">
+  <div class="flex items-start">
+    <svg class="w-6 h-6 text-yellow-600 mr-3 mt-1 dark:text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <div>
+      <h4 class="font-semibold text-yellow-900 mb-1 dark:text-yellow-300">Ready to Audit</h4>
+      <p class="text-sm text-yellow-800 dark:text-yellow-400">Run the audit to check your exported data for issues before migration.</p>
+    </div>
   </div>
 </div>
 
-<div class="border border-gray-200 rounded-lg p-6 mb-6 dark:border-gray-700">
-  <h3 class="text-lg font-semibold mb-4 dark:text-white">Audit Results</h3>
-  <div class="space-y-3">
-    <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200 dark:bg-green-900/20 dark:border-green-800">
-      <svg class="w-5 h-5 text-green-600 mr-3 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span class="flex-1 dark:text-white">All workspaces have valid configurations</span>
-    </div>
-    <div class="flex items-center p-3 bg-yellow-50 rounded-lg border border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
-      <svg class="w-5 h-5 text-yellow-600 mr-3 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-      </svg>
-      <span class="flex-1 dark:text-white">3 workspaces have no recent runs</span>
-    </div>
-    <div class="flex items-center p-3 bg-green-50 rounded-lg border border-green-200 dark:bg-green-900/20 dark:border-green-800">
-      <svg class="w-5 h-5 text-green-600 mr-3 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-      </svg>
-      <span class="flex-1 dark:text-white">All state files are accessible</span>
-    </div>
+<!-- error banner -->
+<div x-show="state === 'error'" class="border border-red-300 rounded-lg p-4 mb-6 bg-red-50 dark:bg-red-900/20 dark:border-red-700">
+  <div class="flex items-start">
+    <svg class="w-5 h-5 text-red-600 mr-3 mt-0.5 dark:text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <p class="text-sm text-red-800 dark:text-red-300" x-text="errorMsg"></p>
   </div>
 </div>
 
@@ -53,10 +127,116 @@
   {% else %}
   <div></div>
   {% endif %}
-  {% if next_step %}
-  <a href="/{{ next_step }}" class="px-6 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
-    Continue to Migration
-  </a>
-  {% endif %}
+
+  <div class="flex items-center gap-3">
+    <!-- Run / Re-run / Retry button -->
+    <button
+      @click="runAudit()"
+      :disabled="state === 'running'"
+      class="px-6 py-2 text-white rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
+      style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);"
+    >
+      <span x-show="state !== 'running'">
+        <span x-show="state === 'done'">↺ Re-run Audit</span>
+        <span x-show="state === 'error'">Retry</span>
+        <span x-show="state === 'idle'">Run Audit</span>
+      </span>
+      <span x-show="state === 'running'" class="flex items-center gap-2">
+        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        Auditing…
+      </span>
+    </button>
+
+    {% if next_step %}
+    <template x-if="state === 'done'">
+      <a href="/{{ next_step }}" class="px-6 py-2 text-white rounded-lg" style="background: linear-gradient(135deg, #F4C542 0%, #F59E0B 100%);">
+        Continue to Migration →
+      </a>
+    </template>
+    {% endif %}
+  </div>
 </div>
+
+</div>
+
+<script>
+function auditPage() {
+  return {
+    state: 'idle',
+    errorMsg: '',
+    entityTypes: [],
+    issues: {},
+    activeTab: '',
+
+    async init() {
+      try {
+        const resp = await fetch('/api/audit/status');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data.audited) {
+          this.entityTypes = data.entity_types || [];
+          this.issues = data.issues || {};
+          this.activeTab = this.entityTypes.length > 0 ? this.entityTypes[0].id : '';
+          this.state = 'done';
+        }
+      } catch (_) {
+        // silently ignore — fallback to idle state
+      }
+    },
+
+    groupedIssues(typeId) {
+      const allIssues = this.issues[typeId] || [];
+      const groups = {};
+      for (const issue of allIssues) {
+        const key = issue.entity_id;
+        if (!groups[key]) groups[key] = { entity_id: key, entity: issue.entity || null, issues: [] };
+        groups[key].issues.push(issue);
+      }
+      return Object.values(groups);
+    },
+
+    highlight(obj) {
+      if (!obj) return '';
+      const json = JSON.stringify(obj, null, 2);
+      return json.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        (match) => {
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) return `<span style="color:#9cdcfe">${match}</span>`; // key: blue
+            return `<span style="color:#ce9178">${match}</span>`; // string value: orange
+          }
+          if (/true|false/.test(match)) return `<span style="color:#569cd6">${match}</span>`; // boolean: blue
+          if (/null/.test(match)) return `<span style="color:#808080">${match}</span>`; // null: gray
+          return `<span style="color:#b5cea8">${match}</span>`; // number: green
+        }
+      );
+    },
+
+    async runAudit() {
+      this.state = 'running';
+      this.errorMsg = '';
+      try {
+        const resp = await fetch('/api/audit', { method: 'POST' });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          this.errorMsg = data.detail || 'Audit failed.';
+          this.state = 'error';
+          return;
+        }
+        const data = await resp.json();
+        this.entityTypes = data.entity_types || [];
+        this.issues = data.issues || {};
+        this.activeTab = this.entityTypes.length > 0 ? this.entityTypes[0].id : '';
+        this.state = 'done';
+      } catch (err) {
+        this.errorMsg = 'Network error: ' + err.message;
+        this.state = 'error';
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

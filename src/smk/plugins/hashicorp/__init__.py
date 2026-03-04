@@ -77,6 +77,56 @@ def smk_get_source_info() -> dict[str, Any]:
 
 
 @hookimpl
+def smk_get_entity_types(source_plugin: str) -> list[dict] | None:
+    """Return entity types exported by the HashiCorp plugin."""
+    if source_plugin != "hashicorp":
+        return None
+    return [
+        {"id": "organizations", "display_name": "Organizations"},
+        {"id": "projects", "display_name": "Projects"},
+        {"id": "workspaces", "display_name": "Workspaces"},
+    ]
+
+
+@hookimpl
+def smk_audit_entity_type(
+    entity_type: str,
+    entities: list[dict],
+    source_plugin: str,
+) -> list[dict] | None:
+    """Audit entities of a given type for HashiCorp plugin."""
+    if source_plugin != "hashicorp":
+        return None
+    if entity_type == "workspaces":
+        return _audit_workspaces(entities)
+    if entity_type == "projects":
+        return _audit_projects(entities)
+    return []
+
+
+def _audit_projects(entities: list[dict]) -> list[dict]:
+    issues = []
+    for project in entities:
+        project_id = project.get("id", "unknown")
+        if not project.get("attributes", {}).get("name"):
+            issues.append(
+                {"entity_id": project_id, "entity": project, "severity": "error", "message": "No project name"}
+            )
+    return issues
+
+
+def _audit_workspaces(entities: list[dict]) -> list[dict]:
+    issues = []
+    for ws in entities:
+        ws_id = ws.get("id", "unknown")
+        if ws.get("attributes", {}).get("resource-count", 1) == 0:
+            issues.append({"entity_id": ws_id, "entity": ws, "severity": "warning", "message": "No resources"})
+        if not ws.get("attributes", {}).get("vcs-repo"):
+            issues.append({"entity_id": ws_id, "entity": ws, "severity": "warning", "message": "No VCS configuration"})
+    return issues
+
+
+@hookimpl
 def smk_export_data(vendor_config: dict[str, Any]) -> dict[str, Any] | None:
     """Export data from HCP Terraform or Terraform Enterprise.
 

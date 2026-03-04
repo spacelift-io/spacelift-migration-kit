@@ -5,6 +5,20 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class AuditIssue(BaseModel):
+    entity: dict | None = None
+    entity_id: str
+    field: str | None = None
+    message: str
+    severity: Literal["error", "warning", "info"]
+
+
+class EntityType(BaseModel):
+    description: str = ""
+    display_name: str
+    id: str
+
+
 class ConfigFieldDependency(BaseModel):
     field: str  # key of the controlling field
     value: str  # show this field only when controlling field equals this value

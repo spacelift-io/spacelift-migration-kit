@@ -22,14 +22,50 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/export/status")
-async def export_status() -> dict[str, Any]:
-    """Return whether source data has already been exported."""
+@router.get("/audit/status")
+async def audit_status(request: Request) -> dict[str, Any]:
+    """Return cached audit results."""
     data_dir = get_data_dir(subdir="source")
-    keys = ["organizations", "projects", "workspaces"]
-    if not all((data_dir / f"{k}.json").exists() for k in keys):
+    path = data_dir / "audit_results.json"
+    if not path.exists():
+        return {"audited": False}
+    manager = ConfigManager()
+    try:
+        config = manager.load()
+    except ConfigNotInitializedError:
+        return {"audited": False}
+    entity_types = request.app.state.plugin_manager.get_entity_types(config.source.plugin)
+    issues = orjson.loads(path.read_bytes())
+    return {"audited": True, "entity_types": entity_types, "issues": issues}
+
+
+@router.get("/entity-types")
+async def get_entity_types(request: Request) -> list[dict]:
+    """Return entity types for the configured source plugin."""
+    manager = ConfigManager()
+    try:
+        config = manager.load()
+    except ConfigNotInitializedError:
+        return []
+    return request.app.state.plugin_manager.get_entity_types(config.source.plugin)
+
+
+@router.get("/export/status")
+async def export_status(request: Request) -> dict[str, Any]:
+    """Return whether source data has already been exported."""
+    manager = ConfigManager()
+    if not manager.is_initialized:
         return {"exported": False}
-    counts = {k: len(orjson.loads((data_dir / f"{k}.json").read_bytes())) for k in keys}
+    try:
+        config = manager.load()
+    except ConfigNotInitializedError:
+        return {"exported": False}
+    source_plugin = config.source.plugin
+    entity_types = request.app.state.plugin_manager.get_entity_types(source_plugin)
+    data_dir = get_data_dir(subdir="source")
+    if not entity_types or not all((data_dir / f"{et['id']}.json").exists() for et in entity_types):
+        return {"exported": False}
+    counts = {et["id"]: len(orjson.loads((data_dir / f"{et['id']}.json").read_bytes())) for et in entity_types}
     return {"exported": True, **counts}
 
 
@@ -84,6 +120,27 @@ class SaveConfigRequest(BaseModel):
     spacelift_api_endpoint: str | None = None
     spacelift_api_key_id: str | None = None
     spacelift_api_key_secret: str | None = None
+
+
+@router.post("/audit")
+async def run_audit(request: Request) -> dict[str, Any]:
+    """Run audit for all entity types. Returns {entity_type_id: [issues]}."""
+    manager = ConfigManager()
+    try:
+        config = manager.load()
+    except ConfigNotInitializedError as e:
+        raise HTTPException(status_code=400, detail="Configuration not initialized") from e
+    plugin_manager = request.app.state.plugin_manager
+    entity_types = plugin_manager.get_entity_types(config.source.plugin)
+    try:
+        results = await asyncio.to_thread(plugin_manager.run_audit, config.source.plugin, entity_types)
+    except Exception as e:
+        logger.error("Audit failed: %s", e)
+        raise HTTPException(status_code=502, detail=str(e)) from e
+    data_dir = get_data_dir(subdir="source")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    (data_dir / "audit_results.json").write_bytes(orjson.dumps(results))
+    return {"entity_types": entity_types, "issues": results}
 
 
 @router.post("/export")

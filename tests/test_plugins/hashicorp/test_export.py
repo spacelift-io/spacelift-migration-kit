@@ -12,7 +12,7 @@ import orjson
 import pytest
 from pytfe.models import Organization, Project, Workspace
 
-from smk.plugins.hashicorp import smk_export_data
+from smk.plugins.hashicorp import smk_audit_entity_type, smk_export_data, smk_get_entity_types
 
 
 @pytest.fixture
@@ -346,3 +346,94 @@ def test_export_org_with_no_name_raises_value_error(
         pytest.raises(ValueError, match="no name"),
     ):
         smk_export_data(vendor_config)
+
+
+# --- smk_get_entity_types ---
+
+
+def test_get_entity_types_returns_three_types_for_hashicorp() -> None:
+    result = smk_get_entity_types(source_plugin="hashicorp")
+    assert result is not None
+    ids = [et["id"] for et in result]
+    assert ids == ["organizations", "projects", "workspaces"]
+
+
+def test_get_entity_types_returns_none_for_other_plugin() -> None:
+    result = smk_get_entity_types(source_plugin="other")
+    assert result is None
+
+
+def test_get_entity_types_each_has_display_name() -> None:
+    result = smk_get_entity_types(source_plugin="hashicorp")
+    assert result is not None
+    for et in result:
+        assert "display_name" in et
+        assert et["display_name"]
+
+
+# --- smk_audit_entity_type ---
+
+
+def test_audit_returns_none_for_other_plugin() -> None:
+    result = smk_audit_entity_type(entity_type="workspaces", entities=[], source_plugin="other")
+    assert result is None
+
+
+def test_audit_returns_empty_list_for_organizations() -> None:
+    result = smk_audit_entity_type(entity_type="organizations", entities=[], source_plugin="hashicorp")
+    assert result == []
+
+
+def test_audit_workspaces_no_resources_warning() -> None:
+    ws = {"id": "ws-1", "attributes": {"resource-count": 0, "vcs-repo": {"identifier": "org/repo"}}}
+    result = smk_audit_entity_type(entity_type="workspaces", entities=[ws], source_plugin="hashicorp")
+    assert result is not None
+    assert any(i["severity"] == "warning" and "No resources" in i["message"] for i in result)
+
+
+def test_audit_workspaces_no_vcs_warning() -> None:
+    ws = {"id": "ws-2", "attributes": {"resource-count": 5, "vcs-repo": None}}
+    result = smk_audit_entity_type(entity_type="workspaces", entities=[ws], source_plugin="hashicorp")
+    assert result is not None
+    assert any("No VCS" in i["message"] for i in result)
+
+
+def test_audit_workspaces_clean_workspace_no_issues() -> None:
+    entities = [{"id": "ws-3", "attributes": {"resource-count": 2, "vcs-repo": {"identifier": "org/repo"}}}]
+    result = smk_audit_entity_type(entity_type="workspaces", entities=entities, source_plugin="hashicorp")
+    assert result == []
+
+
+def test_audit_workspaces_both_issues_on_same_workspace() -> None:
+    ws = {"id": "ws-4", "attributes": {"resource-count": 0, "vcs-repo": None}}
+    result = smk_audit_entity_type(entity_type="workspaces", entities=[ws], source_plugin="hashicorp")
+    assert result is not None
+    assert len(result) == 2
+    assert all(i["entity_id"] == "ws-4" for i in result)
+
+
+def test_audit_issues_include_entity_data() -> None:
+    ws = {"id": "ws-5", "attributes": {"resource-count": 0, "vcs-repo": None}}
+    result = smk_audit_entity_type(entity_type="workspaces", entities=[ws], source_plugin="hashicorp")
+    assert result is not None
+    assert all(i["entity"] == ws for i in result)
+
+
+def test_audit_projects_no_name_error() -> None:
+    entities = [{"id": "prj-1", "attributes": {}}]
+    result = smk_audit_entity_type(entity_type="projects", entities=entities, source_plugin="hashicorp")
+    assert result is not None
+    assert any(i["severity"] == "error" and "No project name" in i["message"] for i in result)
+
+
+def test_audit_projects_with_name_no_issues() -> None:
+    entities = [{"id": "prj-2", "attributes": {"name": "My Project"}}]
+    result = smk_audit_entity_type(entity_type="projects", entities=entities, source_plugin="hashicorp")
+    assert result == []
+
+
+def test_audit_projects_issue_includes_entity_data() -> None:
+    project = {"id": "prj-3", "attributes": {}}
+    result = smk_audit_entity_type(entity_type="projects", entities=[project], source_plugin="hashicorp")
+    assert result is not None
+    assert result[0]["entity"] == project

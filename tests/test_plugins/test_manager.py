@@ -177,3 +177,80 @@ def test_get_source_plugins_filters_none() -> None:
 
     assert len(plugins) == 1
     assert plugins[0]["plugin_id"] == "x"
+
+
+def test_get_entity_types_flattens_results() -> None:
+    """get_entity_types flattens lists and filters None."""
+    manager = SMKPluginManager()
+
+    with patch.object(
+        manager.pm.hook,
+        "smk_get_entity_types",
+        return_value=[None, [{"id": "workspaces", "display_name": "Workspaces"}]],
+    ):
+        result = manager.get_entity_types("hashicorp")
+
+    assert len(result) == 1
+    assert result[0]["id"] == "workspaces"
+
+
+def test_get_entity_types_returns_empty_when_all_none() -> None:
+    """get_entity_types returns empty list when all plugins return None."""
+    manager = SMKPluginManager()
+
+    with patch.object(manager.pm.hook, "smk_get_entity_types", return_value=[None, None]):
+        result = manager.get_entity_types("unknown")
+
+    assert result == []
+
+
+def test_run_audit_returns_empty_when_file_missing(tmp_path: Path) -> None:
+    """run_audit returns empty issues list when entity file doesn't exist."""
+    from unittest.mock import patch as upatch
+
+    manager = SMKPluginManager()
+    entity_types = [{"id": "workspaces", "display_name": "Workspaces"}]
+
+    with upatch("smk.core.plugins.manager.get_data_dir", return_value=tmp_path):
+        result = manager.run_audit("hashicorp", entity_types)
+
+    assert result == {"workspaces": []}
+
+
+def test_run_audit_calls_hook_and_aggregates(tmp_path: Path) -> None:
+    """run_audit reads entities from disk, calls hook, and aggregates results."""
+    from unittest.mock import patch as upatch
+
+    import orjson
+
+    manager = SMKPluginManager()
+    entities = [{"id": "ws-1"}]
+    (tmp_path / "workspaces.json").write_bytes(orjson.dumps(entities))
+
+    issues = [{"entity_id": "ws-1", "severity": "warning", "message": "No VCS configuration"}]
+
+    with (
+        upatch("smk.core.plugins.manager.get_data_dir", return_value=tmp_path),
+        patch.object(manager.pm.hook, "smk_audit_entity_type", return_value=[issues]),
+    ):
+        result = manager.run_audit("hashicorp", [{"id": "workspaces", "display_name": "Workspaces"}])
+
+    assert result == {"workspaces": issues}
+
+
+def test_run_audit_filters_none_from_hook(tmp_path: Path) -> None:
+    """run_audit skips None results from hook calls."""
+    from unittest.mock import patch as upatch
+
+    import orjson
+
+    manager = SMKPluginManager()
+    (tmp_path / "workspaces.json").write_bytes(orjson.dumps([]))
+
+    with (
+        upatch("smk.core.plugins.manager.get_data_dir", return_value=tmp_path),
+        patch.object(manager.pm.hook, "smk_audit_entity_type", return_value=[None]),
+    ):
+        result = manager.run_audit("hashicorp", [{"id": "workspaces", "display_name": "Workspaces"}])
+
+    assert result == {"workspaces": []}

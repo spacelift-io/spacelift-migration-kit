@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import orjson
 import pluggy
 
+from smk.core.config.paths import get_data_dir
 from smk.core.plugins.cache import PluginCache
 from smk.core.plugins.dependencies import PluginDependencyManager
 from smk.core.plugins.loader import PluginLoader
@@ -113,9 +115,41 @@ class SMKPluginManager:
         """
         return self.loaded_plugins.copy()
 
+    def get_entity_types(self, source_plugin: str) -> list[dict]:
+        """Return entity types for the active source plugin."""
+        results = self.pm.hook.smk_get_entity_types(source_plugin=source_plugin)
+        types = []
+        for result in results:
+            if result is not None:
+                types.extend(result)
+        return types
+
     def get_source_plugins(self) -> list[dict]:
         """Return metadata dicts for all registered source plugins."""
         return [r for r in self.pm.hook.smk_get_source_info() if r is not None]
+
+    def run_audit(self, source_plugin: str, entity_types: list[dict]) -> dict[str, list[dict]]:
+        """Run audit for each entity type. Returns {entity_type_id: [issues]}."""
+        data_dir = get_data_dir(subdir="source")
+        audit_results: dict[str, list[dict]] = {}
+        for et in entity_types:
+            entity_type_id = et["id"]
+            path = data_dir / f"{entity_type_id}.json"
+            if not path.exists():
+                audit_results[entity_type_id] = []
+                continue
+            entities = orjson.loads(path.read_bytes())
+            all_issues = self.pm.hook.smk_audit_entity_type(
+                entity_type=entity_type_id,
+                entities=entities,
+                source_plugin=source_plugin,
+            )
+            issues = []
+            for result in all_issues:
+                if result is not None:
+                    issues.extend(result)
+            audit_results[entity_type_id] = issues
+        return audit_results
 
     def get_failed_plugins(self) -> dict[str, str]:
         """Get dictionary of failed plugins with error messages.

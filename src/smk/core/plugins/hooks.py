@@ -23,6 +23,39 @@ def smk_get_source_info() -> dict | None:
     raise NotImplementedError
 
 
+@hookspec
+def smk_get_entity_types(source_plugin: str) -> list[dict] | None:
+    """Return entity types exported by this plugin.
+
+    Args:
+        source_plugin: Active source plugin id. Return None if not your plugin.
+
+    Returns:
+        List of dicts matching EntityType schema, or None.
+    """
+    raise NotImplementedError
+
+
+# Audit Stage Hooks
+@hookspec
+def smk_audit_entity_type(
+    entity_type: str,
+    entities: list[dict],
+    source_plugin: str,
+) -> list[dict] | None:
+    """Audit entities of a given type, return issues.
+
+    Args:
+        entity_type: Entity type id being audited.
+        entities: Raw entities loaded from source export files.
+        source_plugin: Active source plugin id. Return None if not your plugin.
+
+    Returns:
+        List of dicts matching AuditIssue schema, or None.
+    """
+    raise NotImplementedError
+
+
 # Export Stage Hooks
 @hookspec
 def smk_export_data(vendor_config: dict) -> dict:

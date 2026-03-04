@@ -156,26 +156,22 @@ function exportPage() {
     state: 'idle',
     errorMsg: '',
     results: {},
-    items: [
-      { key: 'organizations', label: 'Export organizations' },
-      { key: 'projects',      label: 'Export projects' },
-      { key: 'workspaces',    label: 'Export workspaces' },
-    ],
+    items: [],
     get completeCount() {
       return (this.state === 'done' || this.state === 'confirming') ? this.items.length : 0;
     },
 
     async init() {
       try {
+        const etResp = await fetch('/api/entity-types');
+        const entityTypes = etResp.ok ? await etResp.json() : [];
+        this.items = entityTypes.map(et => ({ key: et.id, label: `Export ${et.display_name.toLowerCase()}` }));
+
         const resp = await fetch('/api/export/status');
         if (!resp.ok) return;
         const data = await resp.json();
         if (data.exported) {
-          this.results = {
-            organizations: data.organizations,
-            projects: data.projects,
-            workspaces: data.workspaces,
-          };
+          this.results = Object.fromEntries(this.items.map(i => [i.key, data[i.key] ?? 0]));
           this.state = 'done';
         }
       } catch (_) {
