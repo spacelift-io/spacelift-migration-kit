@@ -1,4 +1,5 @@
 import logging
+import re
 
 import click
 import requests
@@ -44,10 +45,21 @@ def create_module_versions(config):
 
     if "modules" not in data:
         logging.warning("No modules found. Skipping.")
+        return
 
     spacelift = Spacelift(config.get("spacelift"))
 
-    for module in data.get("modules"):
+    modules = data.get("modules", [])
+    include_config = config.get("generator.include", {})
+    modules_pattern = include_config.get("modules") if include_config else None
+
+    if modules_pattern:
+        pattern = re.compile(modules_pattern)
+        original_count = len(modules)
+        modules = [m for m in modules if pattern.match(m.get("name", ""))]
+        logging.info(f"Filtered modules: {original_count} -> {len(modules)} (pattern: {modules_pattern})")
+
+    for module in modules:
         if module.get("vcs.repository") is None:
             logging.warning(f"Module '{module.get('name')}' has no repository information. Skipping")
             continue
