@@ -166,7 +166,8 @@ class Spacelift:
         }
 
         response = self.call_api(operation=operation, variables=variables)
-        for version in response.get("data.module.versions"):
+        vs = response.get("data.module.versions") if response.get("data.module.versions") is not None else []
+        for version in vs:
             versions[version["number"]] = version["commit"]["hash"]
 
         return versions
