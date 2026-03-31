@@ -50,7 +50,7 @@ def create_module_versions(config):
     spacelift = Spacelift(config.get("spacelift"))
 
     modules = data.get("modules", [])
-    include_config = config.get("generator.include", {})
+    include_config = config.get("generator.include", config.get("exporter.settings.include", {}))
     modules_pattern = include_config.get("modules") if include_config else None
 
     if modules_pattern:
