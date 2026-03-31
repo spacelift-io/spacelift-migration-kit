@@ -60,8 +60,11 @@ def create_module_versions(config):
         logging.info(f"Filtered modules: {original_count} -> {len(modules)} (pattern: {modules_pattern})")
 
     for module in modules:
+        module_name = module.get("name")
+        logging.info(f"Processing module '{module_name}'")
+
         if module.get("vcs.repository") is None:
-            logging.warning(f"Module '{module.get('name')}' has no repository information. Skipping")
+            logging.warning(f"Module '{module_name}' has no repository information. Skipping")
             continue
 
         tags = _get_repository_tags(
@@ -71,9 +74,11 @@ def create_module_versions(config):
             repository=module.get("vcs.repository"),
         )
 
+        logging.info(f"Found {len(tags)} tag(s) for module '{module_name}'")
+
         for tag, commit_sha in tags.items():
             spacelift.create_module_version(
                 commit_sha=commit_sha,
-                module=module.get("name"),
+                module=module_name,
                 version=tag,
             )

@@ -141,7 +141,11 @@ class Spacelift:
             "version": version,
         }
 
-        self.call_api(operation=operation, variables=variables)
+        response = self.call_api(operation=operation, variables=variables)
+
+        if response.get("errors"):
+            error_msg = response.get("errors[0].message")
+            logging.error(f"Failed to create version '{version}' for module '{module}': {error_msg}")
 
     def _get_module_versions(self, module: str) -> list:
         versions = {}
@@ -166,8 +170,12 @@ class Spacelift:
         }
 
         response = self.call_api(operation=operation, variables=variables)
-        vs = response.get("data.module.versions") if response.get("data.module.versions") is not None else []
-        for version in vs:
+
+        if response.get("data.module") is None:
+            logging.warning(f"Module '{module}' not found in Spacelift. Has it been created?")
+            return versions
+
+        for version in response.get("data.module.versions") or []:
             versions[version["number"]] = version["commit"]["hash"]
 
         return versions
@@ -220,8 +228,7 @@ class Spacelift:
 
         if response.get("errors"):
             logging.warning(
-                f"Error setting mounted file '{filename}' for stack '{stack_id}': "
-                f"{response.get('errors[0].message')}"
+                f"Error setting mounted file '{filename}' for stack '{stack_id}': {response.get('errors[0].message')}"
             )
 
     def set_sensitive_env_vars(self) -> None:
