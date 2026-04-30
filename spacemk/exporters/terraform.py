@@ -16,6 +16,7 @@ import requests
 import semver
 from benedict import benedict
 from python_on_whales import Container, docker
+from python_on_whales.exceptions import DockerException, NoSuchContainer
 from requests_toolbelt.utils import dump as request_dump
 from slugify import slugify
 
@@ -572,9 +573,11 @@ class TerraformExporter(BaseExporter):
                     reset_variable_set_relationships(var_set_id, variable_set_relationship_backup)
                     var_set_reset = True
 
-                if agent_container.exists() and agent_container.state.running:
+                try:
                     logging.debug(f"Local TFC/TFE agent Docker container '{agent_container_id}' logs:")
                     logging.debug(agent_container.logs())
+                except (DockerException, NoSuchContainer) as e:
+                    logging.debug(f"Could not retrieve logs for container '{agent_container_id}': {e}")
 
         finally:
             logging.info("Stop enriching variable_set data")
@@ -839,9 +842,11 @@ class TerraformExporter(BaseExporter):
                             logging.exception(f"Failed to process workspace '{workspace_id}'")
 
                 for container in agent_containers:
-                    if container.exists() and container.state.running:
+                    try:
                         logging.debug(f"Local TFC/TFE agent Docker container '{container.id}' logs:")
                         logging.debug(container.logs())
+                    except (DockerException, NoSuchContainer) as e:
+                        logging.debug(f"Could not retrieve logs for container '{container.id}': {e}")
 
             finally:
                 logging.info(f"Stop local TFC/TFE agent(s) for organization '{organization_id}'")
