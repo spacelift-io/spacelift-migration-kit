@@ -32,7 +32,7 @@ resource "spacelift_context" "{{ space._migration_id }}_terraform_workflow_tool"
   {{ argument("labels", ["migration_class:" + class]) }}
 }
 
-resource "spacelift_mounted_file" "workflow" {
+resource "spacelift_mounted_file" "{{ space._migration_id }}_workflow" {
   {{ argument("context_id", "spacelift_context." ~ space._migration_id ~ "_terraform_workflow_tool.id", required=True, serialize=False) }}
   {{ argument("relative_path", "source/.spacelift/workflow.yml", required=True) }}
   {% raw %}
