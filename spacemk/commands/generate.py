@@ -14,7 +14,7 @@ from spacemk.generator import Generator
 @pass_meta_key("config")
 def generate(config):
     def set_default(value, _default):
-        return value if value is not None else _default
+        return value if value else _default
 
     generation_config = {
         "spacelift": {
@@ -25,10 +25,10 @@ def generate(config):
         "custom_runner_image": set_default(config.get("generator.custom_runner_image"),
                                        "SPACELIFT_DEFAULT_INVALID"),
         "modules": {
-            "default_branch": set_default(config.get("generator.modules.default_branch"), ""),
+            "default_branch": set_default(config.get("generator.modules.default_branch"), "main"),
         },
         "stacks": {
-            "default_branch": set_default(config.get("generator.stacks.default_branch"), ""),
+            "default_branch": set_default(config.get("generator.stacks.default_branch"), "main"),
         }
     }
 
