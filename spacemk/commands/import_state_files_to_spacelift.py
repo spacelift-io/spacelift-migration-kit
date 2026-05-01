@@ -1,5 +1,6 @@
 import base64
 import logging
+import re
 
 import click
 
@@ -179,12 +180,20 @@ def import_state_files_to_spacelift(config, no_wait):
     if api_endpoint is None:
         api_endpoint = "https://app.terraform.io"
 
+    workspace_pattern = config.get("generator.include.workspaces")
+    stacks = data.get("stacks") or []
+    if workspace_pattern:
+        regex = re.compile(workspace_pattern)
+        before = len(stacks)
+        stacks = [s for s in stacks if regex.match(s.get("name", ""))]
+        logging.info(f"Filtered stacks for import: {before} -> {len(stacks)} (pattern: {workspace_pattern})")
+
     for space_id in space_ids:
         # Create a Context with the TFC/TFE token that auto-attaches to all stacks
         _create_context(spacelift=spacelift, space_id=space_id, token=config.exporter.settings.api_token,
                         tfc_address=api_endpoint)
 
-    for stack in data.get("stacks"):
+    for stack in stacks:
         stack_id = stack.slug
         workspace_id = stack._source_id  # noqa: SLF001
 
