@@ -445,7 +445,7 @@ class TerraformExporter(BaseExporter):
                     },
                     image=self._config.get("push_image", "ghcr.io/spacelift-io/terraform-push:latest"),
                     pull="always",
-                    remove=True,
+                    remove=False,
                     volumes={
                         (f"{os.environ['HOME']}/.terraform.d/", "/root/.terraform.d/"),
                     }
