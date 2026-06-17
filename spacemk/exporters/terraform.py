@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import subprocess
 import tempfile
 import threading
 import time
@@ -22,6 +23,18 @@ from slugify import slugify
 
 from spacemk import get_tmp_subfolder, is_command_available
 from spacemk.exporters import BaseExporter
+
+# The hashicorp/tfc-agent base image (and our data/terraform-agent/Dockerfile, which is
+# FROM hashicorp/tfc-agent) runs the agent process as the 'tfc-agent' user, uid/gid 999.
+# The temp directory we bind-mount into the agent must be writable by this uid so the
+# pre-plan hook can dump the environment for sensitive variable extraction.
+AGENT_UID = AGENT_GID = 999
+
+# Permission bits required to create a file in a directory: write + execute (search),
+# for the owner, group, and other classes respectively.
+DIR_WRITE_BITS_OWNER = 0o300
+DIR_WRITE_BITS_GROUP = 0o030
+DIR_WRITE_BITS_OTHER = 0o003
 
 
 class TerraformExporterPlanError(Exception):
@@ -55,6 +68,10 @@ class TerraformExporter(BaseExporter):
         self.parallel_enrichment_workers = self._config.get("parallel_enrichment_workers", 1)
         if self.parallel_enrichment_workers > 1:
             logging.info(f"Parallel enrichment enabled with {self.parallel_enrichment_workers} workers")
+
+        # Caches the user's decision for granting the agent write access to the bind-mounted
+        # temp directory (see _make_agent_writable) so they are prompted at most once per run.
+        self._tempdir_perm_strategy = None
 
     def _build_stack_slug(self, workspace: dict) -> str:
         name = workspace.get("attributes.name")
@@ -291,13 +308,92 @@ class TerraformExporter(BaseExporter):
 
     def _get_log_data_from_disk(self, id_: str):
         log_path_on_disk = f"{self.tempdir}/{id_}.txt"
-        logging.info(f"Reading log data from '{log_path_on_disk}'")
         p = Path(log_path_on_disk)
+        if not p.exists():
+            logging.warning(
+                f"No local log file at '{log_path_on_disk}'. The agent likely could not write it "
+                f"(check directory permissions); sensitive values were not captured for this run."
+            )
+            return ""
+        logging.info(f"Reading log data from '{log_path_on_disk}'")
         with p.open(mode="r") as f:
             contents = f.read()
         logging.info(f"Removing log file '{log_path_on_disk}'")
         p.unlink()
         return contents
+
+    def _agent_can_write_dir(self, path: str) -> bool:
+        """Return True if the agent user (uid/gid 999) can already create files in `path`.
+
+        Creating files in a directory requires both write and execute (search) bits for the
+        relevant permission class, hence the w+x masks below.
+        """
+        st = Path(path).stat()
+        mode = st.st_mode
+        if st.st_uid == AGENT_UID and (mode & DIR_WRITE_BITS_OWNER) == DIR_WRITE_BITS_OWNER:
+            return True
+        if st.st_gid == AGENT_GID and (mode & DIR_WRITE_BITS_GROUP) == DIR_WRITE_BITS_GROUP:
+            return True
+        return (mode & DIR_WRITE_BITS_OTHER) == DIR_WRITE_BITS_OTHER
+
+    def _make_agent_writable(self, path: str) -> bool:  # noqa: PLR0911
+        """Grant the agent container user (uid/gid 999) write access to a bind-mounted temp dir.
+
+        The directory is created with tempfile.mkdtemp() (mode 0700, owned by the current user),
+        but the agent runs as uid 999 and must write the pre-plan environment dump there. We try,
+        in order of decreasing security: leave it alone if already writable, chown it (keeping
+        0700), sudo chown, then a world-writable chmod. Returns False only if the user declines
+        every option, in which case sensitive variable values cannot be captured.
+        """
+        # 0. Already writable by the agent? Nothing to do.
+        if self._agent_can_write_dir(path):
+            return True
+
+        # 1. Preferred: chown to the agent uid and keep 0700 so the dumps stay private.
+        #    Requires root (a non-root user cannot chown to a uid it does not own).
+        try:
+            os.chown(path, AGENT_UID, AGENT_GID)
+        except PermissionError:
+            pass
+        else:
+            return True
+
+        # Decide a strategy once, then reuse it for any later temp dirs this run.
+        if self._tempdir_perm_strategy is None:
+            if click.confirm(
+                "Capturing sensitive variable values requires the migration agent (uid 999) to "
+                "write to a temporary directory owned by your user. Fix this by running "
+                "'sudo chown' on the temp directory?"
+            ):
+                self._tempdir_perm_strategy = "sudo"
+            elif click.confirm(
+                "Without sudo, we can make the directory world-writable (chmod 0777) instead.\n"
+                "WARNING: sensitive variable VALUES will be briefly world-readable on this machine "
+                "until the temp files are deleted.\nProceed with chmod 0777?"
+            ):
+                self._tempdir_perm_strategy = "chmod"
+            else:
+                self._tempdir_perm_strategy = "skip"
+
+        if self._tempdir_perm_strategy == "sudo":
+            # Streams are left inherited so sudo can prompt for a password on the TTY.
+            result = subprocess.run(["sudo", "chown", f"{AGENT_UID}:{AGENT_GID}", path], check=False)
+            if result.returncode == 0:
+                return True
+            logging.warning("'sudo chown' failed; falling back to a chmod 0777 prompt.")
+            if click.confirm(
+                "WARNING: chmod 0777 makes sensitive values briefly world-readable on this "
+                "machine. Proceed?"
+            ):
+                Path(path).chmod(0o777)
+                return True
+            return False
+
+        if self._tempdir_perm_strategy == "chmod":
+            Path(path).chmod(0o777)
+            return True
+
+        return False  # "skip"
 
     def _download_text_file(self, url: str) -> str:
         logging.info("Start downloading text file")
@@ -404,11 +500,22 @@ class TerraformExporter(BaseExporter):
                     if project.get("attributes.name") == "Default Project":
                         default_project_id = project.get("id")
 
+                var_tempdir = tempfile.mkdtemp()
+                if not self._make_agent_writable(var_tempdir):
+                    logging.warning(
+                        f"Skipping sensitive variable-set capture for organization "
+                        f"'{organization.get('id')}' — could not grant the agent write access to "
+                        f"the temp directory. Sensitive variable-set values will not be exported."
+                    )
+                    continue
+
                 logging.info(f"Start local TFC/TFE agent for organization '{organization.get('id')}'")
                 agent_pool_id = self._create_agent_pool(organization_id=organization.get("id"))
                 agent_container_name = f"smk-tfc-agent-{organization.get('id')}"
                 agent_container, self.tempdir = self._start_agent_container(
-                    agent_pool_id=agent_pool_id, container_name=agent_container_name
+                    agent_pool_id=agent_pool_id,
+                    container_name=agent_container_name,
+                    worker_tempdir=var_tempdir,
                 )
                 # Store the container ID in case it gets stopped and we need it for the error message
                 agent_container_id = agent_container.id
@@ -602,7 +709,7 @@ class TerraformExporter(BaseExporter):
         return data
 
 
-    def _process_single_workspace_enrichment(  # noqa: PLR0913, PLR0915
+    def _process_single_workspace_enrichment(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         workspace_id: str,
         workspace_variables: dict,
@@ -698,10 +805,10 @@ class TerraformExporter(BaseExporter):
             plan_data = self._get_plan(id_=plan_id)
             run_id = run_data.get("id")
 
-            if plan_data.get("attributes.log-read-url"):
-                log_path = f"{worker_tempdir}/{run_id}.txt"
+            log_path = f"{worker_tempdir}/{run_id}.txt"
+            p = Path(log_path)
+            if plan_data.get("attributes.log-read-url") and p.exists():
                 logging.info(f"Reading log data from '{log_path}'")
-                p = Path(log_path)
                 with p.open(mode="r") as f:
                     logs_data = f.read()
                 logging.info(f"Removing log file '{log_path}'")
@@ -734,6 +841,13 @@ class TerraformExporter(BaseExporter):
                             ws = find_workspace_local(workspace_id)
                             if ws and not ws.get("attributes.vcs-repo.branch"):
                                 ws["attributes.vcs-repo.branch"] = branch_name
+            elif not p.exists():
+                logging.warning(
+                    f"No local log file at '{log_path}' for workspace "
+                    f"'{organization_id}/{workspace_id}' (run {run_id}, plan status "
+                    f"'{plan_data.get('attributes.status')}'). The agent likely could not write it; "
+                    f"sensitive variable values were not captured for this workspace."
+                )
 
             self._restore_workspace_exec_mode(organization_id, workspace_id, workspace_data_backup)
 
@@ -804,6 +918,13 @@ class TerraformExporter(BaseExporter):
                 )
 
                 shared_tempdir = tempfile.mkdtemp()
+                if not self._make_agent_writable(shared_tempdir):
+                    logging.warning(
+                        f"Skipping sensitive variable capture for organization '{organization_id}' "
+                        f"— could not grant the agent write access to the temp directory. "
+                        f"Sensitive variable values will not be exported."
+                    )
+                    continue  # the finally block still tears down the agent pool
 
                 for i in range(actual_workers):
                     agent_container_name = f"smk-tfc-agent-{organization_id}-{i}"
