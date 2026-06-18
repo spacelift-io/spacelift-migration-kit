@@ -3,7 +3,6 @@ import json
 import logging
 import os
 import re
-import subprocess
 import tempfile
 import threading
 import time
@@ -309,17 +308,18 @@ class TerraformExporter(BaseExporter):
     def _get_log_data_from_disk(self, id_: str):
         log_path_on_disk = f"{self.tempdir}/{id_}.txt"
         p = Path(log_path_on_disk)
-        if not p.exists():
+        try:
+            logging.info(f"Reading log data from '{log_path_on_disk}'")
+            contents = p.read_text()
+            logging.info(f"Removing log file '{log_path_on_disk}'")
+            p.unlink()
+        except OSError as e:
             logging.warning(
-                f"No local log file at '{log_path_on_disk}'. The agent likely could not write it "
-                f"(check directory permissions); sensitive values were not captured for this run."
+                f"Could not read local log file '{log_path_on_disk}': {e}. The agent likely could "
+                f"not write it (check directory permissions); sensitive values were not captured "
+                f"for this run."
             )
             return ""
-        logging.info(f"Reading log data from '{log_path_on_disk}'")
-        with p.open(mode="r") as f:
-            contents = f.read()
-        logging.info(f"Removing log file '{log_path_on_disk}'")
-        p.unlink()
         return contents
 
     def _agent_can_write_dir(self, path: str) -> bool:
@@ -336,58 +336,40 @@ class TerraformExporter(BaseExporter):
             return True
         return (mode & DIR_WRITE_BITS_OTHER) == DIR_WRITE_BITS_OTHER
 
-    def _make_agent_writable(self, path: str) -> bool:  # noqa: PLR0911
-        """Grant the agent container user (uid/gid 999) write access to a bind-mounted temp dir.
+    def _make_agent_writable(self, path: str) -> bool:
+        """Make a bind-mounted temp dir usable by BOTH the agent and this process.
 
-        The directory is created with tempfile.mkdtemp() (mode 0700, owned by the current user),
-        but the agent runs as uid 999 and must write the pre-plan environment dump there. We try,
-        in order of decreasing security: leave it alone if already writable, chown it (keeping
-        0700), sudo chown, then a world-writable chmod. Returns False only if the user declines
-        every option, in which case sensitive variable values cannot be captured.
+        The directory is created with tempfile.mkdtemp() (mode 0700, owned by the current user).
+        The agent container (uid 999) writes the pre-plan environment dump into it, and this
+        process then reads that dump back. Two different non-root UIDs cannot share a 0700
+        directory: chown-ing it to the agent uid would lock this reader out (and vice versa).
+        So the directory's ownership is kept, and access is granted based on our privileges:
+
+          * running as root  -> chown to the agent uid, keep 0700 (root still reads everything,
+            so the dumps never become world-readable).
+          * running non-root -> chmod 0777 so the agent ('other') can write and we (owner) can
+            still read; the values are briefly world-readable on this host until unlinked.
+
+        Both operations act on a directory we created, so neither needs elevated privileges.
+        Returns False only if the user declines, meaning sensitive values cannot be captured.
         """
-        # 0. Already writable by the agent? Nothing to do.
         if self._agent_can_write_dir(path):
             return True
 
-        # 1. Preferred: chown to the agent uid and keep 0700 so the dumps stay private.
-        #    Requires root (a non-root user cannot chown to a uid it does not own).
-        try:
+        # Root can keep the dir private (0700) and still read the agent's output.
+        if os.geteuid() == 0:
             os.chown(path, AGENT_UID, AGENT_GID)
-        except PermissionError:
-            pass
-        else:
             return True
 
-        # Decide a strategy once, then reuse it for any later temp dirs this run.
+        # Non-root: the only way for both UIDs to share the dir is to open the 'other' bits.
         if self._tempdir_perm_strategy is None:
-            if click.confirm(
-                "Capturing sensitive variable values requires the migration agent (uid 999) to "
-                "write to a temporary directory owned by your user. Fix this by running "
-                "'sudo chown' on the temp directory?"
-            ):
-                self._tempdir_perm_strategy = "sudo"
-            elif click.confirm(
-                "Without sudo, we can make the directory world-writable (chmod 0777) instead.\n"
-                "WARNING: sensitive variable VALUES will be briefly world-readable on this machine "
-                "until the temp files are deleted.\nProceed with chmod 0777?"
-            ):
-                self._tempdir_perm_strategy = "chmod"
-            else:
-                self._tempdir_perm_strategy = "skip"
-
-        if self._tempdir_perm_strategy == "sudo":
-            # Streams are left inherited so sudo can prompt for a password on the TTY.
-            result = subprocess.run(["sudo", "chown", f"{AGENT_UID}:{AGENT_GID}", path], check=False)
-            if result.returncode == 0:
-                return True
-            logging.warning("'sudo chown' failed; falling back to a chmod 0777 prompt.")
-            if click.confirm(
-                "WARNING: chmod 0777 makes sensitive values briefly world-readable on this "
-                "machine. Proceed?"
-            ):
-                Path(path).chmod(0o777)
-                return True
-            return False
+            self._tempdir_perm_strategy = "chmod" if click.confirm(
+                "Capturing sensitive variable values requires sharing a temporary directory "
+                "with the migration agent (uid 999). Since this is not running as root, we do "
+                "that with chmod 0777.\n"
+                "WARNING: sensitive variable VALUES will be briefly world-readable on this "
+                "machine until the temp files are deleted.\nProceed?"
+            ) else "skip"
 
         if self._tempdir_perm_strategy == "chmod":
             Path(path).chmod(0o777)
@@ -806,14 +788,23 @@ class TerraformExporter(BaseExporter):
             run_id = run_data.get("id")
 
             log_path = f"{worker_tempdir}/{run_id}.txt"
-            p = Path(log_path)
-            if plan_data.get("attributes.log-read-url") and p.exists():
-                logging.info(f"Reading log data from '{log_path}'")
-                with p.open(mode="r") as f:
-                    logs_data = f.read()
-                logging.info(f"Removing log file '{log_path}'")
-                p.unlink()
+            logs_data = None
+            if plan_data.get("attributes.log-read-url"):
+                p = Path(log_path)
+                try:
+                    logging.info(f"Reading log data from '{log_path}'")
+                    logs_data = p.read_text()
+                    logging.info(f"Removing log file '{log_path}'")
+                    p.unlink()
+                except OSError as e:
+                    logging.warning(
+                        f"Could not read local log file '{log_path}' for workspace "
+                        f"'{organization_id}/{workspace_id}' (run {run_id}, plan status "
+                        f"'{plan_data.get('attributes.status')}'): {e}. The agent likely could not "
+                        f"write it; sensitive variable values were not captured for this workspace."
+                    )
 
+            if logs_data is not None:
                 logging.debug("Plan output:")
                 logging.debug(logs_data)
 
@@ -841,13 +832,6 @@ class TerraformExporter(BaseExporter):
                             ws = find_workspace_local(workspace_id)
                             if ws and not ws.get("attributes.vcs-repo.branch"):
                                 ws["attributes.vcs-repo.branch"] = branch_name
-            elif not p.exists():
-                logging.warning(
-                    f"No local log file at '{log_path}' for workspace "
-                    f"'{organization_id}/{workspace_id}' (run {run_id}, plan status "
-                    f"'{plan_data.get('attributes.status')}'). The agent likely could not write it; "
-                    f"sensitive variable values were not captured for this workspace."
-                )
 
             self._restore_workspace_exec_mode(organization_id, workspace_id, workspace_data_backup)
 
